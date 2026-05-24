@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "skills": {
+    "tesseract-ocr": {
+      "version": "1.0.0",
+      "installedAt": 1779628311735
+    }
+  }
+}
