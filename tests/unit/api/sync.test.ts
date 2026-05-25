@@ -135,6 +135,10 @@ describe('POST /api/sync/gmail', () => {
   it('returns 429 when rate limited', async () => {
     mockGetUser.mockResolvedValue({ data: { user: VALID_USER }, error: null })
 
+    // Profile check now comes before rate limit
+    const profileChain = makeChain({ data: VALID_PROFILE, error: null })
+    mockFrom.mockReturnValueOnce(profileChain)
+
     const { checkRateLimit } = await import('@/lib/utils/rate-limit')
     vi.mocked(checkRateLimit).mockReturnValueOnce({ allowed: false, retryAfter: 240 })
 

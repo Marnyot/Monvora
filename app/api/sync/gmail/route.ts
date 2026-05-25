@@ -22,17 +22,8 @@ export async function POST(request: Request) {
     )
   }
 
-  // ─── 2. RATE LIMIT ────────────────────────────────────────
-  // Rate limit lebih ketat untuk Gmail sync: 1 per 5 menit (300 detik)
-  const rl = checkRateLimit(user.id, '/api/sync/gmail')
-  if (!rl.allowed) {
-    return NextResponse.json(
-      { data: null, error: { code: 'RATE_LIMIT', message: 'Terlalu banyak permintaan. Coba beberapa menit lagi.' } },
-      { status: 429, headers: { 'Retry-After': String(rl.retryAfter ?? 300) } }
-    )
-  }
-
-  // ─── 3. CHECK GMAIL SYNC ENABLED ───────────────────────────
+  // ─── 2. CHECK GMAIL SYNC ENABLED ───────────────────────────
+  // Check before rate limit so unenabled attempts don't consume quota
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('gmail_sync_enabled')
@@ -50,6 +41,16 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { data: null, error: { code: 'GMAIL_NOT_ENABLED', message: 'Gmail sync belum diaktifkan' } },
       { status: 400 }
+    )
+  }
+
+  // ─── 3. RATE LIMIT ────────────────────────────────────────
+  // Rate limit lebih ketat untuk Gmail sync: 1 per 5 menit (300 detik)
+  const rl = checkRateLimit(user.id, '/api/sync/gmail')
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { data: null, error: { code: 'RATE_LIMIT', message: 'Terlalu banyak permintaan. Coba beberapa menit lagi.' } },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfter ?? 300) } }
     )
   }
 
