@@ -22,17 +22,8 @@ export async function POST(request: Request) {
     )
   }
 
-  // ─── 2. RATE LIMIT ────────────────────────────────────────
-  // Rate limit lebih ketat untuk Gmail sync: 1 per 5 menit (300 detik)
-  const rl = checkRateLimit(user.id, '/api/sync/gmail')
-  if (!rl.allowed) {
-    return NextResponse.json(
-      { data: null, error: { code: 'RATE_LIMIT', message: 'Terlalu banyak permintaan. Coba beberapa menit lagi.' } },
-      { status: 429, headers: { 'Retry-After': String(rl.retryAfter ?? 300) } }
-    )
-  }
-
-  // ─── 3. CHECK GMAIL SYNC ENABLED ───────────────────────────
+  // ─── 2. CHECK GMAIL SYNC ENABLED ───────────────────────────
+  // Check before rate limit so unenabled attempts don't consume quota
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('gmail_sync_enabled')
@@ -53,16 +44,20 @@ export async function POST(request: Request) {
     )
   }
 
-  // ─── 4. GET GOOGLE OAUTH ACCESS TOKEN ─────────────────────
-  // Token disimpan di Supabase Auth internal storage
-  // Kita perlu ambil dari user identities atau session
-  let accessToken: string | null = null
-
-  // Cek di user identities
-  const googleIdentity = user.identities?.find(i => i.provider === 'google')
-  if (googleIdentity?.identity_data?.provider_token) {
-    accessToken = googleIdentity.identity_data.provider_token as string
+  // ─── 3. RATE LIMIT ────────────────────────────────────────
+  // Rate limit lebih ketat untuk Gmail sync: 1 per 5 menit (300 detik)
+  const rl = checkRateLimit(user.id, '/api/sync/gmail')
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { data: null, error: { code: 'RATE_LIMIT', message: 'Terlalu banyak permintaan. Coba beberapa menit lagi.' } },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfter ?? 300) } }
+    )
   }
+
+  // ─── 4. GET GOOGLE OAUTH ACCESS TOKEN ─────────────────────
+  // provider_token hanya ada di session (bukan di identity_data dari getUser)
+  const { data: { session } } = await supabase.auth.getSession()
+  const accessToken = session?.provider_token ?? null
 
   if (!accessToken) {
     return NextResponse.json(

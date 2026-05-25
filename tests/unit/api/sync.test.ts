@@ -14,11 +14,12 @@ function makeChain(finalResult: unknown) {
 }
 
 const mockGetUser = vi.fn()
+const mockGetSession = vi.fn()
 const mockFrom = vi.fn()
 
 vi.mock('@/lib/supabase/server', () => ({
   createClient: vi.fn().mockResolvedValue({
-    auth: { getUser: mockGetUser },
+    auth: { getUser: mockGetUser, getSession: mockGetSession },
     from: mockFrom,
   }),
 }))
@@ -41,10 +42,11 @@ vi.mock('@/lib/gmail/sync', () => ({
 const VALID_USER = {
   id: 'user-abc',
   email: 'user@example.com',
-  identities: [{
-    provider: 'google',
-    identity_data: { provider_token: 'google-access-token-xyz' }
-  }]
+  identities: [{ provider: 'google', identity_data: {} }]
+}
+
+const VALID_SESSION = {
+  provider_token: 'google-access-token-xyz',
 }
 
 const VALID_PROFILE = {
@@ -90,18 +92,13 @@ describe('POST /api/sync/gmail', () => {
   })
 
   it('returns 400 when no Google OAuth token is available', async () => {
-    const userWithoutToken = {
-      id: 'user-abc',
-      email: 'user@example.com',
-      identities: []
-    }
-    mockGetUser.mockResolvedValue({ data: { user: userWithoutToken }, error: null })
+    mockGetUser.mockResolvedValue({ data: { user: VALID_USER }, error: null })
 
-    const profileChain = makeChain({
-      data: VALID_PROFILE,
-      error: null,
-    })
+    const profileChain = makeChain({ data: VALID_PROFILE, error: null })
     mockFrom.mockReturnValueOnce(profileChain)
+
+    // No provider_token in session
+    mockGetSession.mockResolvedValue({ data: { session: { provider_token: null } }, error: null })
 
     const { POST } = await import('@/app/api/sync/gmail/route')
     const req = new Request('http://localhost/api/sync/gmail', { method: 'POST' })
@@ -115,11 +112,10 @@ describe('POST /api/sync/gmail', () => {
   it('returns 200 with SyncResult on success', async () => {
     mockGetUser.mockResolvedValue({ data: { user: VALID_USER }, error: null })
 
-    const profileChain = makeChain({
-      data: VALID_PROFILE,
-      error: null,
-    })
+    const profileChain = makeChain({ data: VALID_PROFILE, error: null })
     mockFrom.mockReturnValueOnce(profileChain)
+
+    mockGetSession.mockResolvedValue({ data: { session: VALID_SESSION }, error: null })
 
     const { POST } = await import('@/app/api/sync/gmail/route')
     const req = new Request('http://localhost/api/sync/gmail', { method: 'POST' })
@@ -134,6 +130,9 @@ describe('POST /api/sync/gmail', () => {
 
   it('returns 429 when rate limited', async () => {
     mockGetUser.mockResolvedValue({ data: { user: VALID_USER }, error: null })
+
+    const profileChain = makeChain({ data: VALID_PROFILE, error: null })
+    mockFrom.mockReturnValueOnce(profileChain)
 
     const { checkRateLimit } = await import('@/lib/utils/rate-limit')
     vi.mocked(checkRateLimit).mockReturnValueOnce({ allowed: false, retryAfter: 240 })
@@ -150,11 +149,10 @@ describe('POST /api/sync/gmail', () => {
   it('returns 500 when syncUserGmail throws error', async () => {
     mockGetUser.mockResolvedValue({ data: { user: VALID_USER }, error: null })
 
-    const profileChain = makeChain({
-      data: VALID_PROFILE,
-      error: null,
-    })
+    const profileChain = makeChain({ data: VALID_PROFILE, error: null })
     mockFrom.mockReturnValueOnce(profileChain)
+
+    mockGetSession.mockResolvedValue({ data: { session: VALID_SESSION }, error: null })
 
     const { syncUserGmail } = await import('@/lib/gmail/sync')
     vi.mocked(syncUserGmail).mockRejectedValueOnce(new Error('Gmail API error'))
