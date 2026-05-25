@@ -10,6 +10,12 @@ export async function signInWithGoogle() {
     provider: 'google',
     options: {
       redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
+      // Minta gmail.readonly sekaligus saat login — satu OAuth, tidak perlu connect terpisah
+      scopes: 'openid email profile https://www.googleapis.com/auth/gmail.readonly',
+      queryParams: {
+        access_type: 'offline',
+        prompt: 'consent',
+      },
       skipBrowserRedirect: true,
     },
   })
