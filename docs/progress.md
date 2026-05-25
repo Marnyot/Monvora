@@ -270,7 +270,7 @@ Phase 4         ░░░░░░░░░░░░░░░░░░░░   0
 
 | Task | Status | Notes |
 |---|---|---|
-| Expand OAuth scope ke gmail.readonly | ⏭️ | Perlu update Google Cloud Console secara manual — kode sudah siap |
+| Expand OAuth scope ke gmail.readonly | ✅ | Google Cloud Console sudah diupdate |
 | Gmail API client wrapper | ✅ | `lib/gmail/client.ts` — fetchNewEmails, isBankEmail |
 | Token management (store historyId) | ✅ | Di profiles.gmail_sync_token, diupdate setiap sync |
 | Token refresh handling | ✅ | Supabase handle otomatis via session |
