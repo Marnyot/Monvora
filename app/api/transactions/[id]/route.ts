@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { updateTransactionSchema } from '@/lib/validations/transaction'
+import { checkRateLimit } from '@/lib/utils/rate-limit'
 
 export async function GET(_request: Request, { params }: { params: { id: string } }) {
   const supabase = createClient()
@@ -8,6 +9,14 @@ export async function GET(_request: Request, { params }: { params: { id: string 
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) {
     return NextResponse.json({ data: null, error: { code: 'UNAUTHORIZED', message: 'Unauthorized' } }, { status: 401 })
+  }
+
+  const rl = checkRateLimit(user.id, '/api/transactions')
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { data: null, error: { code: 'RATE_LIMIT', message: 'Terlalu banyak permintaan' } },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } }
+    )
   }
 
   const { data, error } = await supabase
@@ -36,6 +45,14 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) {
     return NextResponse.json({ data: null, error: { code: 'UNAUTHORIZED', message: 'Unauthorized' } }, { status: 401 })
+  }
+
+  const rl = checkRateLimit(user.id, '/api/transactions')
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { data: null, error: { code: 'RATE_LIMIT', message: 'Terlalu banyak permintaan' } },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } }
+    )
   }
 
   const { data: existing } = await supabase
@@ -109,6 +126,14 @@ export async function DELETE(_request: Request, { params }: { params: { id: stri
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) {
     return NextResponse.json({ data: null, error: { code: 'UNAUTHORIZED', message: 'Unauthorized' } }, { status: 401 })
+  }
+
+  const rl = checkRateLimit(user.id, '/api/transactions')
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { data: null, error: { code: 'RATE_LIMIT', message: 'Terlalu banyak permintaan' } },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } }
+    )
   }
 
   const { data: existing } = await supabase

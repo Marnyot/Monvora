@@ -195,7 +195,6 @@ export function WalletForm({ open, onOpenChange, wallet }: WalletFormProps) {
                   className="h-7 w-7 rounded-full ring-2 ring-offset-2 ring-offset-background transition-all"
                   style={{
                     backgroundColor: c,
-                    ringColor: form.color === c ? c : 'transparent',
                     outline: form.color === c ? `2px solid ${c}` : '2px solid transparent',
                   }}
                   onClick={() => handleChange('color', c)}

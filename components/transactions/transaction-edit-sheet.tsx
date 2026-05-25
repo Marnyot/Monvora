@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import {
@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { PAYMENT_METHODS } from '@/lib/validations/transaction'
+import { toDatetimeLocalInput } from '@/lib/utils/date'
 
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
   qris: 'QRIS',
@@ -81,9 +82,18 @@ export function TransactionEditSheet({
   const [description, setDescription] = useState(transaction.description ?? '')
   const [categoryId, setCategoryId] = useState(transaction.category?.id ?? '')
   const [paymentMethod, setPaymentMethod] = useState(transaction.payment_method ?? '')
-  const [transactedAt, setTransactedAt] = useState(
-    new Date(transaction.transacted_at).toISOString().slice(0, 16)
-  )
+  const [transactedAt, setTransactedAt] = useState(toDatetimeLocalInput(transaction.transacted_at))
+
+  // Sync form fields from transaction data each time sheet opens
+  useEffect(() => {
+    if (open) {
+      setMerchantName(transaction.merchant_name ?? '')
+      setDescription(transaction.description ?? '')
+      setCategoryId(transaction.category?.id ?? '')
+      setPaymentMethod(transaction.payment_method ?? '')
+      setTransactedAt(toDatetimeLocalInput(transaction.transacted_at))
+    }
+  }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const filteredCategories = categories.filter(c => c.type === transaction.type)
 
