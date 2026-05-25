@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -50,6 +51,7 @@ function statusLabel(status: SyncLog['status']): string {
 }
 
 export function GmailSettingsClient({ isConnected, lastSyncedAt, syncLogs }: GmailSettingsClientProps) {
+  const router = useRouter()
   const [disconnectOpen, setDisconnectOpen] = useState(false)
   const [isSyncing, startSyncTransition] = useTransition()
   const [isDisconnecting, startDisconnectTransition] = useTransition()
@@ -74,7 +76,8 @@ export function GmailSettingsClient({ isConnected, lastSyncedAt, syncLogs }: Gma
           const data = await res.json().catch(() => ({}))
           throw new Error(data?.error?.message ?? 'Sync gagal')
         }
-        toast.success('Sync dimulai', { description: 'Transaksi baru akan muncul dalam beberapa saat.' })
+        toast.success('Sync selesai', { description: 'Transaksi baru sudah ditambahkan.' })
+        router.refresh()
       } catch (err) {
         toast.error('Sync gagal', {
           description: err instanceof Error ? err.message : 'Coba lagi nanti.',
