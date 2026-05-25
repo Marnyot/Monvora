@@ -108,37 +108,22 @@ export function GmailSettingsClient({ isConnected, lastSyncedAt, syncLogs }: Gma
 
   if (!isConnected) {
     return (
-      <div className="space-y-6">
-        {/* Disconnected state */}
-        <div className="rounded-xl border border-border bg-card p-6 space-y-4">
-          <div className="flex items-start gap-3">
-            <div className="rounded-full bg-muted p-2">
-              <Mail className="h-5 w-5 text-muted-foreground" />
-            </div>
-            <div className="space-y-1">
-              <p className="text-sm font-medium text-foreground">Gmail belum terhubung</p>
-              <p className="text-xs text-muted-foreground">
-                Hubungkan Gmail kamu agar Monvora bisa membaca notifikasi transaksi bank secara otomatis.
-                Kami hanya meminta akses baca-saja (gmail.readonly).
-              </p>
-            </div>
+      <div className="rounded-xl border border-border bg-card p-6 space-y-4">
+        <div className="flex items-start gap-3">
+          <div className="rounded-full bg-muted p-2">
+            <Mail className="h-5 w-5 text-muted-foreground" />
           </div>
-
-          <div className="space-y-2 text-xs text-muted-foreground">
-            <p className="font-medium text-foreground text-sm">Manfaat menghubungkan Gmail:</p>
-            <ul className="list-disc list-inside space-y-1">
-              <li>Transaksi bank terdeteksi otomatis dari email notifikasi</li>
-              <li>Tidak perlu input manual untuk transaksi bank</li>
-              <li>Mendukung Mandiri, BCA, BNI, BRI, dan CIMB Niaga</li>
-              <li>Akses hanya baca — Monvora tidak bisa kirim email</li>
-            </ul>
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-foreground">Gmail terputus</p>
+            <p className="text-xs text-muted-foreground">
+              Koneksi Gmail tidak aktif. Login ulang atau sambungkan kembali untuk melanjutkan sync otomatis.
+            </p>
           </div>
-
-          <Button onClick={handleConnectGmail} className="w-full sm:w-auto">
-            <Mail className="h-4 w-4 mr-2" />
-            Hubungkan Gmail
-          </Button>
         </div>
+        <Button size="sm" variant="outline" onClick={handleConnectGmail} className="w-full sm:w-auto">
+          <Mail className="h-4 w-4 mr-2" />
+          Sambungkan Kembali
+        </Button>
       </div>
     )
   }
