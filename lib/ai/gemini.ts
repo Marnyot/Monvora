@@ -15,7 +15,7 @@ export interface GeminiCategoryResult {
  */
 function getGeminiClient(): GoogleGenerativeAI {
   const apiKey = process.env.GEMINI_API_KEY!
-  return new GoogleGenerativeAI({ apiKey })
+  return new GoogleGenerativeAI(apiKey)
 }
 
 /**
