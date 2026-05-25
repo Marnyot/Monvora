@@ -83,7 +83,8 @@ JSON keys    : snake_case (konsisten dengan database)
 
 ```
 AUTH
-POST   /api/auth/callback          → OAuth callback handler
+GET    /auth/callback              → OAuth callback handler
+POST   /api/auth/logout            → logout (hapus session)
 
 TRANSACTIONS
 GET    /api/transactions            → list transaksi dengan filter
@@ -105,23 +106,23 @@ POST   /api/categories              → buat kategori custom
 PATCH  /api/categories/:id          → update kategori (hanya milik sendiri)
 DELETE /api/categories/:id          → hapus kategori custom
 
-BUDGETS
+SYNC
+POST   /api/sync/gmail              → trigger manual Gmail sync
+GET    /api/sync/status             → status sync terakhir + logs
+
+BUDGETS (Phase 3)
 GET    /api/budgets                 → list semua budget aktif
 POST   /api/budgets                 → buat budget baru
 PATCH  /api/budgets/:id             → update budget
 DELETE /api/budgets/:id             → nonaktifkan budget
 
-SYNC
-POST   /api/sync/gmail              → trigger manual Gmail sync
-GET    /api/sync/status             → status sync terakhir + logs
-
-ANALYTICS
+ANALYTICS (Phase 3)
 GET    /api/analytics               → data analytics dengan query params
 
-OCR
+OCR (Phase 3)
 POST   /api/ocr                     → parse hasil OCR (text input)
 
-PROFILE
+PROFILE (Phase 3)
 GET    /api/profile                 → data profil user
 PATCH  /api/profile                 → update preferensi profil
 ```
@@ -214,6 +215,8 @@ JANGAN kirim: "24/05/2026" (format non-standard)
 
 ### Success Response
 
+Semua response menggunakan struktur `{ data, error, meta? }`:
+
 ```json
 // Single resource (GET /:id, POST, PATCH)
 {
@@ -237,12 +240,14 @@ JANGAN kirim: "24/05/2026" (format non-standard)
     "source": "manual",
     "is_verified": true,
     "created_at": "2026-05-24T12:31:00+07:00"
-  }
+  },
+  "error": null
 }
 
 // Collection (GET tanpa /:id)
 {
   "data": [...],
+  "error": null,
   "meta": {
     "total": 150,
     "page": 1,
@@ -253,10 +258,10 @@ JANGAN kirim: "24/05/2026" (format non-standard)
   }
 }
 
-// Delete / Archive (tidak return data)
+// Delete / Archive
 {
-  "success": true,
-  "message": "Transaction deleted"
+  "data": null,
+  "error": null
 }
 ```
 
@@ -287,30 +292,32 @@ gmail_sync_token        : Internal Gmail historyId
 ```json
 // Error umum
 {
+  "data": null,
   "error": {
     "code": "UNAUTHORIZED",
-    "message": "You must be logged in to access this resource"
+    "message": "Belum login"
   }
 }
 
 // Validation error (dari Zod)
 {
+  "data": null,
   "error": {
     "code": "VALIDATION_ERROR",
-    "message": "Invalid input",
+    "message": "Input tidak valid",
     "details": {
       "amount": ["Amount harus bilangan bulat positif"],
-      "wallet_id": ["wallet_id harus UUID valid"]
+      "wallet_id": ["Wallet ID tidak valid"]
     }
   }
 }
 
 // Server error (tidak expose internal details)
 {
+  "data": null,
   "error": {
-    "code": "INTERNAL_ERROR",
-    "message": "Something went wrong. Please try again.",
-    "error_id": "uuid-untuk-debugging"  
+    "code": "DB_ERROR",
+    "message": "Terjadi kesalahan database"
   }
 }
 ```
@@ -320,12 +327,15 @@ gmail_sync_token        : Internal Gmail historyId
 | Code | HTTP Status | Kapan Dipakai |
 |---|---|---|
 | `UNAUTHORIZED` | 401 | Tidak ada session atau session expired |
-| `FORBIDDEN` | 403 | Ada session tapi tidak punya akses (jarang — gunakan 404) |
 | `NOT_FOUND` | 404 | Resource tidak ada atau tidak milik user ini |
 | `VALIDATION_ERROR` | 422 | Input tidak valid (Zod gagal) |
-| `RATE_LIMITED` | 429 | Terlalu banyak request |
+| `RATE_LIMIT` | 429 | Terlalu banyak request |
 | `CONFLICT` | 409 | Duplikat (contoh: email sudah sync) |
-| `INTERNAL_ERROR` | 500 | Error tidak terduga di server |
+| `INVALID_JSON` | 400 | Request body bukan JSON valid |
+| `INVALID_ID` | 422 | UUID param tidak valid |
+| `DB_ERROR` | 500 | Error database tidak terduga |
+| `NO_GOOGLE_TOKEN` | 400 | User belum connect Google akun |
+| `GMAIL_NOT_ENABLED` | 400 | Gmail sync belum diaktifkan |
 
 ### Kenapa 404 bukan 403 untuk Data Orang Lain
 
@@ -581,8 +591,8 @@ Soft delete — set `deleted_at = NOW()`
 **Response `200`:**
 ```json
 {
-  "success": true,
-  "message": "Transaction deleted"
+  "data": null,
+  "error": null
 }
 ```
 
@@ -648,10 +658,10 @@ Trigger manual sync untuk user yang sedang login.
 **Response `429` (sudah sync dalam 5 menit terakhir):**
 ```json
 {
+  "data": null,
   "error": {
-    "code": "RATE_LIMITED",
-    "message": "Please wait before triggering another sync",
-    "retry_after_seconds": 240
+    "code": "RATE_LIMIT",
+    "message": "Terlalu banyak permintaan. Coba beberapa menit lagi."
   }
 }
 ```

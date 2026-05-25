@@ -28,7 +28,7 @@ export async function GET(request: Request) {
     )
   }
 
-  const { page, limit, type, category_id, wallet_id, from, to, q } = parsed.data
+  const { page, limit, type, category_id, wallet_id, payment_method, source, is_verified, start_date, end_date, search, sort_by, sort_order } = parsed.data
   const offset = (page - 1) * limit
 
   let query = supabase
@@ -45,12 +45,15 @@ export async function GET(request: Request) {
   if (type) query = query.eq('type', type)
   if (category_id) query = query.eq('category_id', category_id)
   if (wallet_id) query = query.eq('wallet_id', wallet_id)
-  if (from) query = query.gte('transacted_at', from)
-  if (to) query = query.lte('transacted_at', to)
-  if (q) query = query.or(`merchant_name.ilike.%${q}%,description.ilike.%${q}%`)
+  if (payment_method) query = query.eq('payment_method', payment_method)
+  if (source) query = query.eq('source', source)
+  if (is_verified !== undefined) query = query.eq('is_verified', is_verified)
+  if (start_date) query = query.gte('transacted_at', start_date)
+  if (end_date) query = query.lte('transacted_at', end_date)
+  if (search) query = query.or(`merchant_name.ilike.%${search}%,description.ilike.%${search}%`)
 
   const { data, count, error } = await query
-    .order('transacted_at', { ascending: false })
+    .order(sort_by, { ascending: sort_order === 'asc' })
     .range(offset, offset + limit - 1)
 
   if (error) {
@@ -60,7 +63,7 @@ export async function GET(request: Request) {
   return NextResponse.json({
     data,
     error: null,
-    meta: { page, limit, total: count ?? 0, pages: Math.ceil((count ?? 0) / limit) },
+    meta: { page, limit, total: count ?? 0, total_pages: Math.ceil((count ?? 0) / limit), has_next: page * limit < (count ?? 0), has_prev: page > 1 },
   })
 }
 

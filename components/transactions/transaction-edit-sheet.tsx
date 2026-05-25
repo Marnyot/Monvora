@@ -129,7 +129,7 @@ export function TransactionEditSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="bottom" className="h-[85dvh] rounded-t-2xl p-0 flex flex-col">
         <SheetHeader className="px-4 pt-4 pb-3 border-b">
-          <SheetTitle>Edit Transaksi</SheetTitle>
+          <SheetTitle>Ubah Transaksi</SheetTitle>
         </SheetHeader>
 
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">

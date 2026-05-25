@@ -6,8 +6,8 @@ const uuidSchema = z.string().uuid()
 export function validateUUID(id: string): NextResponse | null {
   if (!uuidSchema.safeParse(id).success) {
     return NextResponse.json(
-      { data: null, error: { code: 'INVALID_ID', message: 'ID tidak valid' } },
-      { status: 400 }
+      { data: null, error: { code: 'VALIDATION_ERROR', message: 'ID tidak valid' } },
+      { status: 422 }
     )
   }
   return null

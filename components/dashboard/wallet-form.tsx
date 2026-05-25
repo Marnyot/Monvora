@@ -106,7 +106,7 @@ export function WalletForm({ open, onOpenChange, wallet }: WalletFormProps) {
         return
       }
 
-      toast.success(isEdit ? 'Wallet berhasil diupdate' : 'Wallet berhasil ditambahkan')
+        toast.success(isEdit ? 'Dompet berhasil diupdate' : 'Dompet berhasil ditambahkan')
       onOpenChange(false)
       router.refresh()
     })
@@ -116,7 +116,7 @@ export function WalletForm({ open, onOpenChange, wallet }: WalletFormProps) {
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="bottom" className="h-auto max-h-[90dvh] overflow-y-auto rounded-t-2xl">
         <SheetHeader className="text-left pb-4">
-          <SheetTitle>{isEdit ? 'Edit Wallet' : 'Tambah Wallet'}</SheetTitle>
+          <SheetTitle>{isEdit ? 'Ubah Dompet' : 'Tambah Dompet'}</SheetTitle>
           <SheetDescription>
             {isEdit ? 'Ubah detail wallet kamu' : 'Tambahkan rekening, e-wallet, atau tunai'}
           </SheetDescription>
@@ -125,7 +125,7 @@ export function WalletForm({ open, onOpenChange, wallet }: WalletFormProps) {
         <form onSubmit={handleSubmit} className="space-y-4 pb-4">
           {/* Name */}
           <div className="space-y-1.5">
-            <Label htmlFor="wallet-name">Nama Wallet</Label>
+            <Label htmlFor="wallet-name">Nama Dompet</Label>
             <Input
               id="wallet-name"
               placeholder="cth: BCA Utama, GoPay"

@@ -97,7 +97,7 @@ export function TransactionDetailClient({ transaction, wallets, categories }: Pr
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <h1 className="text-lg font-semibold flex-1">Detail Transaksi</h1>
-        <Button variant="ghost" size="icon" onClick={() => setEditOpen(true)} aria-label="Edit">
+        <Button variant="ghost" size="icon" onClick={() => setEditOpen(true)} aria-label="Ubah">
           <Pencil className="h-5 w-5" />
         </Button>
         <Button
@@ -139,7 +139,7 @@ export function TransactionDetailClient({ transaction, wallets, categories }: Pr
           <DetailRow label="Kategori" value={transaction.category.name} />
         )}
         {transaction.wallet && (
-          <DetailRow label="Wallet" value={transaction.wallet.name} />
+          <DetailRow label="Dompet" value={transaction.wallet.name} />
         )}
         {transaction.payment_method && (
           <DetailRow
@@ -149,7 +149,7 @@ export function TransactionDetailClient({ transaction, wallets, categories }: Pr
         )}
         <DetailRow label="Tanggal" value={formatDate(transaction.transacted_at)} />
         {transaction.merchant_name && (
-          <DetailRow label="Merchant" value={transaction.merchant_name} />
+          <DetailRow label="Merchant / Toko" value={transaction.merchant_name} />
         )}
         {transaction.description && (
           <DetailRow label="Catatan" value={transaction.description} />

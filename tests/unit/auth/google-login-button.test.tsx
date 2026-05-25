@@ -9,7 +9,7 @@ vi.mock('@/app/(auth)/login/actions', () => ({
 describe('GoogleLoginButton', () => {
   it('renders the sign in button', () => {
     render(<GoogleLoginButton />)
-    expect(screen.getByRole('button', { name: /sign in with google/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /masuk dengan google/i })).toBeInTheDocument()
   })
 
   it('shows loading state when pending', () => {
@@ -20,6 +20,6 @@ describe('GoogleLoginButton', () => {
 
   it('has accessible text', () => {
     render(<GoogleLoginButton />)
-    expect(screen.getByText(/sign in with google/i)).toBeInTheDocument()
+    expect(screen.getByText(/masuk dengan google/i)).toBeInTheDocument()
   })
 })

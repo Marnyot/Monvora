@@ -11,7 +11,7 @@ describe('NavSidebar', () => {
     render(<NavSidebar />)
     expect(screen.getByText('Beranda')).toBeInTheDocument()
     expect(screen.getByText('Transaksi')).toBeInTheDocument()
-    expect(screen.getByText('Wallet')).toBeInTheDocument()
+    expect(screen.getByText('Dompet')).toBeInTheDocument()
   })
 
   it('marks active item based on pathname', () => {
@@ -24,6 +24,6 @@ describe('NavSidebar', () => {
     render(<NavSidebar />)
     expect(screen.getByRole('link', { name: /beranda/i })).toHaveAttribute('href', '/dashboard')
     expect(screen.getByRole('link', { name: /transaksi/i })).toHaveAttribute('href', '/transactions')
-    expect(screen.getByRole('link', { name: /wallet/i })).toHaveAttribute('href', '/wallets')
+    expect(screen.getByRole('link', { name: /dompet/i })).toHaveAttribute('href', '/wallets')
   })
 })

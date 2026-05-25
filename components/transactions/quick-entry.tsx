@@ -222,10 +222,10 @@ export function QuickEntry({ open, onOpenChange, wallets, categories }: QuickEnt
 
               {/* Wallet */}
               <div className="space-y-1.5">
-                <Label>Wallet</Label>
+                <Label>Dompet</Label>
                 <Select value={walletId} onValueChange={setWalletId}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Pilih wallet" />
+                    <SelectValue placeholder="Pilih dompet" />
                   </SelectTrigger>
                   <SelectContent>
                     {wallets.map(w => (

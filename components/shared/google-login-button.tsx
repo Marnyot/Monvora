@@ -22,7 +22,7 @@ export function GoogleLoginButton() {
       disabled={isPending}
     >
       <GoogleIcon />
-      {isPending ? 'Mengarahkan...' : 'Sign in with Google'}
+      {isPending ? 'Mengarahkan...' : 'Masuk dengan Google'}
     </Button>
   )
 }

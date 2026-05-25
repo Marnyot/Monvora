@@ -2,13 +2,14 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Wallet, List } from 'lucide-react'
+import { LayoutDashboard, Wallet, List, Settings } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Beranda', icon: LayoutDashboard },
   { href: '/transactions', label: 'Transaksi', icon: List },
-  { href: '/wallets', label: 'Wallet', icon: Wallet },
+  { href: '/wallets', label: 'Dompet', icon: Wallet },
+  { href: '/settings/gmail', label: 'Pengaturan', icon: Settings },
 ]
 
 export function BottomNav() {

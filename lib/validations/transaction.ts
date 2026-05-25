@@ -25,9 +25,14 @@ export const listTransactionSchema = z.object({
   type: z.enum(TRANSACTION_TYPES).optional(),
   category_id: z.string().uuid().optional(),
   wallet_id: z.string().uuid().optional(),
-  from: z.string().datetime({ offset: true }).optional(),
-  to: z.string().datetime({ offset: true }).optional(),
-  q: z.string().max(100).optional(),
+  payment_method: z.enum(PAYMENT_METHODS).optional(),
+  source: z.enum(TRANSACTION_SOURCES).optional(),
+  is_verified: z.coerce.boolean().optional(),
+  start_date: z.string().datetime({ offset: true }).optional(),
+  end_date: z.string().datetime({ offset: true }).optional(),
+  search: z.string().max(100).optional(),
+  sort_by: z.enum(['transacted_at', 'amount', 'created_at']).default('transacted_at'),
+  sort_order: z.enum(['asc', 'desc']).default('desc'),
 })
 
 export type CreateTransactionInput = z.infer<typeof createTransactionSchema>

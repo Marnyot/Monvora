@@ -3,8 +3,16 @@ import { NextResponse } from 'next/server'
 
 export async function POST(request: Request) {
   const supabase = await createClient()
+
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) {
+    return NextResponse.json(
+      { data: null, error: { code: 'UNAUTHORIZED', message: 'Belum login' } },
+      { status: 401 }
+    )
+  }
+
   await supabase.auth.signOut()
 
-  const { origin } = new URL(request.url)
-  return NextResponse.redirect(`${origin}/login`)
+  return NextResponse.json({ data: null, error: null })
 }

@@ -36,13 +36,13 @@ function makeRequest(body: unknown = {}) {
 }
 
 describe('UUID validation guard', () => {
-  it('returns 400 for non-UUID id', async () => {
+  it('returns 422 for non-UUID id', async () => {
     const { PATCH } = await import('@/app/api/transactions/[id]/route')
     const badParams = Promise.resolve({ id: 'not-a-uuid' })
     const res = await PATCH(makeRequest(), { params: badParams })
-    expect(res.status).toBe(400)
+    expect(res.status).toBe(422)
     const json = await res.json()
-    expect(json.error.code).toBe('INVALID_ID')
+    expect(json.error.code).toBe('VALIDATION_ERROR')
   })
 })
 

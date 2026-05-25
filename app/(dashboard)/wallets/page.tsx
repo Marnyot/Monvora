@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { WalletListClient } from '@/components/dashboard/wallet-list-client'
 
-export const metadata = { title: 'Wallet — Monvora' }
+export const metadata = { title: 'Dompet — Monvora' }
 
 export default async function WalletsPage() {
   const supabase = await createClient()
