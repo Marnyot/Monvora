@@ -45,7 +45,7 @@ Next Milestone  : Onboarding flow + Wallet management
 
 ```
 Documentation   ████████████████████ 100% (10/10 docs selesai)
-Phase 1         █████░░░░░░░░░░░░░░░  25% (DB + auth selesai, mulai onboarding + wallets)
+Phase 1         ███████░░░░░░░░░░░░░  35% (DB + auth + wallet CRUD done, mulai categories)
 Phase 2         ░░░░░░░░░░░░░░░░░░░░   0%
 Phase 3         ░░░░░░░░░░░░░░░░░░░░   0%
 Phase 4         ░░░░░░░░░░░░░░░░░░░░   0%
@@ -143,11 +143,11 @@ Phase 4         ░░░░░░░░░░░░░░░░░░░░   0
 | API: POST /api/wallets | ✅ | Zod validation, user_id dari session |
 | API: PATCH /api/wallets/:id | ✅ | Ownership check → 404 jika bukan milik user |
 | API: DELETE /api/wallets/:id (soft) | ✅ | Soft delete via deleted_at |
-| UI: Wallet list page | ⏳ | |
-| UI: Add wallet form | ⏳ | |
-| UI: Edit wallet | ⏳ | |
-| UI: Archive wallet | ⏳ | Dengan konfirmasi dialog |
-| **Test: wallet CRUD** | ⏳ | Unit + integration |
+| UI: Wallet list page | ✅ | `app/(dashboard)/wallets/page.tsx` — Server Component |
+| UI: Add wallet form | ✅ | Bottom sheet, color picker, Zod validation client-side |
+| UI: Edit wallet | ✅ | Same form with pre-filled data |
+| UI: Archive wallet | ✅ | Soft delete via ConfirmDialog → DELETE /api/wallets/:id |
+| **Test: wallet CRUD** | ✅ | WalletCard component tests, validation schema tests (45 total) |
 
 ### Category Management
 
