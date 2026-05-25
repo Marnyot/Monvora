@@ -1,0 +1,92 @@
+import { createClient } from '@/lib/supabase/server'
+import { NextResponse } from 'next/server'
+import { checkRateLimit } from '@/lib/utils/rate-limit'
+import { syncUserGmail } from '@/lib/gmail/sync'
+
+/**
+ * POST /api/sync/gmail
+ * Trigger manual Gmail sync untuk user yang sedang login.
+ *
+ * Auth required: Yes (session check)
+ * Rate limit: 1 request per 5 menit per user (300 detik)
+ */
+export async function POST(request: Request) {
+  const supabase = await createClient()
+
+  // ─── 1. AUTH CHECK ─────────────────────────────────────────
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) {
+    return NextResponse.json(
+      { data: null, error: { code: 'UNAUTHORIZED', message: 'Unauthorized' } },
+      { status: 401 }
+    )
+  }
+
+  // ─── 2. RATE LIMIT ────────────────────────────────────────
+  // Rate limit lebih ketat untuk Gmail sync: 1 per 5 menit (300 detik)
+  const rl = checkRateLimit(user.id, '/api/sync/gmail')
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { data: null, error: { code: 'RATE_LIMIT', message: 'Terlalu banyak permintaan. Coba beberapa menit lagi.' } },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfter ?? 300) } }
+    )
+  }
+
+  // ─── 3. CHECK GMAIL SYNC ENABLED ───────────────────────────
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('gmail_sync_enabled')
+    .eq('id', user.id)
+    .single()
+
+  if (profileError || !profile) {
+    return NextResponse.json(
+      { data: null, error: { code: 'NOT_FOUND', message: 'Profil tidak ditemukan' } },
+      { status: 404 }
+    )
+  }
+
+  if (!profile.gmail_sync_enabled) {
+    return NextResponse.json(
+      { data: null, error: { code: 'GMAIL_NOT_ENABLED', message: 'Gmail sync belum diaktifkan' } },
+      { status: 400 }
+    )
+  }
+
+  // ─── 4. GET GOOGLE OAUTH ACCESS TOKEN ─────────────────────
+  // Token disimpan di Supabase Auth internal storage
+  // Kita perlu ambil dari user identities atau session
+  let accessToken: string | null = null
+
+  // Cek di user identities
+  const googleIdentity = user.identities?.find(i => i.provider === 'google')
+  if (googleIdentity?.identity_data?.provider_token) {
+    accessToken = googleIdentity.identity_data.provider_token as string
+  }
+
+  if (!accessToken) {
+    return NextResponse.json(
+      { data: null, error: { code: 'NO_GOOGLE_TOKEN', message: 'Akun Google belum terhubung' } },
+      { status: 400 }
+    )
+  }
+
+  // ─── 5. RUN SYNC ──────────────────────────────────────────
+  try {
+    const result = await syncUserGmail(supabase, user.id, accessToken)
+    return NextResponse.json({ data: result, error: null }, { status: 200 })
+  } catch (error) {
+    const errorId = crypto.randomUUID()
+    console.error('Gmail sync failed', {
+      errorId,
+      userId: user.id,
+      endpoint: '/api/sync/gmail',
+      timestamp: new Date().toISOString(),
+    })
+
+    return NextResponse.json(
+      { data: null, error: { code: 'SYNC_ERROR', message: 'Sync gagal. Coba lagi nanti.' } },
+      { status: 500 }
+    )
+  }
+}
