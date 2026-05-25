@@ -26,6 +26,7 @@ vi.mock('@/lib/gmail/client', () => ({
 
 vi.mock('@/lib/gmail/parsers/index', () => ({
   detectAndParse: (email: unknown) => mockDetectAndParse(email),
+  registerParser: vi.fn(),
 }))
 
 // ─── Supabase mock factory ──────────────────────────────────────────────────────
