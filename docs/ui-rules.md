@@ -9,10 +9,11 @@
 
 | Version | Date | Updated By | Changes |
 |---|---|---|---|
+| v2 | May 25, 2026 | opencode | Sync with ADR-023: semua copy Bahasa Indonesia |
 | v1 | May 24, 2026 | Claude | Initial creation |
 
-**Current Version:** v1
-**Last Updated:** May 24, 2026
+**Current Version:** v2
+**Last Updated:** May 25, 2026
 
 ---
 
@@ -763,15 +764,17 @@ Target user tidak paham finance. Semua copy harus dalam bahasa sehari-hari.
 
 | Istilah Teknis | Ganti Dengan |
 |---|---|
-| Debit | Money Out |
-| Credit | Money In |
-| Transaction | Transaction (boleh, sudah familiar) |
-| Balance | Balance atau Total Money |
-| Category | Category (boleh) |
-| Wallet | Wallet (boleh) |
-| Sync | Sync atau "Auto-update" |
+| Debit | Pengeluaran |
+| Credit | Pemasukan |
+| Transaction | Transaksi |
+| Balance | Saldo |
+| Category | Kategori |
+| Wallet | Dompet |
+| Sync | Sinkronisasi |
+| Expense | Pengeluaran |
+| Income | Pemasukan |
 | Parse | — (tidak pernah ke user) |
-| OAuth | "Connect with Google" |
+| OAuth | "Masuk dengan Google" |
 | Confidence score | — (tidak pernah ke user) |
 
 ### Tone of Voice
@@ -782,12 +785,12 @@ Target user tidak paham finance. Semua copy harus dalam bahasa sehari-hari.
 ✅ Positif — fokus pada solusi, bukan masalah
 
 ❌ Tidak pernah menghakimi pengeluaran user
-   SALAH: "You spent too much on food this month"
-   BENAR: "Food spending is up 35% this month"
+   SALAH: "Kamu kebanyakan jajan bulan ini"
+   BENAR: "Pengeluaran makanan naik 35% bulan ini"
 
 ❌ Tidak pernah panik atau alarm berlebihan
-   SALAH: "WARNING: Budget exceeded!"
-   BENAR: "You've reached your Food budget for this month"
+   SALAH: "AWAS: Budget jebol!"
+   BENAR: "Budget Makanan sudah mencapai batas bulan ini"
 
 ❌ Tidak pernah jargon teknis ke user
 ```
@@ -799,58 +802,58 @@ Target user tidak paham finance. Semua copy harus dalam bahasa sehari-hari.
 ✅ Jelaskan apa yang bisa dilakukan user
 
 SALAH: "500 Internal Server Error"
-BENAR: "Something went wrong. Please try again."
+BENAR: "Terjadi kesalahan. Silakan coba lagi."
 
 SALAH: "Validation failed: amount must be positive integer"
-BENAR: "Please enter a valid amount"
+BENAR: "Masukkan nominal yang valid"
 
 SALAH: "Gmail OAuth token refresh failed"
-BENAR: "We couldn't connect to your Gmail. Please reconnect in Settings."
+BENAR: "Gagal terhubung ke Gmail. Silakan hubungkan ulang di Pengaturan."
 
 SALAH: "Duplicate key constraint violation"
-BENAR: "This transaction has already been recorded"
+BENAR: "Transaksi ini sudah pernah tercatat"
 ```
 
 ### Button Labels
 
 ```
-✅ Action verb + object
-   "Add Transaction"
-   "Save Changes"
-   "Connect Gmail"
-   "Delete Wallet"
-   "Enable Sync"
+✅ Action verb + object dalam Bahasa Indonesia
+   "Tambah Transaksi"
+   "Simpan"
+   "Hubungkan Gmail"
+   "Hapus Dompet"
+   "Aktifkan Sinkronisasi"
 
 ❌ Ambigu atau pasif
    "OK"
    "Submit"
-   "Yes"
-   "Click here"
-   "Continue"  (boleh hanya untuk onboarding flow multi-step)
+   "Ya"
+   "Klik di sini"
+   "Lanjut"  (boleh hanya untuk multi-step flow)
 ```
 
 ### Empty State Copy
 
 ```
-Transactions kosong:
-  Title       : "No transactions yet"
-  Description : "Add your first transaction to start tracking your spending"
-  Action      : "Add Transaction"
+Transaksi kosong:
+  Title       : "Belum ada transaksi"
+  Description : "Catat transaksi pertama kamu untuk mulai melacak pengeluaran"
+  Action      : "Tambah Transaksi"
 
 Budget kosong:
-  Title       : "No budgets set"
-  Description : "Set spending limits to keep your finances on track"
-  Action      : "Create Budget"
+  Title       : "Belum ada budget"
+  Description : "Atur batas pengeluaran biar keuangan lebih terkontrol"
+  Action      : "Buat Budget"
 
-Wallets kosong:
-  Title       : "No wallets added"
-  Description : "Add your bank accounts and e-wallets to get started"
-  Action      : "Add Wallet"
+Dompet kosong:
+  Title       : "Belum ada dompet"
+  Description : "Tambah rekening bank dan e-wallet untuk memulai"
+  Action      : "Tambah Dompet"
 
-Gmail tidak connect:
-  Title       : "Auto-sync not enabled"
-  Description : "Connect Gmail to automatically track your bank transactions"
-  Action      : "Connect Gmail"
+Gmail belum terhubung:
+  Title       : "Sinkronisasi otomatis belum aktif"
+  Description : "Hubungkan Gmail untuk mencatat transaksi bank secara otomatis"
+  Action      : "Hubungkan Gmail"
 ```
 
 ---

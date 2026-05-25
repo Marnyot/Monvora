@@ -8,11 +8,11 @@
 
 | Version | Date | Updated By | Changes |
 |---|---|---|---|
+| v3 | May 25, 2026 | opencode | Fix Next.js version 14→16, sync tech stack |
 | v2 | May 24, 2026 | Claude | Switch npm → pnpm, add light/dark/system theme support, skip monorepo, add document versioning system |
-| v1 | May 24, 2026 | Claude | Initial creation — full project blueprint |
 
-**Current Version:** v2
-**Last Updated:** May 24, 2026
+**Current Version:** v3
+**Last Updated:** May 25, 2026
 
 ---
 
@@ -84,7 +84,7 @@ All UI strings in Bahasa Indonesia for Phase 1–3. i18n infrastructure (next-in
 ### Frontend
 | Technology | Version | Purpose |
 |---|---|---|
-| Next.js | 14 (App Router) | Framework |
+| Next.js | 16 (App Router) | Framework |
 | TypeScript | 5.x | Type safety — mandatory for financial data |
 | Tailwind CSS | 3.x | Styling |
 | shadcn/ui | Latest | Component library |

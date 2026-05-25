@@ -9,10 +9,11 @@
 
 | Version | Date | Updated By | Changes |
 |---|---|---|---|
+| v2 | May 25, 2026 | opencode | Fix status code: Zod validation → 422, not 400 |
 | v1 | May 24, 2026 | Claude | Initial creation |
 
-**Current Version:** v1
-**Last Updated:** May 24, 2026
+**Current Version:** v2
+**Last Updated:** May 25, 2026
 
 ---
 
@@ -321,7 +322,7 @@ gmail_sync_token        : Internal Gmail historyId
 | `UNAUTHORIZED` | 401 | Tidak ada session atau session expired |
 | `FORBIDDEN` | 403 | Ada session tapi tidak punya akses (jarang — gunakan 404) |
 | `NOT_FOUND` | 404 | Resource tidak ada atau tidak milik user ini |
-| `VALIDATION_ERROR` | 400 | Input tidak valid (Zod gagal) |
+| `VALIDATION_ERROR` | 422 | Input tidak valid (Zod gagal) |
 | `RATE_LIMITED` | 429 | Terlalu banyak request |
 | `CONFLICT` | 409 | Duplikat (contoh: email sudah sync) |
 | `INTERNAL_ERROR` | 500 | Error tidak terduga di server |
@@ -341,7 +342,7 @@ Mengembalikan 403 (Forbidden) mengkonfirmasi bahwa resource tersebut ada, hanya 
 | `200 OK` | GET berhasil, PATCH berhasil |
 | `201 Created` | POST berhasil membuat resource baru |
 | `204 No Content` | DELETE berhasil (tidak return body) |
-| `400 Bad Request` | Input tidak valid |
+| `422 Unprocessable Content` | Input tidak valid (Zod gagal) |
 | `401 Unauthorized` | Tidak ada session |
 | `404 Not Found` | Resource tidak ada atau tidak milik user |
 | `409 Conflict` | Duplikat resource |
@@ -353,7 +354,7 @@ Mengembalikan 403 (Forbidden) mengkonfirmasi bahwa resource tersebut ada, hanya 
 ```
 301, 302  → Next.js handle redirect, bukan API
 403       → Gunakan 404 (lihat penjelasan di atas)
-422       → Gunakan 400 dengan details dari Zod
+422       → Dipakai — validation error dengan details dari Zod
 ```
 
 ---
