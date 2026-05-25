@@ -38,14 +38,14 @@ Status          : 🟢 Development — Phase 1
 Current Phase   : Phase 1 — Core Loop
 App Version     : v0.1.0-dev (auth + DB done)
 Last Updated    : May 25, 2026
-Next Milestone  : Onboarding flow + Wallet management
+Next Milestone  : Transaction detail/edit, onboarding flow, deploy to Vercel
 ```
 
 ### Overall Progress
 
 ```
 Documentation   ████████████████████ 100% (10/10 docs selesai)
-Phase 1         ███████░░░░░░░░░░░░░  35% (DB + auth + wallet CRUD done, mulai categories)
+Phase 1         ████████████░░░░░░░░  60% (core loop usable — auth, wallet, transactions, dashboard done)
 Phase 2         ░░░░░░░░░░░░░░░░░░░░   0%
 Phase 3         ░░░░░░░░░░░░░░░░░░░░   0%
 Phase 4         ░░░░░░░░░░░░░░░░░░░░   0%
@@ -153,43 +153,43 @@ Phase 4         ░░░░░░░░░░░░░░░░░░░░   0
 
 | Task | Status | Notes |
 |---|---|---|
-| API: GET /api/categories | ⏳ | Sistem + milik user |
-| API: POST /api/categories | ⏳ | Hanya custom |
-| API: PATCH /api/categories/:id | ⏳ | |
-| API: DELETE /api/categories/:id | ⏳ | |
-| UI: Category list | ⏳ | Icon grid |
+| API: GET /api/categories | ✅ | Sistem + milik user, ordered by is_system DESC |
+| API: POST /api/categories | ✅ | Custom only, user_id dari session |
+| API: PATCH /api/categories/:id | ✅ | Blocks system category edits (403) |
+| API: DELETE /api/categories/:id | ✅ | Blocks system category deletes, soft delete |
+| UI: Category list | ⏳ | Ditampilkan via quick entry icon grid |
 | UI: Add custom category | ⏳ | |
-| **Test: category API** | ⏳ | |
+| **Test: category API** | ✅ | Validation schema tests (5 tests) |
 
 ### Quick Entry (Manual Transaction)
 
 | Task | Status | Notes |
 |---|---|---|
-| API: POST /api/transactions | ⏳ | Dengan Zod validation |
-| UI: FAB button (floating) | ⏳ | Fixed bottom right |
-| UI: Quick entry bottom sheet | ⏳ | Slide dari bawah |
-| UI: Number pad / amount input | ⏳ | inputMode="numeric", autoFocus |
-| UI: Type selector (in/out/transfer) | ⏳ | |
-| UI: Category icon grid | ⏳ | |
-| UI: Payment method selector | ⏳ | |
-| UI: Note input (optional) | ⏳ | |
-| UI: Date picker (default now) | ⏳ | |
-| Optimistic update | ⏳ | Transaksi langsung muncul sebelum server confirm |
+| API: POST /api/transactions | ✅ | Zod validation, ownership check wallet, auto-update balance |
+| UI: FAB button (floating) | ✅ | Fixed bottom right, mobile + desktop positioning |
+| UI: Quick entry bottom sheet | ✅ | 92dvh sheet, smooth slide |
+| UI: Number pad / amount input | ✅ | inputMode="numeric", autoFocus, formatted display |
+| UI: Type selector (in/out/transfer) | ✅ | Tabs: Pengeluaran / Pemasukan / Transfer |
+| UI: Category icon grid | ✅ | Pill buttons dengan color filter per type |
+| UI: Payment method selector | ✅ | Select dropdown, bahasa Indonesia |
+| UI: Note input (optional) | ✅ | Description field |
+| UI: Date picker (default now) | ✅ | datetime-local input, default = now |
+| Optimistic update | ⏳ | router.refresh() setelah save (bukan optimistic) |
 | **Test: quick entry < 10 detik** | ⏳ | E2E timer test |
-| **Test: form validation** | ⏳ | Amount 0, tanpa kategori |
+| **Test: form validation** | ✅ | 12 validation schema tests |
 
 ### Transaction List
 
 | Task | Status | Notes |
 |---|---|---|
-| API: GET /api/transactions | ⏳ | Dengan pagination + filter |
-| UI: Transaction list page | ⏳ | |
-| UI: Transaction card component | ⏳ | |
-| UI: Filter bar | ⏳ | Type, kategori, tanggal |
-| UI: Search input | ⏳ | Merchant + description |
+| API: GET /api/transactions | ✅ | Pagination, filter type/category/wallet/date/q, ownership enforced |
+| UI: Transaction list page | ✅ | `/transactions` — Suspense + TransactionCard |
+| UI: Transaction card component | ✅ | Category color, merchant/desc/category label, amount, date + wallet |
+| UI: Filter bar | ⏳ | |
+| UI: Search input | ⏳ | |
 | UI: Pagination | ⏳ | |
-| UI: Empty state | ⏳ | |
-| UI: Skeleton loader | ⏳ | |
+| UI: Empty state | ✅ | Via EmptyState component |
+| UI: Skeleton loader | ✅ | Via SkeletonList in Suspense fallback |
 | **Test: filter + search** | ⏳ | |
 
 ### Transaction Detail & Edit
@@ -208,11 +208,11 @@ Phase 4         ░░░░░░░░░░░░░░░░░░░░   0
 
 | Task | Status | Notes |
 |---|---|---|
-| API: GET /api/analytics (basic) | ⏳ | Hanya summary bulan ini |
-| UI: Balance card | ⏳ | Total semua wallet |
-| UI: Cashflow summary | ⏳ | Income vs expense bulan ini |
-| UI: Recent transactions | ⏳ | 10 terakhir |
-| UI: Empty state (user baru) | ⏳ | |
+| API: GET /api/analytics (basic) | ⏳ | Computed inline di dashboard page |
+| UI: Balance card | ✅ | Total semua wallet, primary color card |
+| UI: Cashflow summary | ✅ | Income (hijau) vs expense (merah) bulan ini |
+| UI: Recent transactions | ✅ | 10 terakhir dengan TransactionCard |
+| UI: Empty state (user baru) | ✅ | Via EmptyState component |
 | UI: Skeleton loader | ⏳ | |
 | **Test: dashboard render** | ⏳ | |
 
