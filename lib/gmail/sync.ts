@@ -9,6 +9,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database'
 import { fetchNewEmails, isBankEmail, GmailTokenExpiredError } from '@/lib/gmail/client'
 import { detectAndParse } from '@/lib/gmail/parsers/index'
+import { categorizeTransaction } from '@/lib/ai/categorize'
 
 // Register all bank parsers via side effects
 import '@/lib/gmail/parsers/mandiri'
@@ -17,15 +18,6 @@ import '@/lib/gmail/parsers/bni'
 import '@/lib/gmail/parsers/bri'
 import '@/lib/gmail/parsers/cimb'
 import '@/lib/gmail/parsers/generic'
-
-// ─── Temporary stub — akan diimplementasi di Task 12 ──────────────────────────
-
-async function categorizeTransaction(
-  _merchant: string | null,
-  _description: string | null
-): Promise<string | null> {
-  return null // AI categorization belum tersedia
-}
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -147,8 +139,13 @@ export async function syncUserGmail(
         continue
       }
 
-      // 4d. Categorize (stub saat ini)
-      const categoryRaw = await categorizeTransaction(tx.merchant_name, tx.description)
+      // 4d. Categorize via AI pipeline (rules → gemini → fallback)
+      const categoryResult = await categorizeTransaction(
+        tx.merchant_name,
+        tx.description,
+        tx.amount,
+        tx.payment_method ?? 'unknown'
+      )
 
       // 4e. Ambil default wallet user (diambil dari wallets dengan is_active = true)
       const { data: wallet } = await supabase
@@ -182,8 +179,8 @@ export async function syncUserGmail(
           reference_number: tx.reference_number,
           raw_email_id: tx.raw_email_id,
           raw_email_snippet: tx.raw_snippet,
-          ai_category_raw: categoryRaw,
-          ai_category_confidence: categoryRaw ? tx.confidence : null,
+          ai_category_raw: categoryResult.category,
+          ai_category_confidence: categoryResult.category ? categoryResult.confidence : null,
           is_verified: false,
         })
 
