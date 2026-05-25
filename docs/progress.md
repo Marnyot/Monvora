@@ -9,10 +9,12 @@
 
 | Version | Date | Updated By | Changes |
 |---|---|---|---|
+| v3 | May 25, 2026 | Claude | Transaction detail/edit/delete UI, desktop sidebar, toast notifications, TransactionCard links — Phase 1 ~85% |
+| v2 | May 25, 2026 | Claude | Decisions Log dipindahkan ke decisions.md, section 7 jadi ADR index |
 | v1 | May 24, 2026 | Claude | Initial creation — project kickoff |
 
-**Current Version:** v1
-**Last Updated:** May 24, 2026
+**Current Version:** v3
+**Last Updated:** May 25, 2026
 
 ---
 
@@ -36,16 +38,16 @@
 ```
 Status          : 🟢 Development — Phase 1
 Current Phase   : Phase 1 — Core Loop
-App Version     : v0.1.0-dev (auth + DB done)
+App Version     : v0.1.0-dev
 Last Updated    : May 25, 2026
-Next Milestone  : Transaction detail/edit, onboarding flow, deploy to Vercel
+Next Milestone  : Filter/search UI, deploy to Vercel
 ```
 
 ### Overall Progress
 
 ```
 Documentation   ████████████████████ 100% (10/10 docs selesai)
-Phase 1         ████████████░░░░░░░░  60% (core loop usable — auth, wallet, transactions, dashboard done)
+Phase 1         █████████████████░░░  85% (transaction detail+edit, sidebar, toast done)
 Phase 2         ░░░░░░░░░░░░░░░░░░░░   0%
 Phase 3         ░░░░░░░░░░░░░░░░░░░░   0%
 Phase 4         ░░░░░░░░░░░░░░░░░░░░   0%
@@ -196,12 +198,12 @@ Phase 4         ░░░░░░░░░░░░░░░░░░░░   0
 
 | Task | Status | Notes |
 |---|---|---|
-| API: GET /api/transactions/:id | ⏳ | |
-| API: PATCH /api/transactions/:id | ⏳ | |
-| API: DELETE /api/transactions/:id (soft) | ⏳ | |
-| UI: Transaction detail page | ⏳ | |
-| UI: Edit form | ⏳ | |
-| UI: Delete dengan konfirmasi | ⏳ | |
+| API: GET /api/transactions/:id | ✅ | Auth-gated, ownership enforced, wallet+category join |
+| API: PATCH /api/transactions/:id | ✅ | Zod validation, ownership check, wallet balance sync |
+| API: DELETE /api/transactions/:id (soft) | ✅ | Soft delete, balance reversal |
+| UI: Transaction detail page | ✅ | `app/(dashboard)/transactions/[id]/page.tsx` — Server Component |
+| UI: Edit form | ✅ | `TransactionEditSheet` — bottom sheet, pre-filled |
+| UI: Delete dengan konfirmasi | ✅ | ConfirmDialog → DELETE → redirect /transactions |
 | **Test: ownership verification** | ⏳ | User A tidak bisa edit transaksi User B |
 
 ### Dashboard
@@ -223,14 +225,14 @@ Phase 4         ░░░░░░░░░░░░░░░░░░░░   0
 | Setup next-themes ThemeProvider | ✅ | `components/providers.tsx`, lang="id", suppressHydrationWarning |
 | Configure Tailwind dark mode | ✅ | darkMode: ["class"], font-sans → Geist via CSS var |
 | Theme toggle component | ✅ | `components/shared/theme-toggle.tsx` — dropdown Light/Dark/System |
-| Bottom navigation (mobile) | ⏳ | |
-| Sidebar navigation (desktop) | ⏳ | |
+| Bottom navigation (mobile) | ✅ | `components/dashboard/bottom-nav.tsx` — md:hidden |
+| Sidebar navigation (desktop) | ✅ | `components/shared/nav-sidebar.tsx` — hidden md:flex |
 | AmountDisplay component | ✅ | Hijau income / merah expense / neutral transfer, prefix ±− |
 | CurrencyDisplay component | ✅ | Wraps formatIDR, tabular-nums |
 | EmptyState component | ✅ | Icon + title + desc + optional action button |
 | SkeletonCard component | ✅ | SkeletonCard + SkeletonList helper |
 | ConfirmDialog component | ✅ | Dialog wrapper, destructive variant, isPending state |
-| Toast notifications (Sonner) | ⏳ | |
+| Toast notifications (Sonner) | ✅ | Wired di providers.tsx, dipakai di quick-entry + wallet-form + transaction detail |
 | **Test: light + dark mode** | ⏳ | Visual check semua halaman |
 
 ### Phase 1 Completion Criteria
@@ -444,25 +446,38 @@ Phase 4         ░░░░░░░░░░░░░░░░░░░░   0
 
 ## 7. DECISIONS LOG
 
-Keputusan yang sudah dibuat dan tidak perlu didiskusikan ulang.
-Untuk keputusan product, lihat juga `product.md` section 11.
+> ⚠️ **Keputusan sekarang dicatat di `decisions.md` dalam format ADR (Architectural Decision Record).**
+> Tabel di bawah adalah legacy log dari sebelum `decisions.md` dibuat — tidak perlu diupdate lagi.
+> **Untuk keputusan baru: tambahkan ke `decisions.md`**, bukan di sini.
 
-| # | Tanggal | Keputusan | Alasan |
-|---|---|---|---|
-| D01 | May 24, 2026 | pnpm sebagai package manager | Faster, stricter dependency resolution |
-| D02 | May 24, 2026 | Skip monorepo untuk MVP | Overhead tidak sebanding untuk solo dev pemula |
-| D03 | May 24, 2026 | next-themes untuk theme system | Handles system preference + no flash |
-| D04 | May 24, 2026 | Opsi B untuk agents (system prompt Claude) | Realistis untuk solo dev, bukan automated agents |
-| D05 | May 24, 2026 | 6 agents: Planner, Frontend, Backend, Reviewer, Security, QA | Cukup tanpa overkill |
-| D06 | May 24, 2026 | Superpowers via Claude Code plugin | Framework skills terbaik untuk Claude Code |
-| D07 | May 24, 2026 | Monvora gratis dulu, iklan post-public release | Butuh user base dulu sebelum monetisasi |
-| D08 | May 24, 2026 | Format angka: Rp 1.500.000 (titik) | Standar Indonesia |
-| D09 | May 24, 2026 | AI insights dalam Bahasa Indonesia | Lebih relatable untuk target user |
-| D10 | May 24, 2026 | Tidak ada onboarding tutorial | Empty states yang informatif sudah cukup |
-| D11 | May 24, 2026 | Universal bank parser via registry pattern | Mudah tambah bank baru tanpa ubah core logic |
-| D12 | May 24, 2026 | Soft delete untuk semua data finansial | Data tidak boleh hilang permanen |
-| D13 | May 24, 2026 | Amount stored as INTEGER IDR | Tidak ada floating point untuk uang |
-| D14 | May 24, 2026 | 404 bukan 403 untuk data user lain | Tidak mengkonfirmasi eksistensi data ke attacker |
+### ADR Index (Ringkasan)
+
+| ADR | Keputusan | Status |
+|---|---|---|
+| ADR-001 | Next.js App Router sebagai framework | ✅ Active |
+| ADR-002 | Supabase sebagai BaaS | ✅ Active |
+| ADR-003 | Inngest sebagai background job runner | ✅ Active |
+| ADR-004 | Skip monorepo untuk MVP | ✅ Active |
+| ADR-005 | RLS sebagai primary authorization layer | ✅ Active |
+| ADR-006 | 404 bukan 403 untuk data user lain | ✅ Active |
+| ADR-007 | Gmail scope minimal (gmail.readonly) | ✅ Active |
+| ADR-008 | Sentry di Phase 2, bukan Phase 1 | ✅ Active |
+| ADR-009 | Supabase automated backup (tidak custom) | ✅ Active |
+| ADR-010 | Amount sebagai INTEGER IDR | ✅ Active |
+| ADR-011 | Soft delete untuk semua data finansial | ✅ Active |
+| ADR-012 | UUID untuk primary key | ✅ Active |
+| ADR-013 | Missing indexes di migration 003 | ✅ Active |
+| ADR-014 | Monvora gratis, monetisasi post-public | ✅ Active |
+| ADR-015 | Tidak ada onboarding tutorial | ✅ Active |
+| ADR-016 | AI insights dalam Bahasa Indonesia | ✅ Active |
+| ADR-017 | Format angka Rp 1.500.000 (titik) | ✅ Active |
+| ADR-018 | Test-Driven Development | ✅ Active |
+| ADR-019 | Documentation-first development | ✅ Active |
+| ADR-020 | pnpm sebagai package manager | ✅ Active |
+| ADR-021 | Dependabot + pnpm audit | ✅ Active |
+| ADR-022 | Gemini API untuk AI categorization | ✅ Active |
+
+Lihat `decisions.md` untuk detail konteks, alternatif, dan review trigger setiap keputusan.
 
 ---
 
@@ -530,9 +545,10 @@ Setelah selesai 1 task:
 4. Update "Last Updated" di header
 
 Setelah ada keputusan baru:
-1. Tambah ke Decisions Log (section 7)
-2. Update dokumen yang relevan (master.md, product.md, dll)
-3. Bump version dokumen yang diupdate
+1. Tambahkan ADR baru ke `decisions.md` (format ADR-XXX)
+2. Tambahkan ke tabel ADR Index di section 7 progress.md
+3. Update dokumen yang terdampak (security.md, master.md, dll)
+4. Bump version dokumen yang diupdate
 
 Jika ada blocker:
 1. Tambah ke Active Blockers (section 8)

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import {
   Sheet,
   SheetContent,
@@ -100,10 +101,12 @@ export function WalletForm({ open, onOpenChange, wallet }: WalletFormProps) {
       const json = await res.json()
 
       if (!res.ok || json.error) {
+        toast.error(json.error?.message ?? 'Terjadi kesalahan, coba lagi')
         setServerError(json.error?.message ?? 'Terjadi kesalahan, coba lagi')
         return
       }
 
+      toast.success(isEdit ? 'Wallet berhasil diupdate' : 'Wallet berhasil ditambahkan')
       onOpenChange(false)
       router.refresh()
     })

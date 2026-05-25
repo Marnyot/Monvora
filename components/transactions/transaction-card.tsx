@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { AmountDisplay } from '@/components/shared/amount-display'
 import { formatDate } from '@/lib/utils/date'
 
@@ -34,7 +35,7 @@ export function TransactionCard({ transaction }: TransactionCardProps) {
   const label = merchant_name || description || category?.name || 'Transaksi'
 
   return (
-    <div className="flex items-center gap-3 py-3 px-4 hover:bg-accent/40 transition-colors rounded-lg">
+    <Link href={`/transactions/${transaction.id}`} className="flex items-center gap-3 py-3 px-4 hover:bg-accent/40 transition-colors rounded-lg block">
       {/* Category color dot */}
       <div
         className="h-9 w-9 rounded-full flex items-center justify-center shrink-0 text-sm"
@@ -65,6 +66,6 @@ export function TransactionCard({ transaction }: TransactionCardProps) {
         type={type as 'expense' | 'income' | 'transfer'}
         className="text-sm"
       />
-    </div>
+    </Link>
   )
 }

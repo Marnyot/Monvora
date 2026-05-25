@@ -2,6 +2,7 @@
 
 import { useState, useTransition, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import {
   Sheet,
   SheetContent,
@@ -112,6 +113,7 @@ export function QuickEntry({ open, onOpenChange, wallets, categories }: QuickEnt
 
       const json = await res.json()
       if (!res.ok || json.error) {
+        toast.error(json.error?.message ?? 'Terjadi kesalahan')
         setServerError(json.error?.message ?? 'Terjadi kesalahan')
         return
       }
@@ -124,6 +126,7 @@ export function QuickEntry({ open, onOpenChange, wallets, categories }: QuickEnt
       setPaymentMethod('')
       setTransactedAt(new Date().toISOString().slice(0, 16))
 
+      toast.success('Transaksi berhasil disimpan')
       onOpenChange(false)
       router.refresh()
     })
