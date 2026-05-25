@@ -10,6 +10,14 @@ import type { Database } from '@/types/database'
 import { fetchNewEmails, isBankEmail, GmailTokenExpiredError } from '@/lib/gmail/client'
 import { detectAndParse } from '@/lib/gmail/parsers/index'
 
+// Register all bank parsers via side effects
+import '@/lib/gmail/parsers/mandiri'
+import '@/lib/gmail/parsers/bca'
+import '@/lib/gmail/parsers/bni'
+import '@/lib/gmail/parsers/bri'
+import '@/lib/gmail/parsers/cimb'
+import '@/lib/gmail/parsers/generic'
+
 // ─── Temporary stub — akan diimplementasi di Task 12 ──────────────────────────
 
 async function categorizeTransaction(
