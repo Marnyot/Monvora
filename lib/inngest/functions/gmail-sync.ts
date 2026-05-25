@@ -49,7 +49,6 @@ export const gmailSyncFunction = inngest.createFunction(
       .from('profiles')
       .select('id')
       .eq('gmail_sync_enabled', true)
-      .is('deleted_at', null)
 
     if (profilesError) {
       logger.error('Failed to fetch active profiles', { error: profilesError.message })

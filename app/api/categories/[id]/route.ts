@@ -38,7 +38,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   }
 
   if (existing.is_system) {
-    return NextResponse.json({ data: null, error: { code: 'FORBIDDEN', message: 'Kategori sistem tidak bisa diubah' } }, { status: 403 })
+    return NextResponse.json({ data: null, error: { code: 'NOT_FOUND', message: 'Kategori tidak ditemukan' } }, { status: 404 })
   }
 
   const body = await request.json().catch(() => null)
@@ -102,7 +102,7 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
   }
 
   if (existing.is_system) {
-    return NextResponse.json({ data: null, error: { code: 'FORBIDDEN', message: 'Kategori sistem tidak bisa dihapus' } }, { status: 403 })
+    return NextResponse.json({ data: null, error: { code: 'NOT_FOUND', message: 'Kategori tidak ditemukan' } }, { status: 404 })
   }
 
   const { error } = await supabase

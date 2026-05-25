@@ -94,11 +94,10 @@ describe('gmailSyncFunction — Inngest Cron Job', () => {
   it('should process users that have gmail_sync_enabled = true via step.run', async () => {
     const mockUserId = 'user-abc-123'
 
-    // Mock profiles query
+    // Mock profiles query (no .is() — profiles table has no deleted_at)
     const profilesChain = {
       select: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      is: vi.fn().mockResolvedValue({
+      eq: vi.fn().mockResolvedValue({
         data: [{ id: mockUserId }],
         error: null,
       }),
@@ -164,8 +163,7 @@ describe('gmailSyncFunction — Inngest Cron Job', () => {
   it('should return empty summary when no users have gmail_sync_enabled', async () => {
     const profilesChain = {
       select: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      is: vi.fn().mockResolvedValue({ data: [], error: null }),
+      eq: vi.fn().mockResolvedValue({ data: [], error: null }),
     }
     mockFrom.mockReturnValue(profilesChain)
 
