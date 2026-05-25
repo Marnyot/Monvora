@@ -29,27 +29,29 @@ Sebelum mengerjakan task apapun, Claude wajib membaca dokumen yang relevan. Urut
 | Sedang mengerjakan... | Baca dokumen ini |
 |---|---|
 | Fitur baru (apapun) | `master.md` → `architecture.md` |
+| Keputusan arsitektur | `decisions.md` |
 | UI / komponen | `ui-rules.md` |
 | API route | `api-conventions.md` → `security.md` |
 | Database / schema | `architecture.md` → `security.md` |
 | Gmail sync / parsing | `architecture.md` → `security.md` |
 | Auth / session | `security.md` |
 | Test | `tdd.md` |
-| Keputusan product | `product.md` |
+| Keputusan product | `decisions.md` → `product.md` |
 | Alur kerja sistem | `workflow.md` |
 
 ### Dokumen Referensi Lengkap
 
 ```
 master.md          → Tech stack, database schema, phase plan, environment vars
-product.md         → Vision, personas, feature list, decisions log
+product.md         → Vision, personas, feature list
+decisions.md       → Semua keputusan arsitektur, security, product, tooling (ADR format)
 workflow.md        → Development workflow, system flow, user flow
 architecture.md    → Layer breakdown, data flow, folder structure
-security.md        → Threat model, auth rules, RLS, API security
+security.md        → Threat model, auth rules, RLS, API security, backup, dependency security
 api-conventions.md → URL structure, request/response format, semua routes
 ui-rules.md        → Design tokens, component rules, accessibility, copy
 tdd.md             → Testing philosophy, tools, RED-GREEN-REFACTOR cycle
-progress.md        → Status per task, blockers, decisions, lessons learned
+progress.md        → Status per task, blockers, lessons learned
 CLAUDE.md          → File ini — entry point
 ```
 
@@ -298,10 +300,11 @@ Urutan prioritas saat ada konflik atau ketidakjelasan:
 
 ```
 1. security.md       → keamanan selalu menang
-2. progress.md       → lihat keputusan yang sudah dibuat
-3. product.md        → decisions log untuk keputusan product
-4. master.md         → source of truth teknis
-5. Tanya developer   → jangan assume jika tidak yakin
+2. decisions.md      → lihat keputusan yang sudah dibuat dan alasannya
+3. progress.md       → lihat status dan blocker terkini
+4. product.md        → visi dan scope product
+5. master.md         → source of truth teknis
+6. Tanya developer   → jangan assume jika tidak yakin
 ```
 
 ---

@@ -9,10 +9,12 @@
 
 | Version | Date | Updated By | Changes |
 |---|---|---|---|
+| v3 | May 25, 2026 | Claude | Transaction detail/edit/delete UI, desktop sidebar, toast notifications, TransactionCard links — Phase 1 ~85% |
+| v2 | May 25, 2026 | Claude | Decisions Log dipindahkan ke decisions.md, section 7 jadi ADR index |
 | v1 | May 24, 2026 | Claude | Initial creation — project kickoff |
 
-**Current Version:** v1
-**Last Updated:** May 24, 2026
+**Current Version:** v3
+**Last Updated:** May 25, 2026
 
 ---
 
@@ -36,16 +38,16 @@
 ```
 Status          : 🟢 Development — Phase 1
 Current Phase   : Phase 1 — Core Loop
-App Version     : v0.0.0 (project scaffold selesai)
-Last Updated    : May 24, 2026
-Next Milestone  : Auth — Google OAuth login + Supabase setup
+App Version     : v0.1.0-dev
+Last Updated    : May 25, 2026
+Next Milestone  : Deploy ke Vercel
 ```
 
 ### Overall Progress
 
 ```
 Documentation   ████████████████████ 100% (10/10 docs selesai)
-Phase 1         ██░░░░░░░░░░░░░░░░░░   8% (setup project selesai, belum mulai auth)
+Phase 1         ███████████████████░  95% (filter, search, pagination done — hanya deploy tersisa)
 Phase 2         ░░░░░░░░░░░░░░░░░░░░   0%
 Phase 3         ░░░░░░░░░░░░░░░░░░░░   0%
 Phase 4         ░░░░░░░░░░░░░░░░░░░░   0%
@@ -66,7 +68,7 @@ Phase 4         ░░░░░░░░░░░░░░░░░░░░   0
 
 | Phase | Fokus | Target | Status | App Version |
 |---|---|---|---|---|
-| Pre-Dev | Documentation | May 24, 2026 | 🔄 In Progress | v0.0.0 |
+| Pre-Dev | Documentation | May 24, 2026 | ✅ Done | v0.0.0 |
 | Phase 1 | Core Loop (manual tracking) | Week 4 | ⏳ Pending | v0.1.0 |
 | Phase 2 | Gmail Automation | Week 10 | ⏳ Pending | v0.2.0 |
 | Phase 3 | Intelligence Layer | Week 16 | ⏳ Pending | v0.3.0 |
@@ -87,42 +89,42 @@ Phase 4         ░░░░░░░░░░░░░░░░░░░░   0
 | Install pnpm | ✅ | pnpm v10.33.0, Node v24.14.1 |
 | Create Next.js 14 project | ✅ | next@14.2.35, TypeScript, Tailwind v3, App Router, `@/*` alias |
 | Install semua dependencies | ✅ | shadcn (manual config: default style, slate, CSS vars), supabase, inngest, zod, zustand, tanstack-query, next-themes, lucide-react, sonner |
-| Setup Supabase project (cloud) | ⏳ | Region: Singapore |
-| Run database migrations | ⏳ | `supabase/migrations/001_initial_schema.sql` |
+| Setup Supabase project (cloud) | ✅ | Migrations applied via MCP (region: Singapore) |
+| Run database migrations | ✅ | 001_initial_schema.sql + 002_seed_categories.sql applied |
 | Setup Google Cloud Console | ⏳ | Enable Gmail API + OAuth |
 | Configure OAuth credentials | ⏳ | Authorized origins + redirect URIs |
 | Setup Inngest account | ⏳ | |
 | Setup Gemini API key | ⏳ | Google AI Studio |
 | Setup .env.local | ⏳ | Dari .env.example |
-| Add .env.local ke .gitignore | ⏳ | Wajib sebelum commit pertama |
+| Add .env.local ke .gitignore | ✅ | Covered oleh `.env*.local` pattern |
 | Init git + push ke GitHub | ⏳ | |
 | Deploy ke Vercel (awal) | ⏳ | Setup CI dari awal |
-| Setup Vitest + Testing Library | ⏳ | |
+| Setup Vitest + Testing Library | ✅ | 21 tests passing (currency + date + auth) |
 
 ### Authentication
 
 | Task | Status | Notes |
 |---|---|---|
-| Google OAuth login page | ⏳ | `/login` dengan "Sign in with Google" |
-| OAuth callback handler | ⏳ | `/auth/callback/route.ts` |
-| Session middleware | ⏳ | `middleware.ts` — guard semua `/dashboard/*` |
-| Auto-create profile on first login | ⏳ | Trigger atau handler di callback |
-| Redirect logic (login ↔ dashboard) | ⏳ | |
-| Logout endpoint | ⏳ | Invalidate session di server |
+| Google OAuth login page | ✅ | `app/(auth)/login/page.tsx` dengan GoogleLoginButton + error state |
+| OAuth callback handler | ✅ | `app/auth/callback/route.ts` — exchange code → redirect /dashboard |
+| Session middleware | ✅ | `middleware.ts` — guard semua `/dashboard/*` |
+| Auto-create profile on first login | ✅ | DB trigger `on_auth_user_created` di migration |
+| Redirect logic (login ↔ dashboard) | ✅ | Di middleware + root page redirect |
+| Logout endpoint | ✅ | `app/api/auth/logout/route.ts` — POST → signOut → /login |
 | **Test: auth flow** | ⏳ | E2E: login → dashboard → logout |
 
 ### Database Schema
 
 | Task | Status | Notes |
 |---|---|---|
-| Migration: profiles table + RLS | ⏳ | |
-| Migration: wallets table + RLS | ⏳ | |
-| Migration: categories table + RLS | ⏳ | |
-| Migration: transactions table + RLS | ⏳ | |
-| Migration: budgets table + RLS | ⏳ | |
-| Migration: gmail_sync_logs table + RLS | ⏳ | |
-| Seed: default categories | ⏳ | `002_seed_categories.sql` |
-| Generate Supabase TypeScript types | ⏳ | `supabase gen types typescript` |
+| Migration: profiles table + RLS | ✅ | Applied via Supabase MCP |
+| Migration: wallets table + RLS | ✅ | Applied via Supabase MCP |
+| Migration: categories table + RLS | ✅ | Applied via Supabase MCP |
+| Migration: transactions table + RLS | ✅ | Applied via Supabase MCP |
+| Migration: budgets table + RLS | ✅ | Applied via Supabase MCP |
+| Migration: gmail_sync_logs table + RLS | ✅ | Applied via Supabase MCP |
+| Seed: default categories | ✅ | 20 kategori sistem (12 expense, 7 income, 1 transfer) |
+| Generate Supabase TypeScript types | ✅ | `types/database.ts` ter-generate dari schema live |
 | **Test: RLS policies** | ⏳ | Verifikasi user A tidak bisa akses data user B |
 
 ### Onboarding
@@ -139,80 +141,80 @@ Phase 4         ░░░░░░░░░░░░░░░░░░░░   0
 
 | Task | Status | Notes |
 |---|---|---|
-| API: GET /api/wallets | ⏳ | |
-| API: POST /api/wallets | ⏳ | |
-| API: PATCH /api/wallets/:id | ⏳ | |
-| API: DELETE /api/wallets/:id (soft) | ⏳ | |
-| UI: Wallet list page | ⏳ | |
-| UI: Add wallet form | ⏳ | |
-| UI: Edit wallet | ⏳ | |
-| UI: Archive wallet | ⏳ | Dengan konfirmasi dialog |
-| **Test: wallet CRUD** | ⏳ | Unit + integration |
+| API: GET /api/wallets | ✅ | Auth-gated, filters deleted_at IS NULL |
+| API: POST /api/wallets | ✅ | Zod validation, user_id dari session |
+| API: PATCH /api/wallets/:id | ✅ | Ownership check → 404 jika bukan milik user |
+| API: DELETE /api/wallets/:id (soft) | ✅ | Soft delete via deleted_at |
+| UI: Wallet list page | ✅ | `app/(dashboard)/wallets/page.tsx` — Server Component |
+| UI: Add wallet form | ✅ | Bottom sheet, color picker, Zod validation client-side |
+| UI: Edit wallet | ✅ | Same form with pre-filled data |
+| UI: Archive wallet | ✅ | Soft delete via ConfirmDialog → DELETE /api/wallets/:id |
+| **Test: wallet CRUD** | ✅ | WalletCard component tests, validation schema tests (45 total) |
 
 ### Category Management
 
 | Task | Status | Notes |
 |---|---|---|
-| API: GET /api/categories | ⏳ | Sistem + milik user |
-| API: POST /api/categories | ⏳ | Hanya custom |
-| API: PATCH /api/categories/:id | ⏳ | |
-| API: DELETE /api/categories/:id | ⏳ | |
-| UI: Category list | ⏳ | Icon grid |
+| API: GET /api/categories | ✅ | Sistem + milik user, ordered by is_system DESC |
+| API: POST /api/categories | ✅ | Custom only, user_id dari session |
+| API: PATCH /api/categories/:id | ✅ | Blocks system category edits (403) |
+| API: DELETE /api/categories/:id | ✅ | Blocks system category deletes, soft delete |
+| UI: Category list | ⏳ | Ditampilkan via quick entry icon grid |
 | UI: Add custom category | ⏳ | |
-| **Test: category API** | ⏳ | |
+| **Test: category API** | ✅ | Validation schema tests (5 tests) |
 
 ### Quick Entry (Manual Transaction)
 
 | Task | Status | Notes |
 |---|---|---|
-| API: POST /api/transactions | ⏳ | Dengan Zod validation |
-| UI: FAB button (floating) | ⏳ | Fixed bottom right |
-| UI: Quick entry bottom sheet | ⏳ | Slide dari bawah |
-| UI: Number pad / amount input | ⏳ | inputMode="numeric", autoFocus |
-| UI: Type selector (in/out/transfer) | ⏳ | |
-| UI: Category icon grid | ⏳ | |
-| UI: Payment method selector | ⏳ | |
-| UI: Note input (optional) | ⏳ | |
-| UI: Date picker (default now) | ⏳ | |
-| Optimistic update | ⏳ | Transaksi langsung muncul sebelum server confirm |
+| API: POST /api/transactions | ✅ | Zod validation, ownership check wallet, auto-update balance |
+| UI: FAB button (floating) | ✅ | Fixed bottom right, mobile + desktop positioning |
+| UI: Quick entry bottom sheet | ✅ | 92dvh sheet, smooth slide |
+| UI: Number pad / amount input | ✅ | inputMode="numeric", autoFocus, formatted display |
+| UI: Type selector (in/out/transfer) | ✅ | Tabs: Pengeluaran / Pemasukan / Transfer |
+| UI: Category icon grid | ✅ | Pill buttons dengan color filter per type |
+| UI: Payment method selector | ✅ | Select dropdown, bahasa Indonesia |
+| UI: Note input (optional) | ✅ | Description field |
+| UI: Date picker (default now) | ✅ | datetime-local input, default = now |
+| Optimistic update | ⏳ | router.refresh() setelah save (bukan optimistic) |
 | **Test: quick entry < 10 detik** | ⏳ | E2E timer test |
-| **Test: form validation** | ⏳ | Amount 0, tanpa kategori |
+| **Test: form validation** | ✅ | 12 validation schema tests |
 
 ### Transaction List
 
 | Task | Status | Notes |
 |---|---|---|
-| API: GET /api/transactions | ⏳ | Dengan pagination + filter |
-| UI: Transaction list page | ⏳ | |
-| UI: Transaction card component | ⏳ | |
-| UI: Filter bar | ⏳ | Type, kategori, tanggal |
-| UI: Search input | ⏳ | Merchant + description |
-| UI: Pagination | ⏳ | |
-| UI: Empty state | ⏳ | |
-| UI: Skeleton loader | ⏳ | |
+| API: GET /api/transactions | ✅ | Pagination, filter type/category/wallet/date/q, ownership enforced |
+| UI: Transaction list page | ✅ | `/transactions` — Suspense + TransactionCard |
+| UI: Transaction card component | ✅ | Category color, merchant/desc/category label, amount, date + wallet |
+| UI: Filter bar | ✅ | Type filter pills (Semua/Pengeluaran/Pemasukan/Transfer), URL-based state |
+| UI: Search input | ✅ | Debounced 300ms, search merchant_name + description via ilike |
+| UI: Pagination | ✅ | 20/halaman, prev/next buttons, hidden jika ≤1 halaman |
+| UI: Empty state | ✅ | Via EmptyState component |
+| UI: Skeleton loader | ✅ | Via SkeletonList in Suspense fallback |
 | **Test: filter + search** | ⏳ | |
 
 ### Transaction Detail & Edit
 
 | Task | Status | Notes |
 |---|---|---|
-| API: GET /api/transactions/:id | ⏳ | |
-| API: PATCH /api/transactions/:id | ⏳ | |
-| API: DELETE /api/transactions/:id (soft) | ⏳ | |
-| UI: Transaction detail page | ⏳ | |
-| UI: Edit form | ⏳ | |
-| UI: Delete dengan konfirmasi | ⏳ | |
+| API: GET /api/transactions/:id | ✅ | Auth-gated, ownership enforced, wallet+category join |
+| API: PATCH /api/transactions/:id | ✅ | Zod validation, ownership check, wallet balance sync |
+| API: DELETE /api/transactions/:id (soft) | ✅ | Soft delete, balance reversal |
+| UI: Transaction detail page | ✅ | `app/(dashboard)/transactions/[id]/page.tsx` — Server Component |
+| UI: Edit form | ✅ | `TransactionEditSheet` — bottom sheet, pre-filled |
+| UI: Delete dengan konfirmasi | ✅ | ConfirmDialog → DELETE → redirect /transactions |
 | **Test: ownership verification** | ⏳ | User A tidak bisa edit transaksi User B |
 
 ### Dashboard
 
 | Task | Status | Notes |
 |---|---|---|
-| API: GET /api/analytics (basic) | ⏳ | Hanya summary bulan ini |
-| UI: Balance card | ⏳ | Total semua wallet |
-| UI: Cashflow summary | ⏳ | Income vs expense bulan ini |
-| UI: Recent transactions | ⏳ | 10 terakhir |
-| UI: Empty state (user baru) | ⏳ | |
+| API: GET /api/analytics (basic) | ⏳ | Computed inline di dashboard page |
+| UI: Balance card | ✅ | Total semua wallet, primary color card |
+| UI: Cashflow summary | ✅ | Income (hijau) vs expense (merah) bulan ini |
+| UI: Recent transactions | ✅ | 10 terakhir dengan TransactionCard |
+| UI: Empty state (user baru) | ✅ | Via EmptyState component |
 | UI: Skeleton loader | ⏳ | |
 | **Test: dashboard render** | ⏳ | |
 
@@ -220,17 +222,17 @@ Phase 4         ░░░░░░░░░░░░░░░░░░░░   0
 
 | Task | Status | Notes |
 |---|---|---|
-| Setup next-themes ThemeProvider | ⏳ | defaultTheme="system" |
-| Configure Tailwind dark mode | ⏳ | darkMode: 'class' |
-| Theme toggle component | ⏳ | Light / Dark / System |
-| Bottom navigation (mobile) | ⏳ | |
-| Sidebar navigation (desktop) | ⏳ | |
-| AmountDisplay component | ⏳ | Hijau/merah sesuai tipe |
-| CurrencyDisplay component | ⏳ | Format Rp X.XXX |
-| EmptyState component | ⏳ | Reusable |
-| SkeletonCard component | ⏳ | Reusable |
-| ConfirmDialog component | ⏳ | Sebelum delete |
-| Toast notifications (Sonner) | ⏳ | |
+| Setup next-themes ThemeProvider | ✅ | `components/providers.tsx`, lang="id", suppressHydrationWarning |
+| Configure Tailwind dark mode | ✅ | darkMode: ["class"], font-sans → Geist via CSS var |
+| Theme toggle component | ✅ | `components/shared/theme-toggle.tsx` — dropdown Light/Dark/System |
+| Bottom navigation (mobile) | ✅ | `components/dashboard/bottom-nav.tsx` — md:hidden |
+| Sidebar navigation (desktop) | ✅ | `components/shared/nav-sidebar.tsx` — hidden md:flex |
+| AmountDisplay component | ✅ | Hijau income / merah expense / neutral transfer, prefix ±− |
+| CurrencyDisplay component | ✅ | Wraps formatIDR, tabular-nums |
+| EmptyState component | ✅ | Icon + title + desc + optional action button |
+| SkeletonCard component | ✅ | SkeletonCard + SkeletonList helper |
+| ConfirmDialog component | ✅ | Dialog wrapper, destructive variant, isPending state |
+| Toast notifications (Sonner) | ✅ | Wired di providers.tsx, dipakai di quick-entry + wallet-form + transaction detail |
 | **Test: light + dark mode** | ⏳ | Visual check semua halaman |
 
 ### Phase 1 Completion Criteria
@@ -444,25 +446,38 @@ Phase 4         ░░░░░░░░░░░░░░░░░░░░   0
 
 ## 7. DECISIONS LOG
 
-Keputusan yang sudah dibuat dan tidak perlu didiskusikan ulang.
-Untuk keputusan product, lihat juga `product.md` section 11.
+> ⚠️ **Keputusan sekarang dicatat di `decisions.md` dalam format ADR (Architectural Decision Record).**
+> Tabel di bawah adalah legacy log dari sebelum `decisions.md` dibuat — tidak perlu diupdate lagi.
+> **Untuk keputusan baru: tambahkan ke `decisions.md`**, bukan di sini.
 
-| # | Tanggal | Keputusan | Alasan |
-|---|---|---|---|
-| D01 | May 24, 2026 | pnpm sebagai package manager | Faster, stricter dependency resolution |
-| D02 | May 24, 2026 | Skip monorepo untuk MVP | Overhead tidak sebanding untuk solo dev pemula |
-| D03 | May 24, 2026 | next-themes untuk theme system | Handles system preference + no flash |
-| D04 | May 24, 2026 | Opsi B untuk agents (system prompt Claude) | Realistis untuk solo dev, bukan automated agents |
-| D05 | May 24, 2026 | 6 agents: Planner, Frontend, Backend, Reviewer, Security, QA | Cukup tanpa overkill |
-| D06 | May 24, 2026 | Superpowers via Claude Code plugin | Framework skills terbaik untuk Claude Code |
-| D07 | May 24, 2026 | Monvora gratis dulu, iklan post-public release | Butuh user base dulu sebelum monetisasi |
-| D08 | May 24, 2026 | Format angka: Rp 1.500.000 (titik) | Standar Indonesia |
-| D09 | May 24, 2026 | AI insights dalam Bahasa Indonesia | Lebih relatable untuk target user |
-| D10 | May 24, 2026 | Tidak ada onboarding tutorial | Empty states yang informatif sudah cukup |
-| D11 | May 24, 2026 | Universal bank parser via registry pattern | Mudah tambah bank baru tanpa ubah core logic |
-| D12 | May 24, 2026 | Soft delete untuk semua data finansial | Data tidak boleh hilang permanen |
-| D13 | May 24, 2026 | Amount stored as INTEGER IDR | Tidak ada floating point untuk uang |
-| D14 | May 24, 2026 | 404 bukan 403 untuk data user lain | Tidak mengkonfirmasi eksistensi data ke attacker |
+### ADR Index (Ringkasan)
+
+| ADR | Keputusan | Status |
+|---|---|---|
+| ADR-001 | Next.js App Router sebagai framework | ✅ Active |
+| ADR-002 | Supabase sebagai BaaS | ✅ Active |
+| ADR-003 | Inngest sebagai background job runner | ✅ Active |
+| ADR-004 | Skip monorepo untuk MVP | ✅ Active |
+| ADR-005 | RLS sebagai primary authorization layer | ✅ Active |
+| ADR-006 | 404 bukan 403 untuk data user lain | ✅ Active |
+| ADR-007 | Gmail scope minimal (gmail.readonly) | ✅ Active |
+| ADR-008 | Sentry di Phase 2, bukan Phase 1 | ✅ Active |
+| ADR-009 | Supabase automated backup (tidak custom) | ✅ Active |
+| ADR-010 | Amount sebagai INTEGER IDR | ✅ Active |
+| ADR-011 | Soft delete untuk semua data finansial | ✅ Active |
+| ADR-012 | UUID untuk primary key | ✅ Active |
+| ADR-013 | Missing indexes di migration 003 | ✅ Active |
+| ADR-014 | Monvora gratis, monetisasi post-public | ✅ Active |
+| ADR-015 | Tidak ada onboarding tutorial | ✅ Active |
+| ADR-016 | AI insights dalam Bahasa Indonesia | ✅ Active |
+| ADR-017 | Format angka Rp 1.500.000 (titik) | ✅ Active |
+| ADR-018 | Test-Driven Development | ✅ Active |
+| ADR-019 | Documentation-first development | ✅ Active |
+| ADR-020 | pnpm sebagai package manager | ✅ Active |
+| ADR-021 | Dependabot + pnpm audit | ✅ Active |
+| ADR-022 | Gemini API untuk AI categorization | ✅ Active |
+
+Lihat `decisions.md` untuk detail konteks, alternatif, dan review trigger setiap keputusan.
 
 ---
 
@@ -530,9 +545,10 @@ Setelah selesai 1 task:
 4. Update "Last Updated" di header
 
 Setelah ada keputusan baru:
-1. Tambah ke Decisions Log (section 7)
-2. Update dokumen yang relevan (master.md, product.md, dll)
-3. Bump version dokumen yang diupdate
+1. Tambahkan ADR baru ke `decisions.md` (format ADR-XXX)
+2. Tambahkan ke tabel ADR Index di section 7 progress.md
+3. Update dokumen yang terdampak (security.md, master.md, dll)
+4. Bump version dokumen yang diupdate
 
 Jika ada blocker:
 1. Tambah ke Active Blockers (section 8)

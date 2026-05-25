@@ -79,7 +79,7 @@ All UI strings in English for MVP. i18n infrastructure added in Phase 3.
 ### Package Manager
 | Technology | Version | Purpose |
 |---|---|---|
-| pnpm | 9.x | Package manager — faster installs, strict dependency resolution, disk efficient |
+| pnpm | 10.x | Package manager — faster installs, strict dependency resolution, disk efficient |
 
 ### Frontend
 | Technology | Version | Purpose |
