@@ -72,7 +72,7 @@ export function GmailSettingsClient({ isConnected, lastSyncedAt, syncLogs }: Gma
         const res = await fetch('/api/sync/gmail', { method: 'POST' })
         if (!res.ok) {
           const data = await res.json().catch(() => ({}))
-          throw new Error(data?.error ?? 'Sync gagal')
+          throw new Error(data?.error?.message ?? 'Sync gagal')
         }
         toast.success('Sync dimulai', { description: 'Transaksi baru akan muncul dalam beberapa saat.' })
       } catch (err) {
@@ -89,7 +89,7 @@ export function GmailSettingsClient({ isConnected, lastSyncedAt, syncLogs }: Gma
         const res = await fetch('/api/sync/gmail/disconnect', { method: 'POST' })
         if (!res.ok) {
           const data = await res.json().catch(() => ({}))
-          throw new Error(data?.error ?? 'Gagal memutuskan Gmail')
+          throw new Error(data?.error?.message ?? 'Gagal memutuskan Gmail')
         }
         setDisconnectOpen(false)
         toast.success('Gmail berhasil diputuskan')
