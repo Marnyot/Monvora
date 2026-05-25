@@ -6,6 +6,7 @@ import { EmptyState } from '@/components/shared/empty-state'
 import { ThemeToggle } from '@/components/shared/theme-toggle'
 import { Skeleton } from '@/components/ui/skeleton'
 import { SkeletonList } from '@/components/shared/skeleton-card'
+import { SyncStatusBadge } from '@/components/dashboard/sync-status-badge'
 import { List } from 'lucide-react'
 import { Suspense } from 'react'
 
@@ -55,7 +56,7 @@ async function DashboardContent() {
   const now = new Date()
   const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
 
-  const [{ data: wallets }, { data: txThisMonth }, { data: recentTx }] = await Promise.all([
+  const [{ data: wallets }, { data: txThisMonth }, { data: recentTx }, { data: profile }] = await Promise.all([
     supabase
       .from('wallets')
       .select('id, name, balance, color')
@@ -79,6 +80,11 @@ async function DashboardContent() {
       .is('deleted_at', null)
       .order('transacted_at', { ascending: false })
       .limit(10),
+    supabase
+      .from('profiles')
+      .select('gmail_sync_enabled, gmail_last_synced_at')
+      .eq('id', user.id)
+      .single(),
   ])
 
   const totalBalance = (wallets ?? []).reduce((sum, w) => sum + (w.balance ?? 0), 0)
@@ -91,9 +97,15 @@ async function DashboardContent() {
     <div className="max-w-lg mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-4">
-        <div>
+        <div className="space-y-1">
           <p className="text-xs text-muted-foreground">Selamat datang,</p>
           <p className="font-semibold text-foreground">{firstName}</p>
+          {profile?.gmail_sync_enabled && (
+            <SyncStatusBadge
+              gmailSyncEnabled={profile.gmail_sync_enabled}
+              lastSyncedAt={profile.gmail_last_synced_at ?? null}
+            />
+          )}
         </div>
         <ThemeToggle />
       </div>
