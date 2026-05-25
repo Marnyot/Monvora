@@ -41,6 +41,9 @@ function makeQueryChain(result: ChainResult) {
   })
   chain['single'] = vi.fn().mockResolvedValue(result)
   chain['maybeSingle'] = vi.fn().mockResolvedValue(result)
+  // Allow direct `await chain` (for list queries and updates without terminal call)
+  chain['then'] = (onFulfilled: (v: ChainResult) => unknown, onRejected?: (e: unknown) => unknown) =>
+    Promise.resolve(result).then(onFulfilled, onRejected)
   return chain
 }
 
@@ -57,7 +60,7 @@ function makeSupabaseMock(overrides: {
     error: null,
   }
   const existingTxResult = overrides.existingTxResult ?? { data: null, error: null }
-  const walletResult = overrides.walletResult ?? { data: { id: 'wallet-001' }, error: null }
+  const walletResult = overrides.walletResult ?? { data: [{ id: 'wallet-001', provider: 'mandiri', balance: 1000000 }], error: null }
   const insertResult = overrides.insertResult ?? { data: null, error: null }
   const updateResult = overrides.updateResult ?? { data: null, error: null }
   const logResult = overrides.logResult ?? { data: null, error: null }
@@ -93,7 +96,9 @@ function makeSupabaseMock(overrides: {
     }
 
     if (table === 'wallets') {
-      return makeQueryChain(walletResult)
+      const chain = makeQueryChain(walletResult)
+      chain['update'] = vi.fn().mockReturnValue(makeQueryChain(updateResult))
+      return chain
     }
 
     if (table === 'gmail_sync_logs') {
@@ -181,7 +186,7 @@ describe('syncUserGmail — Duplicate Detection', () => {
     const supabase = makeSupabaseMock({
       // Simulate: raw_email_id does NOT exist (maybeSingle returns null)
       existingTxResult: { data: null, error: null },
-      walletResult: { data: { id: 'wallet-001' }, error: null },
+      walletResult: { data: [{ id: 'wallet-001', provider: 'mandiri', balance: 1000000 }], error: null },
       insertResult: { data: { id: 'tx-new-001' }, error: null },
     })
 

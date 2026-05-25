@@ -78,7 +78,7 @@ export function GmailSettingsClient({ isConnected, lastSyncedAt, syncLogs }: Gma
         }
         toast.success('Sync dimulai', { description: 'Transaksi baru akan muncul dalam beberapa detik.' })
         // Refresh setelah sync selesai di background (~5 detik)
-        setTimeout(() => router.refresh(), 5000)
+        setTimeout(() => router.refresh(), 3000)
       } catch (err) {
         toast.error('Sync gagal', {
           description: err instanceof Error ? err.message : 'Coba lagi nanti.',

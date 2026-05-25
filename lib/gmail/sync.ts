@@ -30,6 +30,8 @@ export interface SyncResult {
   newHistoryId: string | null
 }
 
+type WalletRow = { id: string; provider: string | null; balance: number }
+
 // ─── Main Orchestrator ─────────────────────────────────────────────────────────
 
 /**
@@ -39,13 +41,11 @@ export interface SyncResult {
  * 1. Ambil gmail_sync_token dari profiles
  * 2. Fetch emails baru via Gmail API
  * 3. Filter bank emails (isBankEmail)
- * 4. Untuk setiap email: check duplikat → parse → validate → categorize → insert
- * 5. Update historyId di profiles
- * 6. Log result ke gmail_sync_logs
- *
- * @param supabase - Supabase client (service role untuk background job)
- * @param userId   - User ID dari profiles table
- * @param accessToken - Google OAuth access token dari Supabase Auth
+ * 4. Prefetch semua wallets aktif (untuk matching + balance)
+ * 5. Untuk setiap email: check duplikat → parse → match wallet → categorize → insert
+ * 6. Update wallet balances
+ * 7. Update historyId di profiles
+ * 8. Log result ke gmail_sync_logs
  */
 export async function syncUserGmail(
   supabase: SupabaseClient<Database>,
@@ -71,12 +71,12 @@ export async function syncUserGmail(
     .single()
 
   if (profileError || !profile) {
-    await logSyncResult(supabase, userId, 'error', result, startedAt, 'Profile not found')
+    await logSyncResult(supabase, userId, 'failed', result, startedAt, 'Profile not found')
     return result
   }
 
   if (!profile.gmail_sync_enabled) {
-    await logSyncResult(supabase, userId, 'skipped', result, startedAt, 'Gmail sync disabled')
+    await logSyncResult(supabase, userId, 'failed', result, startedAt, 'Gmail sync disabled')
     return result
   }
 
@@ -95,7 +95,7 @@ export async function syncUserGmail(
       ? 'Gmail token expired'
       : 'Gmail API fetch failed'
 
-    await logSyncResult(supabase, userId, 'error', result, startedAt, errorMsg)
+    await logSyncResult(supabase, userId, 'failed', result, startedAt, errorMsg)
     return result
   }
 
@@ -105,20 +105,22 @@ export async function syncUserGmail(
   const bankEmails = messages.filter(isBankEmail)
   result.emailsProcessed = bankEmails.length
 
-  // 4. Ambil default wallet sekali sebelum loop
-  const { data: wallet } = await supabase
+  // 4. Prefetch semua wallet aktif (id, provider, balance) untuk matching
+  const { data: wallets } = await supabase
     .from('wallets')
-    .select('id')
+    .select('id, provider, balance')
     .eq('user_id', userId)
     .eq('is_active', true)
     .is('deleted_at', null)
-    .limit(1)
-    .maybeSingle()
 
-  if (!wallet) {
-    await logSyncResult(supabase, userId, 'error', result, startedAt, 'No active wallet')
+  if (!wallets || wallets.length === 0) {
+    await logSyncResult(supabase, userId, 'failed', result, startedAt, 'No active wallet')
     return result
   }
+
+  const defaultWallet = wallets[0] as WalletRow
+  // Balance delta per wallet — di-update sekali setelah loop
+  const balanceDeltas = new Map<string, number>()
 
   // 5. Proses setiap email bank
   for (const email of bankEmails) {
@@ -153,7 +155,13 @@ export async function syncUserGmail(
         continue
       }
 
-      // 5d. Categorize via AI pipeline (rules → gemini → fallback)
+      // 5d. Match wallet by bank name (provider ILIKE bankName), fallback ke default
+      const bankName = parseResult.bank?.toLowerCase() ?? null
+      const matchedWallet: WalletRow = bankName
+        ? ((wallets as WalletRow[]).find(w => w.provider?.toLowerCase().includes(bankName)) ?? defaultWallet)
+        : defaultWallet
+
+      // 5e. Categorize via AI pipeline (rules → gemini → fallback)
       const categoryResult = await categorizeTransaction(
         tx.merchant_name,
         tx.description,
@@ -161,12 +169,12 @@ export async function syncUserGmail(
         tx.payment_method ?? 'unknown'
       )
 
-      // 5e. Insert transaksi
+      // 5f. Insert transaksi
       const { error: insertError } = await supabase
         .from('transactions')
         .insert({
           user_id: userId,
-          wallet_id: wallet.id,
+          wallet_id: matchedWallet.id,
           amount: tx.amount,
           type: tx.type,
           source: 'gmail',
@@ -187,13 +195,31 @@ export async function syncUserGmail(
         continue
       }
 
+      // 5g. Track balance delta (expense=negatif, income=positif, transfer=0)
+      const delta = tx.type === 'income' ? tx.amount : tx.type === 'expense' ? -tx.amount : 0
+      if (delta !== 0) {
+        balanceDeltas.set(matchedWallet.id, (balanceDeltas.get(matchedWallet.id) ?? 0) + delta)
+      }
+
       result.transactionsCreated++
     } catch {
       result.errors++
     }
   }
 
-  // 6. Update historyId di profiles
+  // 6. Update wallet balances (satu UPDATE per wallet yang berubah)
+  for (const [walletId, delta] of balanceDeltas) {
+    const w = (wallets as WalletRow[]).find(w => w.id === walletId)
+    if (w) {
+      await supabase
+        .from('wallets')
+        .update({ balance: w.balance + delta })
+        .eq('id', walletId)
+        .eq('user_id', userId)
+    }
+  }
+
+  // 7. Update historyId di profiles
   await supabase
     .from('profiles')
     .update({
@@ -202,9 +228,11 @@ export async function syncUserGmail(
     })
     .eq('id', userId)
 
-  // 7. Log result ke gmail_sync_logs
-  const status =
-    result.errors > 0 && result.transactionsCreated === 0 ? 'error' : 'success'
+  // 8. Log result ke gmail_sync_logs
+  const status: 'completed' | 'partial' | 'failed' =
+    result.errors > 0 && result.transactionsCreated === 0 ? 'failed'
+    : result.errors > 0 ? 'partial'
+    : 'completed'
 
   await logSyncResult(supabase, userId, status, result, startedAt)
 
@@ -225,7 +253,7 @@ async function logSyncResult(
     user_id: userId,
     status,
     emails_scanned: result.emailsProcessed,
-    transactions_found: result.emailsProcessed,
+    transactions_found: result.transactionsCreated + result.transactionsSkipped,
     transactions_created: result.transactionsCreated,
     started_at: startedAt,
     completed_at: new Date().toISOString(),
