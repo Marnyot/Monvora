@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { checkRateLimit } from '@/lib/utils/rate-limit'
 import { inngest } from '@/lib/inngest/client'
+import { getValidGoogleToken } from '@/lib/utils/google-token'
 
 /**
  * POST /api/sync/gmail
@@ -22,11 +23,12 @@ export async function POST(request: Request) {
     )
   }
 
-  // ─── 2. CHECK GMAIL SYNC ENABLED ───────────────────────────
-  // Check before rate limit so unenabled attempts don't consume quota
+  // ─── 2. CHECK GMAIL SYNC ENABLED + BACA TOKEN DARI DB ─────
+  // Check before rate limit so unenabled attempts don't consume quota.
+  // Token dibaca dari DB karena provider_token hilang setelah middleware me-refresh session.
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('gmail_sync_enabled')
+    .select('gmail_sync_enabled, google_access_token, google_refresh_token, google_token_expires_at')
     .eq('id', user.id)
     .single()
 
@@ -45,7 +47,6 @@ export async function POST(request: Request) {
   }
 
   // ─── 3. RATE LIMIT ────────────────────────────────────────
-  // Rate limit lebih ketat untuk Gmail sync: 1 per 5 menit (300 detik)
   const rl = checkRateLimit(user.id, '/api/sync/gmail')
   if (!rl.allowed) {
     return NextResponse.json(
@@ -54,14 +55,12 @@ export async function POST(request: Request) {
     )
   }
 
-  // ─── 4. GET GOOGLE OAUTH ACCESS TOKEN ─────────────────────
-  // provider_token hanya ada di session (bukan di identity_data dari getUser)
-  const { data: { session } } = await supabase.auth.getSession()
-  const accessToken = session?.provider_token ?? null
+  // ─── 4. GET GOOGLE ACCESS TOKEN (dari DB, refresh jika expired) ──
+  const accessToken = await getValidGoogleToken(profile, supabase, user.id)
 
   if (!accessToken) {
     return NextResponse.json(
-      { data: null, error: { code: 'NO_GOOGLE_TOKEN', message: 'Akun Google belum terhubung' } },
+      { data: null, error: { code: 'NO_GOOGLE_TOKEN', message: 'Sesi Gmail kadaluarsa. Silakan login ulang untuk memperbarui koneksi.' } },
       { status: 400 }
     )
   }
