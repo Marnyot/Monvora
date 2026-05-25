@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import localFont from 'next/font/local'
+import { SpeedInsights } from '@vercel/speed-insights/next'
 import './globals.css'
 import { Providers } from '@/components/providers'
 
@@ -23,6 +24,7 @@ export default function RootLayout({
     <html lang="id" suppressHydrationWarning>
       <body className={`${geistSans.variable} font-sans antialiased`}>
         <Providers>{children}</Providers>
+        <SpeedInsights />
       </body>
     </html>
   )

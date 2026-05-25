@@ -21,7 +21,19 @@
       "Bash(git restore *)",
       "Bash(git commit -m ' *)",
       "PowerShell(Get-ChildItem -Path \"C:\\\\Project\\\\Monvora\\\\lib\" -Recurse -File | Select-Object FullName | ForEach-Object { $_.FullName.Replace\\(\"C:\\\\Project\\\\Monvora\\\\\", \"\"\\) })",
-      "PowerShell(Get-ChildItem -Path \"C:\\\\Project\\\\Monvora\\\\tests\" -Recurse -File -ErrorAction SilentlyContinue | Select-Object FullName | ForEach-Object { $_.FullName.Replace\\(\"C:\\\\Project\\\\Monvora\\\\\", \"\"\\) })"
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Project\\\\Monvora\\\\tests\" -Recurse -File -ErrorAction SilentlyContinue | Select-Object FullName | ForEach-Object { $_.FullName.Replace\\(\"C:\\\\Project\\\\Monvora\\\\\", \"\"\\) })",
+      "Bash(git push *)",
+      "Bash(cat .env.example)",
+      "Bash(ls vercel.json)",
+      "Bash(git merge *)",
+      "Bash(git stash *)",
+      "Bash(cat next.config.ts)",
+      "Bash(cat next.config.js)",
+      "Bash(cat next.config.mjs)",
+      "Bash(pnpm audit *)",
+      "Bash(pnpm tsc *)",
+      "Bash(git commit *)",
+      "Bash(pnpm build *)"
     ]
   },
   "enableAllProjectMcpServers": true,
