@@ -9,10 +9,11 @@
 
 | Version | Date | Updated By | Changes |
 |---|---|---|---|
+| v3 | May 25, 2026 | Claude | UUID validation, DB error masking, Sentry setup, audit script, security.yml CI, Phase 1→2 checklist updated |
 | v2 | May 25, 2026 | Claude | Add backup strategy, dependency security, Sentry config, missing DB indexes, revised phase placement |
 | v1 | May 24, 2026 | Claude | Initial creation |
 
-**Current Version:** v2
+**Current Version:** v3
 **Last Updated:** May 25, 2026
 
 ---
@@ -1098,11 +1099,29 @@ GMAIL
 
 ```
 [ ] Backup restore test sudah dilakukan?
-[ ] Dependabot sudah dikonfigurasi di .github/dependabot.yml?
-[ ] pnpm audit clean (tidak ada high/critical)?
-[ ] Migration 003_missing_indexes.sql sudah applied?
-[ ] Sentry sudah dikonfigurasi dengan PII scrubbing?
-[ ] RLS test: verifikasi user A tidak bisa akses data user B?
+    → MANUAL: Supabase Dashboard → Project Settings → Backups
+      Download backup → restore ke free project baru → verifikasi
+
+[x] Dependabot sudah dikonfigurasi di .github/dependabot.yml?
+    → .github/dependabot.yml — weekly, pnpm, skip major
+
+[x] pnpm audit clean (tidak ada high/critical)?
+    → 0 high/critical. 1 moderate (postcss transitive dari Next.js, tidak actionable)
+    → Script: pnpm audit / pnpm run audit
+
+[x] Migration 003_missing_indexes.sql sudah applied?
+    → Applied via Supabase MCP
+
+[x] Sentry sudah dikonfigurasi dengan PII scrubbing?
+    → sentry.server.config.ts + sentry.client.config.ts sudah ada
+    → enabled: !!process.env.SENTRY_DSN (tidak aktif jika DSN tidak di-set)
+    → Sebelum Phase 2: buat akun Sentry → tambah SENTRY_DSN + NEXT_PUBLIC_SENTRY_DSN
+      ke Vercel environment variables
+
+[x] RLS test: verifikasi user A tidak bisa akses data user B?
+    → Unit tests: tests/unit/api/transaction-ownership.test.ts
+    → PATCH/DELETE return 404 untuk transaksi bukan milik user
+    → Full integration test dengan live DB: verifikasi manual via Supabase dashboard
 ```
 
 ---
