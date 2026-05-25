@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { checkRateLimit } from '@/lib/utils/rate-limit'
-import { syncUserGmail } from '@/lib/gmail/sync'
+import { inngest } from '@/lib/inngest/client'
 
 /**
  * POST /api/sync/gmail
@@ -66,22 +66,21 @@ export async function POST(request: Request) {
     )
   }
 
-  // ─── 5. RUN SYNC ──────────────────────────────────────────
+  // ─── 5. FIRE BACKGROUND JOB ───────────────────────────────
   try {
-    const result = await syncUserGmail(supabase, user.id, accessToken)
-    return NextResponse.json({ data: result, error: null }, { status: 200 })
-  } catch (error) {
-    const errorId = crypto.randomUUID()
-    console.error('Gmail sync failed', {
-      errorId,
-      userId: user.id,
-      endpoint: '/api/sync/gmail',
-      timestamp: new Date().toISOString(),
+    await inngest.send({
+      name: 'gmail/sync.manual',
+      data: { userId: user.id, accessToken },
     })
-
+  } catch {
     return NextResponse.json(
       { data: null, error: { code: 'SYNC_ERROR', message: 'Sync gagal. Coba lagi nanti.' } },
       { status: 500 }
     )
   }
+
+  return NextResponse.json(
+    { data: { message: 'Sync dimulai' }, error: null },
+    { status: 202 }
+  )
 }

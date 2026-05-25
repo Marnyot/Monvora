@@ -79,36 +79,15 @@ export async function fetchNewEmails(
 }
 
 /**
- * Initial sync: fetch 50 email terbaru dari inbox.
+ * Initial sync: ambil current historyId saja, tidak fetch email lama.
+ * Tracking dimulai dari titik koneksi — email sebelum koneksi diabaikan.
  */
 async function fetchInitialEmails(
   gmail: ReturnType<typeof google.gmail>
 ): Promise<{ messages: GmailMessage[]; newHistoryId: string }> {
-  // List message IDs terbaru — filter hanya dari bank sender
-  const listRes = await gmail.users.messages.list({
-    userId: 'me',
-    maxResults: 50,
-    labelIds: ['INBOX'],
-    q: buildBankEmailQuery(),
-  })
-
-  const messageItems = listRes.data.messages ?? []
-
-  if (messageItems.length === 0) {
-    // Ambil historyId dari profile info jika tidak ada email
-    const profileRes = await gmail.users.getProfile({ userId: 'me' })
-    const historyId = profileRes.data.historyId ?? '0'
-    return { messages: [], newHistoryId: historyId }
-  }
-
-  // Fetch detail setiap email
-  const messages = await fetchMessageDetails(gmail, messageItems.map(m => m.id!))
-
-  // historyId terbaru diambil dari email pertama (terbaru)
   const profileRes = await gmail.users.getProfile({ userId: 'me' })
-  const newHistoryId = profileRes.data.historyId ?? messageItems[0].id ?? '0'
-
-  return { messages, newHistoryId }
+  const newHistoryId = profileRes.data.historyId ?? '0'
+  return { messages: [], newHistoryId }
 }
 
 /**

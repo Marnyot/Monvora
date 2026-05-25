@@ -39,8 +39,13 @@ function makeQueryChain(result: ChainResult) {
   methods.forEach(m => { chain[m] = vi.fn().mockReturnValue(chain) })
   chain['single'] = vi.fn().mockResolvedValue(result)
   chain['maybeSingle'] = vi.fn().mockResolvedValue(result)
+  // Allow direct `await chain` (for list queries and updates without terminal call)
+  chain['then'] = (onFulfilled: (v: ChainResult) => unknown, onRejected?: (e: unknown) => unknown) =>
+    Promise.resolve(result).then(onFulfilled, onRejected)
   return chain
 }
+
+const DEFAULT_WALLETS = [{ id: 'wallet-001', provider: 'mandiri', balance: 1000000 }]
 
 function makeSupabaseMock(overrides: {
   profileResult?: ChainResult
@@ -55,7 +60,7 @@ function makeSupabaseMock(overrides: {
     error: null,
   }
   const existingTxResult = overrides.existingTxResult ?? { data: null, error: null }
-  const walletResult = overrides.walletResult ?? { data: { id: 'wallet-001' }, error: null }
+  const walletResult = overrides.walletResult ?? { data: DEFAULT_WALLETS, error: null }
   const insertResult = overrides.insertResult ?? { data: null, error: null }
   const updateResult = overrides.updateResult ?? { data: null, error: null }
   const logResult = overrides.logResult ?? { data: null, error: null }
@@ -89,7 +94,10 @@ function makeSupabaseMock(overrides: {
     }
 
     if (table === 'wallets') {
-      return makeQueryChain(walletResult)
+      // Supports both SELECT (array result via .then) and UPDATE
+      const chain = makeQueryChain(walletResult)
+      chain['update'] = vi.fn().mockReturnValue(makeQueryChain(updateResult))
+      return chain
     }
 
     if (table === 'gmail_sync_logs') {
@@ -172,8 +180,8 @@ describe('syncUserGmail', () => {
     mockDetectAndParse.mockReturnValue(makeParsedTransaction('email-001'))
 
     const supabase = makeSupabaseMock({
-      existingTxResult: { data: null, error: null }, // tidak duplikat
-      walletResult: { data: { id: 'wallet-001' }, error: null },
+      existingTxResult: { data: null, error: null }, // não duplikat
+      walletResult: { data: DEFAULT_WALLETS, error: null },
       insertResult: { data: { id: 'tx-001' }, error: null },
     })
     const { syncUserGmail } = await import('@/lib/gmail/sync')
@@ -269,14 +277,12 @@ describe('syncUserGmail', () => {
     // Should not throw, handled gracefully
   })
 
-  it('increments errors when wallet is not found', async () => {
+  it('returns early when no active wallet found', async () => {
     const email = makeMockEmail('email-nowallet')
     mockFetchNewEmails.mockResolvedValue({ messages: [email], newHistoryId: 'hist-500' })
     mockIsBankEmail.mockReturnValue(true)
-    mockDetectAndParse.mockReturnValue(makeParsedTransaction('email-nowallet'))
 
     const supabase = makeSupabaseMock({
-      existingTxResult: { data: null, error: null },
       walletResult: { data: null, error: null }, // tidak ada wallet
     })
     const { syncUserGmail } = await import('@/lib/gmail/sync')
@@ -285,7 +291,7 @@ describe('syncUserGmail', () => {
     const result: SyncResult = await syncUserGmail(supabase as any, MOCK_USER_ID, MOCK_ACCESS_TOKEN)
 
     expect(result.transactionsCreated).toBe(0)
-    expect(result.errors).toBe(1)
+    expect(result.errors).toBe(0)
   })
 
   it('uses lastHistoryId from profile for incremental sync', async () => {
@@ -304,5 +310,120 @@ describe('syncUserGmail', () => {
 
     // fetchNewEmails should be called with the saved historyId
     expect(mockFetchNewEmails).toHaveBeenCalledWith(MOCK_ACCESS_TOKEN, SAVED_HISTORY_ID)
+  })
+
+  it('matches transaction to wallet whose provider contains the bank name', async () => {
+    const email = makeMockEmail('email-bca')
+    mockFetchNewEmails.mockResolvedValue({ messages: [email], newHistoryId: 'hist-600' })
+    mockIsBankEmail.mockReturnValue(true)
+    mockDetectAndParse.mockReturnValue({
+      transaction: {
+        amount: 200000,
+        type: 'expense' as const,
+        merchant_name: 'Indomaret',
+        description: 'Belanja',
+        payment_method: 'debit' as const,
+        transacted_at: new Date(),
+        reference_number: 'REF-BCA',
+        raw_email_id: 'email-bca',
+        raw_snippet: 'Debit Rp 200.000',
+        confidence: 0.9,
+        bank: 'bca',
+      },
+      error: null,
+      bank: 'bca',
+    })
+
+    const wallets = [
+      { id: 'wallet-mandiri', provider: 'mandiri', balance: 500000 },
+      { id: 'wallet-bca', provider: 'bca', balance: 1000000 },
+    ]
+    const mockFrom = vi.fn()
+    let callCount = 0
+
+    mockFrom.mockImplementation((table: string) => {
+      callCount++
+      if (table === 'profiles') {
+        const chain = makeQueryChain({ data: { gmail_sync_token: null, gmail_sync_enabled: true }, error: null })
+        chain['update'] = vi.fn().mockReturnValue(makeQueryChain({ data: null, error: null }))
+        return chain
+      }
+      if (table === 'wallets') {
+        const chain = makeQueryChain({ data: wallets, error: null })
+        chain['update'] = vi.fn().mockReturnValue(makeQueryChain({ data: null, error: null }))
+        return chain
+      }
+      if (table === 'transactions') {
+        const chain: Record<string, unknown> = {}
+        const methods = ['select', 'eq', 'is', 'limit', 'insert', 'order']
+        methods.forEach(m => { chain[m] = vi.fn().mockReturnValue(chain) })
+        chain['maybeSingle'] = vi.fn().mockResolvedValue({ data: null, error: null })
+        const insertChain = makeQueryChain({ data: { id: 'tx-new' }, error: null })
+        chain['insert'] = vi.fn().mockReturnValue(insertChain)
+        return chain
+      }
+      return makeQueryChain({ data: null, error: null })
+    })
+
+    const { syncUserGmail } = await import('@/lib/gmail/sync')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const result = await syncUserGmail({ from: mockFrom } as any, MOCK_USER_ID, MOCK_ACCESS_TOKEN)
+
+    expect(result.transactionsCreated).toBe(1)
+
+    // Find the transactions insert call and verify wallet_id is wallet-bca
+    const txInsertCalls = mockFrom.mock.calls.filter(([t]) => t === 'transactions')
+    const insertChainCall = txInsertCalls.find(([_]) => {
+      const chain = mockFrom.mock.results[mockFrom.mock.calls.indexOf(_)]
+      return chain
+    })
+    // Verify the insert was called with wallet-bca
+    const transactionsChain = mockFrom.mock.results
+      .filter((_, i) => mockFrom.mock.calls[i][0] === 'transactions')
+      .map(r => r.value)
+    const insertSpy = transactionsChain.find(c => c?.insert?.mock?.calls?.length > 0)
+    expect(insertSpy?.insert).toHaveBeenCalledWith(
+      expect.objectContaining({ wallet_id: 'wallet-bca' })
+    )
+  })
+
+  it('updates wallet balance after successful transaction insert', async () => {
+    const email = makeMockEmail('email-balance')
+    mockFetchNewEmails.mockResolvedValue({ messages: [email], newHistoryId: 'hist-700' })
+    mockIsBankEmail.mockReturnValue(true)
+    mockDetectAndParse.mockReturnValue(makeParsedTransaction('email-balance'))
+
+    const walletUpdateSpy = vi.fn().mockReturnValue(makeQueryChain({ data: null, error: null }))
+
+    const mockFrom = vi.fn().mockImplementation((table: string) => {
+      if (table === 'profiles') {
+        const chain = makeQueryChain({ data: { gmail_sync_token: null, gmail_sync_enabled: true }, error: null })
+        chain['update'] = vi.fn().mockReturnValue(makeQueryChain({ data: null, error: null }))
+        return chain
+      }
+      if (table === 'wallets') {
+        const chain = makeQueryChain({ data: DEFAULT_WALLETS, error: null })
+        chain['update'] = walletUpdateSpy
+        return chain
+      }
+      if (table === 'transactions') {
+        const chain: Record<string, unknown> = {}
+        const methods = ['select', 'eq', 'is', 'limit', 'insert', 'order']
+        methods.forEach(m => { chain[m] = vi.fn().mockReturnValue(chain) })
+        chain['maybeSingle'] = vi.fn().mockResolvedValue({ data: null, error: null })
+        const insertChain = makeQueryChain({ data: { id: 'tx-balance' }, error: null })
+        chain['insert'] = vi.fn().mockReturnValue(insertChain)
+        return chain
+      }
+      return makeQueryChain({ data: null, error: null })
+    })
+
+    const { syncUserGmail } = await import('@/lib/gmail/sync')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const result = await syncUserGmail({ from: mockFrom } as any, MOCK_USER_ID, MOCK_ACCESS_TOKEN)
+
+    expect(result.transactionsCreated).toBe(1)
+    // Expense of 150000 → balance decreases: 1000000 - 150000 = 850000
+    expect(walletUpdateSpy).toHaveBeenCalledWith({ balance: 850000 })
   })
 })

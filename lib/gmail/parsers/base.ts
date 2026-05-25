@@ -43,10 +43,19 @@ export function parseIDRAmount(text: string): number | null {
 }
 
 /**
- * Normalize teks email: lowercase, hapus whitespace berlebih (trim + collapse).
+ * Normalize teks email: decode HTML entities, lowercase, hapus whitespace berlebih.
  */
 export function normalizeText(text: string): string {
-  return text.toLowerCase().trim().replace(/\s+/g, ' ')
+  return text
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&#160;/g, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, ' ')
 }
 
 /**
