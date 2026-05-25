@@ -54,7 +54,7 @@ export async function GET(request: Request) {
     .range(offset, offset + limit - 1)
 
   if (error) {
-    return NextResponse.json({ data: null, error: { code: 'DB_ERROR', message: error.message } }, { status: 500 })
+    return NextResponse.json({ data: null, error: { code: 'DB_ERROR', message: 'Terjadi kesalahan database' } }, { status: 500 })
   }
 
   return NextResponse.json({
@@ -114,7 +114,7 @@ export async function POST(request: Request) {
     .single()
 
   if (txError) {
-    return NextResponse.json({ data: null, error: { code: 'DB_ERROR', message: txError.message } }, { status: 500 })
+    return NextResponse.json({ data: null, error: { code: 'DB_ERROR', message: 'Terjadi kesalahan database' } }, { status: 500 })
   }
 
   // Update wallet balance

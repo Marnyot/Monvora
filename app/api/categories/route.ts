@@ -29,7 +29,7 @@ export async function GET() {
     .order('name', { ascending: true })
 
   if (error) {
-    return NextResponse.json({ data: null, error: { code: 'DB_ERROR', message: error.message } }, { status: 500 })
+    return NextResponse.json({ data: null, error: { code: 'DB_ERROR', message: 'Terjadi kesalahan database' } }, { status: 500 })
   }
 
   return NextResponse.json({ data, error: null })
@@ -71,7 +71,7 @@ export async function POST(request: Request) {
     .single()
 
   if (error) {
-    return NextResponse.json({ data: null, error: { code: 'DB_ERROR', message: error.message } }, { status: 500 })
+    return NextResponse.json({ data: null, error: { code: 'DB_ERROR', message: 'Terjadi kesalahan database' } }, { status: 500 })
   }
 
   return NextResponse.json({ data, error: null }, { status: 201 })

@@ -24,15 +24,27 @@ vi.mock('@/lib/utils/rate-limit', () => ({
 }))
 
 const VALID_USER = { id: 'user-abc', email: 'a@b.com' }
-const VALID_PARAMS = Promise.resolve({ id: 'tx-123' })
+const VALID_ID = '550e8400-e29b-41d4-a716-446655440001'
+const VALID_PARAMS = Promise.resolve({ id: VALID_ID })
 
 function makeRequest(body: unknown = {}) {
-  return new Request('http://localhost/api/transactions/tx-123', {
+  return new Request(`http://localhost/api/transactions/${VALID_ID}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })
 }
+
+describe('UUID validation guard', () => {
+  it('returns 400 for non-UUID id', async () => {
+    const { PATCH } = await import('@/app/api/transactions/[id]/route')
+    const badParams = Promise.resolve({ id: 'not-a-uuid' })
+    const res = await PATCH(makeRequest(), { params: badParams })
+    expect(res.status).toBe(400)
+    const json = await res.json()
+    expect(json.error.code).toBe('INVALID_ID')
+  })
+})
 
 describe('PATCH /api/transactions/[id] — ownership guard', () => {
   beforeEach(() => {
@@ -72,7 +84,7 @@ describe('DELETE /api/transactions/[id] — ownership guard', () => {
     mockFrom.mockReturnValueOnce(makeChain({ data: null, error: null }))
 
     const { DELETE } = await import('@/app/api/transactions/[id]/route')
-    const req = new Request('http://localhost/api/transactions/tx-123', { method: 'DELETE' })
+    const req = new Request(`http://localhost/api/transactions/${VALID_ID}`, { method: 'DELETE' })
     const res = await DELETE(req, { params: VALID_PARAMS })
 
     expect(res.status).toBe(404)
@@ -82,7 +94,7 @@ describe('DELETE /api/transactions/[id] — ownership guard', () => {
     mockGetUser.mockResolvedValue({ data: { user: null }, error: new Error('No session') })
 
     const { DELETE } = await import('@/app/api/transactions/[id]/route')
-    const req = new Request('http://localhost/api/transactions/tx-123', { method: 'DELETE' })
+    const req = new Request(`http://localhost/api/transactions/${VALID_ID}`, { method: 'DELETE' })
     const res = await DELETE(req, { params: VALID_PARAMS })
 
     expect(res.status).toBe(401)

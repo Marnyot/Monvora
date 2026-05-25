@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { updateWalletSchema } from '@/lib/validations/wallet'
+import { validateUUID } from '@/lib/validations/common'
 import { checkRateLimit } from '@/lib/utils/rate-limit'
 
 async function getOwnedWallet(supabase: Awaited<ReturnType<typeof createClient>>, userId: string, walletId: string) {
@@ -16,6 +17,9 @@ async function getOwnedWallet(supabase: Awaited<ReturnType<typeof createClient>>
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
+  const idError = validateUUID(id)
+  if (idError) return idError
+
   const supabase = await createClient()
 
   const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -58,7 +62,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     .single()
 
   if (error) {
-    return NextResponse.json({ data: null, error: { code: 'DB_ERROR', message: error.message } }, { status: 500 })
+    return NextResponse.json({ data: null, error: { code: 'DB_ERROR', message: 'Terjadi kesalahan database' } }, { status: 500 })
   }
 
   return NextResponse.json({ data, error: null })
@@ -66,6 +70,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
+  const idError = validateUUID(id)
+  if (idError) return idError
+
   const supabase = await createClient()
 
   const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -93,7 +100,7 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
     .eq('user_id', user.id)
 
   if (error) {
-    return NextResponse.json({ data: null, error: { code: 'DB_ERROR', message: error.message } }, { status: 500 })
+    return NextResponse.json({ data: null, error: { code: 'DB_ERROR', message: 'Terjadi kesalahan database' } }, { status: 500 })
   }
 
   return new NextResponse(null, { status: 204 })

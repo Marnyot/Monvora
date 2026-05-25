@@ -1,10 +1,14 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { updateTransactionSchema } from '@/lib/validations/transaction'
+import { validateUUID } from '@/lib/validations/common'
 import { checkRateLimit } from '@/lib/utils/rate-limit'
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
+  const idError = validateUUID(id)
+  if (idError) return idError
+
   const supabase = await createClient()
 
   const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -42,6 +46,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
+  const idError = validateUUID(id)
+  if (idError) return idError
+
   const supabase = await createClient()
 
   const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -91,7 +98,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     .single()
 
   if (updateError) {
-    return NextResponse.json({ data: null, error: { code: 'DB_ERROR', message: updateError.message } }, { status: 500 })
+    return NextResponse.json({ data: null, error: { code: 'DB_ERROR', message: 'Terjadi kesalahan database' } }, { status: 500 })
   }
 
   // Sync wallet balance if amount or type changed
@@ -124,6 +131,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
+  const idError = validateUUID(id)
+  if (idError) return idError
+
   const supabase = await createClient()
 
   const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -158,7 +168,7 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
     .eq('user_id', user.id)
 
   if (error) {
-    return NextResponse.json({ data: null, error: { code: 'DB_ERROR', message: error.message } }, { status: 500 })
+    return NextResponse.json({ data: null, error: { code: 'DB_ERROR', message: 'Terjadi kesalahan database' } }, { status: 500 })
   }
 
   // Reverse balance impact
