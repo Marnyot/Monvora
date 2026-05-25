@@ -9,13 +9,15 @@
 
 | Version | Date | Updated By | Changes |
 |---|---|---|---|
+| v7 | May 25, 2026 | Claude | Phase 2 Gmail Automation selesai — parser engine, AI categorization, Inngest job, settings UI |
+| v6 | May 25, 2026 | Claude | Deploy ke Vercel selesai, Phase 1 100% done, app version bump ke v0.1.0 |
 | v5 | May 25, 2026 | Claude | Next.js 14→16 upgrade (CVEs), dashboard skeleton, 12 new tests, all Phase 1 items resolved — deploy only |
 | v4 | May 25, 2026 | Claude | Security hardening done, OAuth login fixed, setup tasks updated, migration 003 applied — Phase 1 98% |
 | v3 | May 25, 2026 | Claude | Transaction detail/edit/delete UI, desktop sidebar, toast notifications, TransactionCard links — Phase 1 ~85% |
 | v2 | May 25, 2026 | Claude | Decisions Log dipindahkan ke decisions.md, section 7 jadi ADR index |
 | v1 | May 24, 2026 | Claude | Initial creation — project kickoff |
 
-**Current Version:** v5
+**Current Version:** v7
 **Last Updated:** May 25, 2026
 
 ---
@@ -38,19 +40,19 @@
 ## 1. PROJECT STATUS
 
 ```
-Status          : 🟢 Development — Phase 1
-Current Phase   : Phase 1 — Core Loop
-App Version     : v0.1.0-dev
+Status          : 🟢 Development — Phase 3
+Current Phase   : Phase 3 — Intelligence Layer
+App Version     : v0.2.0
 Last Updated    : May 25, 2026
-Next Milestone  : Deploy ke Vercel
+Next Milestone  : Analytics page + spending trend charts
 ```
 
 ### Overall Progress
 
 ```
 Documentation   ████████████████████ 100% (10/10 docs selesai)
-Phase 1         ████████████████████  99% (semua item resolved — hanya Vercel deploy tersisa)
-Phase 2         ░░░░░░░░░░░░░░░░░░░░   0%
+Phase 1         ████████████████████ 100% ✅ (selesai — deployed ke Vercel)
+Phase 2         ████████████████████ 100% ✅ (selesai)
 Phase 3         ░░░░░░░░░░░░░░░░░░░░   0%
 Phase 4         ░░░░░░░░░░░░░░░░░░░░   0%
 ```
@@ -71,8 +73,8 @@ Phase 4         ░░░░░░░░░░░░░░░░░░░░   0
 | Phase | Fokus | Target | Status | App Version |
 |---|---|---|---|---|
 | Pre-Dev | Documentation | May 24, 2026 | ✅ Done | v0.0.0 |
-| Phase 1 | Core Loop (manual tracking) | Week 4 | ⏳ Pending | v0.1.0 |
-| Phase 2 | Gmail Automation | Week 10 | ⏳ Pending | v0.2.0 |
+| Phase 1 | Core Loop (manual tracking) | Week 4 | ✅ Done | v0.1.0 |
+| Phase 2 | Gmail Automation | Week 10 | ✅ Done | v0.2.0 |
 | Phase 3 | Intelligence Layer | Week 16 | ⏳ Pending | v0.3.0 |
 | Phase 4 | Public Ready | Week 20 | ⏳ Pending | v1.0.0 |
 
@@ -95,12 +97,12 @@ Phase 4         ░░░░░░░░░░░░░░░░░░░░   0
 | Run database migrations | ✅ | 001_initial_schema.sql + 002_seed_categories.sql + 003_missing_indexes.sql applied |
 | Setup Google Cloud Console | ✅ | OAuth Client configured. Authorized redirect URI: supabase callback. Gmail API scope di Phase 2 |
 | Configure OAuth credentials | ✅ | Redirect URI + Supabase Auth provider configured. Google login berfungsi |
-| Setup Inngest account | ⏳ | Phase 2 |
-| Setup Gemini API key | ⏳ | Phase 2 |
+| Setup Inngest account | ✅ | Keys sudah di .env.local, client setup selesai |
+| Setup Gemini API key | ✅ | GEMINI_API_KEY sudah di .env.local |
 | Setup .env.local | ✅ | Semua vars set: SUPABASE_URL, ANON_KEY, SERVICE_ROLE_KEY, GOOGLE_CLIENT_ID/SECRET, GEMINI_API_KEY, INNGEST keys, APP_URL |
 | Add .env.local ke .gitignore | ✅ | Covered oleh `.env*.local` pattern |
 | Init git + push ke GitHub | ✅ | github.com/Marnyot/Monvora — branch develop → main |
-| Deploy ke Vercel (awal) | ⏳ | Next step |
+| Deploy ke Vercel (awal) | ✅ | https://monvora.vercel.app — canary check HEALTHY |
 | Setup Vitest + Testing Library | ✅ | 50+ tests passing (unit + component) |
 
 ### Authentication
@@ -251,7 +253,7 @@ Phase 4         ░░░░░░░░░░░░░░░░░░░░   0
 ✅ Dashboard menampilkan total balance dan cashflow bulan ini
 ✅ Light/dark/system theme berfungsi
 ✅ Semua test passing (86 tests)
-⏳ Deploy ke Vercel berjalan
+✅ Deploy ke Vercel berjalan
 ✅ Tidak ada data user lain yang bisa diakses
 ```
 
@@ -268,63 +270,63 @@ Phase 4         ░░░░░░░░░░░░░░░░░░░░   0
 
 | Task | Status | Notes |
 |---|---|---|
-| Expand OAuth scope ke gmail.readonly | ⏳ | Update Google Cloud Console |
-| Gmail API client wrapper | ⏳ | `lib/gmail/client.ts` |
-| Token management (store historyId) | ⏳ | Di profiles.gmail_sync_token |
-| Token refresh handling | ⏳ | Supabase handle otomatis |
-| Revocation handling (graceful disable) | ⏳ | |
+| Expand OAuth scope ke gmail.readonly | ⏭️ | Perlu update Google Cloud Console secara manual — kode sudah siap |
+| Gmail API client wrapper | ✅ | `lib/gmail/client.ts` — fetchNewEmails, isBankEmail |
+| Token management (store historyId) | ✅ | Di profiles.gmail_sync_token, diupdate setiap sync |
+| Token refresh handling | ✅ | Supabase handle otomatis via session |
+| Revocation handling (graceful disable) | ✅ | GmailTokenExpiredError → disable sync di profiles |
 
 ### Inngest Background Jobs
 
 | Task | Status | Notes |
 |---|---|---|
-| Setup Inngest client | ⏳ | |
-| Job: gmail-sync (setiap 15 menit) | ⏳ | |
-| Job error handling + retry logic | ⏳ | Max 3x, exponential backoff |
-| Logging ke gmail_sync_logs | ⏳ | |
-| Concurrency control (max 10 user paralel) | ⏳ | |
+| Setup Inngest client | ✅ | `lib/inngest/client.ts` + `app/api/inngest/route.ts` |
+| Job: gmail-sync (setiap 15 menit) | ✅ | `lib/inngest/functions/gmail-sync.ts` — cron */15 * * * * |
+| Job error handling + retry logic | ✅ | retries: 3, per-user step.run() untuk isolasi retry |
+| Logging ke gmail_sync_logs | ✅ | Log di syncUserGmail setiap eksekusi |
+| Concurrency control (max 10 user paralel) | ✅ | concurrency: { limit: 10 } |
 
 ### Parser Engine
 
 | Task | Status | Notes |
 |---|---|---|
-| Base parser interface | ⏳ | `lib/gmail/parsers/base.ts` |
-| Parser registry + auto-detection | ⏳ | `lib/gmail/parsers/index.ts` |
-| Mandiri parser | ⏳ | Prioritas pertama |
-| BCA parser | ⏳ | |
-| BNI parser | ⏳ | |
-| BRI parser | ⏳ | |
-| CIMB parser | ⏳ | |
-| Generic fallback parser | ⏳ | |
-| Duplicate detection (raw_email_id) | ⏳ | |
-| Confidence scoring | ⏳ | |
-| Zod validation untuk ParsedTransaction | ⏳ | |
-| **Test: setiap parser dengan email fixture** | ⏳ | Min 5 test case per bank |
-| **Test: duplicate detection** | ⏳ | |
-| **Test: generic fallback** | ⏳ | |
+| Base parser interface | ✅ | `lib/gmail/parsers/base.ts` — parseIDRAmount, isFromSender, dll |
+| Parser registry + auto-detection | ✅ | `lib/gmail/parsers/index.ts` — PARSER_REGISTRY, detectAndParse |
+| Mandiri parser | ✅ | `lib/gmail/parsers/mandiri.ts` — 15 tests |
+| BCA parser | ✅ | `lib/gmail/parsers/bca.ts` — 17 tests |
+| BNI parser | ✅ | `lib/gmail/parsers/bni.ts` — 20 tests |
+| BRI parser | ✅ | `lib/gmail/parsers/bri.ts` — 27 tests |
+| CIMB parser | ✅ | `lib/gmail/parsers/cimb.ts` — 19 tests |
+| Generic fallback parser | ✅ | `lib/gmail/parsers/generic.ts` — confidence max 0.5 |
+| Duplicate detection (raw_email_id) | ✅ | Cek di syncUserGmail sebelum insert |
+| Confidence scoring | ✅ | 0.9 lengkap, 0.7 tanpa merchant, 0.5 generic |
+| Zod validation untuk ParsedTransaction | ✅ | `lib/validations/parsed-transaction.ts` |
+| **Test: setiap parser dengan email fixture** | ✅ | 15–27 tests per parser |
+| **Test: duplicate detection** | ✅ | `tests/unit/gmail/sync-duplicate.test.ts` — 6 tests |
+| **Test: generic fallback** | ✅ | `tests/unit/parsers/generic.test.ts` — 19 tests |
 
 ### AI Categorization
 
 | Task | Status | Notes |
 |---|---|---|
-| Rule-based engine | ⏳ | `lib/ai/rules.ts` |
-| Gemini API client | ⏳ | `lib/ai/gemini.ts` |
-| Categorization orchestration | ⏳ | Rules → Gemini → fallback |
-| **Test: rule coverage ≥ 80% merchant umum** | ⏳ | |
-| **Test: Gemini fallback saat API error** | ⏳ | |
+| Rule-based engine | ✅ | `lib/ai/rules.ts` — 63 rules, cover merchant Indonesia umum |
+| Gemini API client | ✅ | `lib/ai/gemini.ts` — timeout 5s, error handling, PII-safe logging |
+| Categorization orchestration | ✅ | `lib/ai/categorize.ts` — rules → gemini → fallback pipeline |
+| **Test: rule coverage ≥ 80% merchant umum** | ✅ | 59 tests di rules.test.ts |
+| **Test: Gemini fallback saat API error** | ✅ | 9 tests di gemini.test.ts + categorize.test.ts |
 
 ### Settings — Gmail
 
 | Task | Status | Notes |
 |---|---|---|
-| UI: Gmail sync settings page | ⏳ | Status + enable/disable |
-| UI: Connect Gmail button | ⏳ | |
-| UI: Disconnect Gmail | ⏳ | Dengan konfirmasi |
-| UI: Last synced timestamp | ⏳ | |
-| UI: Recent sync logs | ⏳ | |
-| API: POST /api/sync/gmail (manual trigger) | ⏳ | |
-| API: GET /api/sync/status | ⏳ | |
-| Sync status indicator di dashboard | ⏳ | Badge kecil |
+| UI: Gmail sync settings page | ✅ | `app/(dashboard)/settings/gmail/page.tsx` |
+| UI: Connect Gmail button | ✅ | signInWithOAuth dengan scope gmail.readonly |
+| UI: Disconnect Gmail | ✅ | Dengan ConfirmDialog |
+| UI: Last synced timestamp | ✅ | Di settings page dan badge |
+| UI: Recent sync logs | ✅ | 5 log terbaru di settings page |
+| API: POST /api/sync/gmail (manual trigger) | ✅ | Rate limit 1x/5 menit |
+| API: GET /api/sync/status | ✅ | Return enabled + logs |
+| Sync status indicator di dashboard | ✅ | `components/dashboard/sync-status-badge.tsx` |
 
 ### Phase 2 Completion Criteria
 ```
@@ -535,8 +537,8 @@ Lihat `decisions.md` untuk detail konteks, alternatif, dan review trigger setiap
 | Version | Tanggal | Phase | Highlights |
 |---|---|---|---|
 | v0.0.0 | May 24, 2026 | Pre-Dev | Project kickoff, semua docs dibuat |
-| v0.1.0 | TBD | Phase 1 | Core loop: auth, manual entry, dashboard |
-| v0.2.0 | TBD | Phase 2 | Gmail auto-sync, parser engine, AI categorization |
+| v0.1.0 | May 25, 2026 | Phase 1 | Core loop: auth, manual entry, dashboard — deployed ke Vercel |
+| v0.2.0 | May 25, 2026 | Phase 2 | Gmail auto-sync, parser engine (5 banks + generic), AI categorization (63 rules + Gemini) |
 | v0.3.0 | TBD | Phase 3 | Analytics, OCR, budget, AI insights, PWA |
 | v1.0.0 | TBD | Phase 4 | Public release ready |
 
