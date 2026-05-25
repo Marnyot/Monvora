@@ -126,6 +126,8 @@ test: add mandiri parser tests with email fixtures
 fix: prevent duplicate transaction from gmail sync
 ```
 
+⚠️ **Trailer commit:** Selalu gunakan `git commit --no-trailer` agar tidak ada `Co-Authored-By` otomatis. Jangan pakai `git commit` saja.
+
 ### Sebelum Setiap Commit — Checklist Cepat
 ```
 [ ] Session check ada di setiap API route baru?

@@ -33,7 +33,11 @@
       "Bash(pnpm audit *)",
       "Bash(pnpm tsc *)",
       "Bash(git commit *)",
-      "Bash(pnpm build *)"
+      "Bash(pnpm build *)",
+      "Bash(git *)",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__query-docs",
+      "Bash(node -e ' *)"
     ]
   },
   "enableAllProjectMcpServers": true,

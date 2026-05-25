@@ -1,7 +1,7 @@
 import type { BankParser, GmailMessage, ParseResult } from '@/types/parser'
 
 // Registry akan diisi saat masing-masing parser dibuat
-// Untuk sekarang kosong, akan ditambah di task berikutnya
+// Parsers di-import di sync.ts via side effects untuk menghindari circular dependencies
 export const PARSER_REGISTRY: BankParser[] = []
 
 export function detectAndParse(email: GmailMessage): ParseResult {
