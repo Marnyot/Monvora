@@ -55,15 +55,9 @@ export async function POST(request: Request) {
   }
 
   // ─── 4. GET GOOGLE OAUTH ACCESS TOKEN ─────────────────────
-  // Token disimpan di Supabase Auth internal storage
-  // Kita perlu ambil dari user identities atau session
-  let accessToken: string | null = null
-
-  // Cek di user identities
-  const googleIdentity = user.identities?.find(i => i.provider === 'google')
-  if (googleIdentity?.identity_data?.provider_token) {
-    accessToken = googleIdentity.identity_data.provider_token as string
-  }
+  // provider_token hanya ada di session (bukan di identity_data dari getUser)
+  const { data: { session } } = await supabase.auth.getSession()
+  const accessToken = session?.provider_token ?? null
 
   if (!accessToken) {
     return NextResponse.json(
