@@ -7,7 +7,21 @@
       "PowerShell(pnpm install *)",
       "PowerShell(pnpm add *)",
       "PowerShell(pnpm dev *)",
-      "PowerShell(try { $r = Invoke-WebRequest -Uri \"http://localhost:3000\" -TimeoutSec 10 -ErrorAction Stop; Write-Host \"HTTP $\\($r.StatusCode\\) - $\\($r.Content.Length\\) bytes\" } catch { Write-Host \"Error: $_\" })"
+      "PowerShell(try { $r = Invoke-WebRequest -Uri \"http://localhost:3000\" -TimeoutSec 10 -ErrorAction Stop; Write-Host \"HTTP $\\($r.StatusCode\\) - $\\($r.Content.Length\\) bytes\" } catch { Write-Host \"Error: $_\" })",
+      "Bash(git checkout *)",
+      "Bash(pnpm add *)",
+      "Bash(pnpm vitest *)",
+      "mcp__supabase__list_migrations",
+      "mcp__supabase__list_tables",
+      "mcp__supabase__apply_migration",
+      "mcp__supabase__generate_typescript_types",
+      "Bash(pnpm dlx *)",
+      "Bash(pnpm test *)",
+      "Bash(git add *)",
+      "Bash(git restore *)",
+      "Bash(git commit -m ' *)",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Project\\\\Monvora\\\\lib\" -Recurse -File | Select-Object FullName | ForEach-Object { $_.FullName.Replace\\(\"C:\\\\Project\\\\Monvora\\\\\", \"\"\\) })",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Project\\\\Monvora\\\\tests\" -Recurse -File -ErrorAction SilentlyContinue | Select-Object FullName | ForEach-Object { $_.FullName.Replace\\(\"C:\\\\Project\\\\Monvora\\\\\", \"\"\\) })"
     ]
   },
   "enableAllProjectMcpServers": true,

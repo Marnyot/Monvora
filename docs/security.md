@@ -9,10 +9,11 @@
 
 | Version | Date | Updated By | Changes |
 |---|---|---|---|
+| v2 | May 25, 2026 | Claude | Add backup strategy, dependency security, Sentry config, missing DB indexes, revised phase placement |
 | v1 | May 24, 2026 | Claude | Initial creation |
 
-**Current Version:** v1
-**Last Updated:** May 24, 2026
+**Current Version:** v2
+**Last Updated:** May 25, 2026
 
 ---
 
@@ -28,8 +29,11 @@
 8. [Gmail OAuth Security](#8-gmail-oauth-security)
 9. [Environment Variables](#9-environment-variables)
 10. [Logging & Monitoring](#10-logging--monitoring)
-11. [Security Checklist](#11-security-checklist)
-12. [Incident Response](#12-incident-response)
+11. [Backup Strategy](#11-backup-strategy)
+12. [Dependency Security](#12-dependency-security)
+13. [Database Indexes](#13-database-indexes)
+14. [Security Checklist](#14-security-checklist)
+15. [Incident Response](#15-incident-response)
 
 ---
 
@@ -755,15 +759,293 @@ console.log('Transaction created', {
 | Sync job ID | Snippet email |
 | Error type/message umum | Stack trace dengan data user |
 
-### Error Monitoring (Phase 4)
-Setelah public release, tambahkan Sentry dengan konfigurasi:
-- Scrub PII dari semua error reports
-- Tidak kirim request/response body
-- Hanya kirim stack trace dan metadata
+### Error Monitoring — Phase-Based
+
+**Phase 1 (solo use):** Vercel logs sudah cukup. Sentry belum diperlukan karena developer bisa melihat error secara langsung.
+
+**Phase 2 (Gmail sync mulai berjalan):** Tambahkan Sentry. Silent bug di sync job berbahaya karena background process — error tidak terlihat tanpa monitoring.
+
+```typescript
+// sentry.server.config.ts — konfigurasi wajib saat install
+import * as Sentry from '@sentry/nextjs'
+
+Sentry.init({
+  dsn: process.env.SENTRY_DSN,
+  environment: process.env.NODE_ENV,
+
+  // WAJIB: Strip semua data sensitif sebelum dikirim ke Sentry
+  beforeSend(event) {
+    // Hapus seluruh request payload
+    delete event.request?.data
+    delete event.request?.cookies
+    delete event.request?.headers
+
+    // Strip user info — hanya kirim ID
+    if (event.user) {
+      event.user = { id: event.user.id }
+    }
+
+    return event
+  },
+
+  // Jangan kirim transaction traces yang bisa mengandung data user
+  tracesSampleRate: 0,
+})
+```
+
+```typescript
+// sentry.client.config.ts
+Sentry.init({
+  dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
+
+  beforeSend(event) {
+    // Client-side: hapus semua breadcrumbs yang bisa mengandung data form
+    event.breadcrumbs = {
+      values: event.breadcrumbs?.values?.filter(
+        b => b.category !== 'ui.input' && b.category !== 'xhr'
+      )
+    }
+    return event
+  },
+
+  // Sampling minimal — hanya error, bukan performance
+  tracesSampleRate: 0,
+  replaysSessionSampleRate: 0,
+  replaysOnErrorSampleRate: 0,
+})
+```
+
+**Yang tidak boleh masuk Sentry:**
+- Nominal transaksi
+- Nama merchant
+- Email user
+- OAuth token apapun
+- Stack trace dengan data user di dalamnya
 
 ---
 
-## 11. SECURITY CHECKLIST
+## 11. BACKUP STRATEGY
+
+### Apa yang Sudah Ada (Supabase Default)
+
+Supabase secara default sudah melakukan automated backup:
+
+| Tier | Backup Interval | Retention | PITR |
+|---|---|---|---|
+| Free | Daily | 7 hari | ❌ |
+| Pro | Daily | 7 hari | ✅ (sampai 7 hari) |
+
+**Tidak perlu membuat custom backup script.** Backup sudah berjalan otomatis.
+
+### Yang Wajib Dilakukan (Phase 1)
+
+```
+[ ] Verifikasi backup aktif:
+    Supabase Dashboard → Project Settings → Backups
+    Pastikan "Daily Backups" showing sebagai enabled
+
+[ ] Lakukan test restore SEBELUM Phase 2:
+    1. Download backup terbaru dari Dashboard
+    2. Restore ke Supabase project baru (pakai free project terpisah)
+    3. Verifikasi: semua tabel ada, RLS aktif, data intact
+    4. Dokumentasikan waktu yang dibutuhkan untuk restore
+    Tujuan: tahu prosedur restore sebelum benar-benar dibutuhkan
+
+[ ] Dokumentasikan recovery steps di sini (section 15)
+```
+
+### Kapan Pertimbangkan Pro Plan
+
+Upgrade ke Supabase Pro (dan aktifkan PITR) saat:
+- Ada user nyata yang datanya bisa hilang
+- Volume transaksi sudah signifikan (>1000 transaksi/hari)
+- Belum tentu di Phase 2 — pertimbangkan saat mendekati public release
+
+### Yang Tidak Perlu Dilakukan (Terlalu Dini)
+
+```
+❌ Custom backup scripts ke S3/GCS
+❌ External database replication
+❌ Multi-region failover setup
+```
+
+Semua ini overkill untuk MVP dengan satu user (developer sendiri).
+
+---
+
+## 12. DEPENDENCY SECURITY
+
+### Setup (Lakukan Sekarang — Phase 1)
+
+**Dependabot** — deteksi vulnerability di dependencies secara otomatis:
+
+```yaml
+# .github/dependabot.yml
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Jakarta"
+    open-pull-requests-limit: 5
+    ignore:
+      # Major version updates perlu review manual lebih hati-hati
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    labels:
+      - "dependencies"
+      - "security"
+```
+
+**pnpm audit** — tambahkan ke CI pipeline:
+
+```json
+// package.json
+{
+  "scripts": {
+    "audit": "pnpm audit --audit-level=high",
+    "audit:fix": "pnpm audit --fix"
+  }
+}
+```
+
+```yaml
+# .github/workflows/security.yml
+name: Security Audit
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '0 9 * * 1'  # Setiap Senin jam 9 WIB
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm audit --audit-level=high
+```
+
+### Aturan Review Dependabot PR
+
+```
+❌ JANGAN auto-merge Dependabot PR
+✅ Review manual setiap PR sebelum merge
+✅ Cek changelog — apakah ada breaking change atau security note?
+✅ Jalankan test suite setelah merge
+✅ Finance app jadi target supply chain attack — jangan skip review
+```
+
+### Audit Manual (Minimal Sebulan Sekali)
+
+```bash
+# Cek vulnerability
+pnpm audit
+
+# Cek outdated packages
+pnpm outdated
+
+# Lihat dependency tree untuk cek transitive deps mencurigakan
+pnpm list --depth=2
+```
+
+---
+
+## 13. DATABASE INDEXES
+
+### Indexes yang Sudah Ada di Migration
+
+```sql
+-- Dari 001_initial_schema.sql — sudah applied
+CREATE INDEX idx_transactions_user_date
+  ON transactions(user_id, transacted_at DESC);
+
+CREATE INDEX idx_transactions_user_category
+  ON transactions(user_id, category_id);
+
+CREATE INDEX idx_transactions_gmail_id
+  ON transactions(raw_email_id)
+  WHERE raw_email_id IS NOT NULL;
+```
+
+### Indexes yang PERLU Ditambahkan (Buat Migration Baru)
+
+```sql
+-- ============================================================
+-- FILE: migrations/003_missing_indexes.sql
+-- Tambahkan ini SEKARANG saat tabel masih kosong
+-- ============================================================
+
+-- Soft delete filter — query paling sering include WHERE deleted_at IS NULL
+-- Partial index lebih efisien daripada full index
+CREATE INDEX idx_transactions_active
+  ON public.transactions(user_id, transacted_at DESC)
+  WHERE deleted_at IS NULL;
+
+CREATE INDEX idx_wallets_active
+  ON public.wallets(user_id)
+  WHERE deleted_at IS NULL;
+
+CREATE INDEX idx_budgets_active
+  ON public.budgets(user_id)
+  WHERE deleted_at IS NULL AND is_active = TRUE;
+
+-- Foreign key indexes — Postgres tidak auto-create ini (berbeda dari MySQL)
+-- Tanpa ini, JOIN operations melakukan full scan
+CREATE INDEX idx_transactions_wallet_id
+  ON public.transactions(wallet_id);
+
+CREATE INDEX idx_transactions_category_id
+  ON public.transactions(category_id);
+
+CREATE INDEX idx_budgets_category_id
+  ON public.budgets(category_id);
+
+-- Gmail sync logs — untuk dashboard status + recent sync history
+CREATE INDEX idx_gmail_sync_logs_user_recent
+  ON public.gmail_sync_logs(user_id, started_at DESC);
+
+-- Categories — system + custom query sering dipakai bersama
+CREATE INDEX idx_categories_user_system
+  ON public.categories(user_id, is_system);
+```
+
+### Panduan Index ke Depan
+
+```
+Rules of thumb untuk Monvora:
+
+1. Setiap foreign key column → buat index
+2. Setiap column yang sering di-filter (deleted_at, is_active) → partial index
+3. Kolom yang sering di-ORDER BY (transacted_at, created_at) → composite index dengan user_id
+4. Jangan over-index — setiap index memperlambat INSERT/UPDATE
+5. Di Phase 3 saat analytics mulai berat, review query slow dengan EXPLAIN ANALYZE
+```
+
+### Kapan Perlu Index Tambahan
+
+```sql
+-- Phase 2: Gmail sync mulai — tambahkan jika query duplicate detection lambat
+CREATE INDEX idx_transactions_reference_number
+  ON public.transactions(reference_number)
+  WHERE reference_number IS NOT NULL;
+
+-- Phase 3: Analytics dashboard — tambahkan jika aggregate query lambat
+CREATE INDEX idx_transactions_type_date
+  ON public.transactions(user_id, type, transacted_at DESC)
+  WHERE deleted_at IS NULL;
+```
+
+---
+
+## 14. SECURITY CHECKLIST
 
 ### Checklist Sebelum Setiap Commit
 
@@ -809,11 +1091,23 @@ GMAIL
 [ ] Tidak ada console.log debug yang tertinggal?
 [ ] Test manual: login → transaksi → logout berjalan normal?
 [ ] Test manual: akses URL transaksi user lain → 404 (bukan 403)?
+[ ] pnpm audit --audit-level=high tidak ada critical/high vulnerability?
+```
+
+### Checklist Phase 1 → Phase 2 (Sebelum Gmail Integration)
+
+```
+[ ] Backup restore test sudah dilakukan?
+[ ] Dependabot sudah dikonfigurasi di .github/dependabot.yml?
+[ ] pnpm audit clean (tidak ada high/critical)?
+[ ] Migration 003_missing_indexes.sql sudah applied?
+[ ] Sentry sudah dikonfigurasi dengan PII scrubbing?
+[ ] RLS test: verifikasi user A tidak bisa akses data user B?
 ```
 
 ---
 
-## 12. INCIDENT RESPONSE
+## 15. INCIDENT RESPONSE
 
 ### Skenario 1: Data Breach (Data User Bocor)
 
@@ -865,4 +1159,4 @@ LANGKAH SEGERA:
 *Document maintained by: Solo Developer*
 *Referenced from: master.md v2, architecture.md v1*
 *⚠️ Review dokumen ini setiap kali ada fitur baru yang menyentuh auth atau data user*
-*Next review: Before Phase 2 (Gmail integration)*
+*Next review: Before Phase 2 (Gmail integration) — pastikan checklist Phase 1→2 sudah selesai*
