@@ -7,10 +7,10 @@ export const TRANSACTION_SOURCES = ['manual', 'gmail', 'ocr'] as const
 export const createTransactionSchema = z.object({
   wallet_id: z.string().uuid('Wallet ID tidak valid'),
   category_id: z.string().uuid('Category ID tidak valid').optional(),
-  amount: z.number().int('Amount harus bilangan bulat').positive('Amount harus lebih dari 0'),
+  amount: z.number().int('Amount harus bilangan bulat').positive('Amount harus lebih dari 0').max(999_999_999),
   type: z.enum(TRANSACTION_TYPES),
-  description: z.string().max(255).optional(),
-  merchant_name: z.string().max(100).optional(),
+  description: z.string().max(255).optional().transform(val => val?.trim()),
+  merchant_name: z.string().max(100).optional().transform(val => val?.trim()),
   payment_method: z.enum(PAYMENT_METHODS).optional(),
   transacted_at: z.string().datetime({ offset: true }),
 })

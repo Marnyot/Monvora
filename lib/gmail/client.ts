@@ -84,11 +84,12 @@ export async function fetchNewEmails(
 async function fetchInitialEmails(
   gmail: ReturnType<typeof google.gmail>
 ): Promise<{ messages: GmailMessage[]; newHistoryId: string }> {
-  // List message IDs terbaru
+  // List message IDs terbaru — filter hanya dari bank sender
   const listRes = await gmail.users.messages.list({
     userId: 'me',
     maxResults: 50,
     labelIds: ['INBOX'],
+    q: buildBankEmailQuery(),
   })
 
   const messageItems = listRes.data.messages ?? []
@@ -267,7 +268,50 @@ function stripHtmlTags(html: string): string {
   return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
 }
 
+// ─── Known Bank Senders ────────────────────────────────────────────────────────
+
+const KNOWN_BANK_DOMAINS = [
+  'bankmandiri.co.id',
+  'klikbca.com',
+  'bca.co.id',
+  'bni.co.id',
+  'bri.co.id',
+  'cimbniaga.co.id',
+  'ocbcnisp.com',
+]
+
+/**
+ * Build Gmail API query untuk filter sender bank.
+ * Query ini dikirim ke Gmail API supaya hanya email dari bank yang di-fetch.
+ */
+export function buildBankEmailQuery(): string {
+  return KNOWN_BANK_DOMAINS.map(d => `from:${d}`).join(' OR ')
+}
+
 // ─── Bank Email Filter ─────────────────────────────────────────────────────────
+
+const BANK_KEYWORDS = [
+  'bank',
+  'transaksi',
+  'debit',
+  'transfer',
+  'bayar',
+  'pembayaran',
+  'notifikasi',
+  'mandiri',
+  'bca',
+  'bni',
+  'bri',
+  'cimb',
+  'ocbc',
+  'permata',
+  'danamon',
+  'gopay',
+  'ovo',
+  'dana',
+  'shopeepay',
+  'linkaja',
+]
 
 /**
  * Filter kasar: cek apakah email kemungkinan notifikasi bank/transaksi.
@@ -276,29 +320,6 @@ function stripHtmlTags(html: string): string {
  * Cek subject dan sender mengandung kata kunci bank/transaksi.
  */
 export function isBankEmail(email: GmailMessage): boolean {
-  const BANK_KEYWORDS = [
-    'bank',
-    'transaksi',
-    'debit',
-    'transfer',
-    'bayar',
-    'pembayaran',
-    'notifikasi',
-    'mandiri',
-    'bca',
-    'bni',
-    'bri',
-    'cimb',
-    'ocbc',
-    'permata',
-    'danamon',
-    'gopay',
-    'ovo',
-    'dana',
-    'shopeepay',
-    'linkaja',
-  ]
-
   const subjectLower = email.subject.toLowerCase()
   const fromLower = email.from.toLowerCase()
 
