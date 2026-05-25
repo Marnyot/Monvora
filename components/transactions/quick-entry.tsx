@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/select'
 import { PAYMENT_METHODS } from '@/lib/validations/transaction'
 import { formatIDR } from '@/lib/utils/currency'
-import { formatDate } from '@/lib/utils/date'
+import { formatDate, toDatetimeLocalInput } from '@/lib/utils/date'
 
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
   qris: 'QRIS',
@@ -71,7 +71,21 @@ export function QuickEntry({ open, onOpenChange, wallets, categories }: QuickEnt
   const [description, setDescription] = useState('')
   const [merchantName, setMerchantName] = useState('')
   const [paymentMethod, setPaymentMethod] = useState<string>('')
-  const [transactedAt, setTransactedAt] = useState(new Date().toISOString().slice(0, 16))
+  const [transactedAt, setTransactedAt] = useState(() => toDatetimeLocalInput(new Date()))
+
+  // Reset all fields to defaults when sheet opens
+  useEffect(() => {
+    if (open) {
+      setType('expense')
+      setAmountRaw('')
+      setCategoryId('')
+      setWalletId(wallets[0]?.id ?? '')
+      setDescription('')
+      setMerchantName('')
+      setPaymentMethod('')
+      setTransactedAt(toDatetimeLocalInput(new Date()))
+    }
+  }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Reset category when type changes
   useEffect(() => {
@@ -117,14 +131,6 @@ export function QuickEntry({ open, onOpenChange, wallets, categories }: QuickEnt
         setServerError(json.error?.message ?? 'Terjadi kesalahan')
         return
       }
-
-      // Reset form
-      setAmountRaw('')
-      setCategoryId('')
-      setDescription('')
-      setMerchantName('')
-      setPaymentMethod('')
-      setTransactedAt(new Date().toISOString().slice(0, 16))
 
       toast.success('Transaksi berhasil disimpan')
       onOpenChange(false)

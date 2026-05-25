@@ -5,11 +5,12 @@ import { TransactionDetailClient } from '@/components/transactions/transaction-d
 export const metadata = { title: 'Detail Transaksi — Monvora' }
 
 interface Props {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 export default async function TransactionDetailPage({ params }: Props) {
-  const supabase = createClient()
+  const supabase = await createClient()
+  const { id } = await params
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) notFound()
@@ -23,7 +24,7 @@ export default async function TransactionDetailPage({ params }: Props) {
         wallet:wallets(id, name, color),
         category:categories(id, name, icon, color)
       `)
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('user_id', user.id)
       .is('deleted_at', null)
       .single(),

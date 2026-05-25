@@ -5,7 +5,7 @@ import { WalletListClient } from '@/components/dashboard/wallet-list-client'
 export const metadata = { title: 'Wallet — Monvora' }
 
 export default async function WalletsPage() {
-  const supabase = createClient()
+  const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')

@@ -4,11 +4,13 @@ export const metadata = {
   title: 'Masuk — Monvora',
 }
 
-export default function LoginPage({
+export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: { error?: string }
+  searchParams: Promise<{ error?: string }>
 }) {
+  const { error } = await searchParams
+
   return (
     <div className="w-full max-w-sm space-y-8">
       {/* Logo & heading */}
@@ -29,7 +31,7 @@ export default function LoginPage({
         </div>
 
         {/* Error state */}
-        {searchParams.error && (
+        {error && (
           <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-3 py-2 text-sm text-destructive">
             Terjadi kesalahan saat masuk. Silakan coba lagi.
           </div>

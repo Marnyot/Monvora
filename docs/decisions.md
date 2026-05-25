@@ -9,10 +9,11 @@
 
 | Version | Date | Updated By | Changes |
 |---|---|---|---|
+| v3 | May 25, 2026 | Claude | Tambah ADR-023 (Bahasa Indonesia UI), update ADR-016, update ADR index |
 | v2 | May 25, 2026 | Claude | Tambah section 7: Future Upgrade Path |
 | v1 | May 25, 2026 | Claude | Initial creation — konsolidasi dari progress.md + tambah security decisions |
 
-**Current Version:** v2
+**Current Version:** v3
 **Last Updated:** May 25, 2026
 
 ---
@@ -505,7 +506,7 @@ Tidak ada onboarding tutorial. Gunakan empty states yang informatif sebagai peng
 Monvora targets Indonesian users. Perlu memutuskan bahasa untuk AI-generated insights dari Gemini.
 
 **Keputusan:**
-AI insights di-generate dalam Bahasa Indonesia. UI lainnya dalam English untuk Phase 1-2 (i18n di Phase 3).
+AI insights di-generate dalam Bahasa Indonesia. ~~UI lainnya dalam English~~ → **Superseded oleh ADR-023** — seluruh UI juga dalam Bahasa Indonesia.
 
 **Alasan:**
 - Target user Indonesia — insights finansial lebih relatable dalam bahasa sendiri
@@ -701,6 +702,36 @@ Gemini API (gemini-1.5-flash) sebagai AI provider. Rule-based fallback sebagai s
 - Data transaksi tidak boleh dikirim ke Gemini secara verbatim — hanya metadata
 
 **Review Trigger:** Jika Gemini free tier rate limit menghambat user experience, atau ada privacy concern dengan data yang dikirim ke Gemini.
+
+---
+
+### ADR-023 — Bahasa Indonesia sebagai Default Language UI
+
+| Field | Detail |
+|---|---|
+| **Tanggal** | May 25, 2026 |
+| **Status** | ✅ Active |
+| **Kategori** | Product |
+| **Supersedes** | ADR-016 (bagian "UI dalam English") dan master.md P5 |
+
+**Konteks:**
+ADR-016 dan master.md P5 awalnya menetapkan UI dalam English untuk Phase 1-2. Saat implementasi dimulai, semua copy UI ditulis langsung dalam Bahasa Indonesia karena target user adalah Indonesia, dan terjemahan terasa lebih natural untuk fintech lokal.
+
+**Keputusan:**
+Seluruh UI Monvora (label, placeholder, toast, error message, navigasi) dalam Bahasa Indonesia sejak Phase 1. i18n (next-intl) tetap di Phase 3 jika ada kebutuhan ekspansi ke market non-Indonesia.
+
+**Alasan:**
+- Target user 100% Indonesia untuk Phase 1-3 — tidak ada user non-Indonesia dalam scope ini
+- "Pengeluaran", "Pemasukan", "Transfer" lebih natural dari "Expense", "Income" untuk user Indonesia
+- Mengurangi cognitive load — user tidak perlu translate di kepalanya
+- Tidak ada kerugian: jika nanti butuh English, tinggal tambah i18n di Phase 3
+
+**Konsekuensi yang diterima:**
+- Dokumen-dokumen teknis (CLAUDE.md, progress.md, dll) tetap dalam Bahasa Indonesia
+- Jika ada contributor non-Indonesia, UI copy perlu penjelasan tambahan
+- Saat Phase 3 (i18n), perlu extraction semua string dari kode ke translation files
+
+**Review Trigger:** Jika ada target market non-Indonesia yang konkret di Phase 4.
 
 ---
 

@@ -1,20 +1,34 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { updateCategorySchema } from '@/lib/validations/category'
+import { validateUUID } from '@/lib/validations/common'
+import { checkRateLimit } from '@/lib/utils/rate-limit'
 
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
-  const supabase = createClient()
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const idError = validateUUID(id)
+  if (idError) return idError
+
+  const supabase = await createClient()
 
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) {
     return NextResponse.json({ data: null, error: { code: 'UNAUTHORIZED', message: 'Unauthorized' } }, { status: 401 })
   }
 
+  const rl = checkRateLimit(user.id, '/api/categories')
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { data: null, error: { code: 'RATE_LIMIT', message: 'Terlalu banyak permintaan' } },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } }
+    )
+  }
+
   // Only allow editing own (non-system) categories
   const { data: existing } = await supabase
     .from('categories')
     .select('id, is_system')
-    .eq('id', params.id)
+    .eq('id', id)
     .eq('user_id', user.id)
     .is('deleted_at', null)
     .single()
@@ -43,30 +57,42 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   const { data, error } = await supabase
     .from('categories')
     .update(parsed.data)
-    .eq('id', params.id)
+    .eq('id', id)
     .eq('user_id', user.id)
     .select('id, name, icon, color, type, is_system, user_id')
     .single()
 
   if (error) {
-    return NextResponse.json({ data: null, error: { code: 'DB_ERROR', message: error.message } }, { status: 500 })
+    return NextResponse.json({ data: null, error: { code: 'DB_ERROR', message: 'Terjadi kesalahan database' } }, { status: 500 })
   }
 
   return NextResponse.json({ data, error: null })
 }
 
-export async function DELETE(_request: Request, { params }: { params: { id: string } }) {
-  const supabase = createClient()
+export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const idError = validateUUID(id)
+  if (idError) return idError
+
+  const supabase = await createClient()
 
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) {
     return NextResponse.json({ data: null, error: { code: 'UNAUTHORIZED', message: 'Unauthorized' } }, { status: 401 })
   }
 
+  const rl = checkRateLimit(user.id, '/api/categories')
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { data: null, error: { code: 'RATE_LIMIT', message: 'Terlalu banyak permintaan' } },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } }
+    )
+  }
+
   const { data: existing } = await supabase
     .from('categories')
     .select('id, is_system')
-    .eq('id', params.id)
+    .eq('id', id)
     .eq('user_id', user.id)
     .is('deleted_at', null)
     .single()
@@ -82,11 +108,11 @@ export async function DELETE(_request: Request, { params }: { params: { id: stri
   const { error } = await supabase
     .from('categories')
     .update({ deleted_at: new Date().toISOString() })
-    .eq('id', params.id)
+    .eq('id', id)
     .eq('user_id', user.id)
 
   if (error) {
-    return NextResponse.json({ data: null, error: { code: 'DB_ERROR', message: error.message } }, { status: 500 })
+    return NextResponse.json({ data: null, error: { code: 'DB_ERROR', message: 'Terjadi kesalahan database' } }, { status: 500 })
   }
 
   return new NextResponse(null, { status: 204 })

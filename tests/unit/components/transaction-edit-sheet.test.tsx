@@ -25,7 +25,7 @@ const mockTransaction = {
   payment_method: 'cash',
   transacted_at: '2026-05-25T12:00:00.000Z',
   wallet: { id: 'w-1', name: 'BCA', color: '#3b82f6' },
-  category: { id: 'cat-1', name: 'Food & Beverage', icon: 'utensils', color: '#f59e0b' },
+  category: { id: 'cat-1', name: 'Food & Beverage', icon: 'utensils', color: '#f59e0b', type: 'expense', is_system: true },
 }
 
 const mockWallets = [{ id: 'w-1', name: 'BCA', color: '#3b82f6' }]

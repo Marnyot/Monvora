@@ -32,6 +32,12 @@ export function formatDateShort(input: string | Date): string {
   return `${day} ${month}`
 }
 
+export function toDatetimeLocalInput(date: Date | string): string {
+  const d = typeof date === 'string' ? new Date(date) : date
+  const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000)
+  return local.toISOString().slice(0, 16)
+}
+
 export function toJakartaISO(date: Date): string {
   const local = new Date(date.getTime() + JAKARTA_OFFSET_MS)
   const yyyy = local.getUTCFullYear()

@@ -12,21 +12,21 @@ export const metadata = { title: 'Transaksi — Monvora' }
 const PAGE_SIZE = 20
 
 interface PageProps {
-  searchParams: {
+  searchParams: Promise<{
     page?: string
     type?: string
     q?: string
-  }
+  }>
 }
 
 async function TransactionList({ searchParams }: PageProps) {
-  const supabase = createClient()
+  const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const page = Math.max(1, parseInt(searchParams.page ?? '1', 10))
-  const type = searchParams.type
-  const q = searchParams.q?.trim()
+  const { page: pageParam, type, q: rawQ } = await searchParams
+  const page = Math.max(1, parseInt(pageParam ?? '1', 10))
+  const q = rawQ?.trim()
 
   const from = (page - 1) * PAGE_SIZE
   const to = from + PAGE_SIZE - 1
@@ -80,7 +80,7 @@ async function TransactionList({ searchParams }: PageProps) {
   )
 }
 
-export default function TransactionsPage({ searchParams }: PageProps) {
+export default async function TransactionsPage({ searchParams }: PageProps) {
   return (
     <div className="max-w-lg mx-auto">
       <div className="flex items-center justify-between px-4 py-4 border-b">
