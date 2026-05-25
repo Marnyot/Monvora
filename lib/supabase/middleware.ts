@@ -26,19 +26,16 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
+  const { data: { user }, error: userError } = await supabase.auth.getUser()
 
+  const isAuthed = user && !userError
   const pathname = request.nextUrl.pathname
 
-  // Redirect unauthenticated users away from protected routes
-  if (!session && pathname.startsWith('/dashboard')) {
+  if (!isAuthed && pathname.startsWith('/dashboard')) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  // Redirect authenticated users away from login
-  if (session && pathname === '/login') {
+  if (isAuthed && pathname === '/login') {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
