@@ -40,14 +40,14 @@ Status          : 🟢 Development — Phase 1
 Current Phase   : Phase 1 — Core Loop
 App Version     : v0.1.0-dev
 Last Updated    : May 25, 2026
-Next Milestone  : Filter/search UI, deploy to Vercel
+Next Milestone  : Deploy ke Vercel
 ```
 
 ### Overall Progress
 
 ```
 Documentation   ████████████████████ 100% (10/10 docs selesai)
-Phase 1         █████████████████░░░  85% (transaction detail+edit, sidebar, toast done)
+Phase 1         ███████████████████░  95% (filter, search, pagination done — hanya deploy tersisa)
 Phase 2         ░░░░░░░░░░░░░░░░░░░░   0%
 Phase 3         ░░░░░░░░░░░░░░░░░░░░   0%
 Phase 4         ░░░░░░░░░░░░░░░░░░░░   0%
@@ -187,9 +187,9 @@ Phase 4         ░░░░░░░░░░░░░░░░░░░░   0
 | API: GET /api/transactions | ✅ | Pagination, filter type/category/wallet/date/q, ownership enforced |
 | UI: Transaction list page | ✅ | `/transactions` — Suspense + TransactionCard |
 | UI: Transaction card component | ✅ | Category color, merchant/desc/category label, amount, date + wallet |
-| UI: Filter bar | ⏳ | |
-| UI: Search input | ⏳ | |
-| UI: Pagination | ⏳ | |
+| UI: Filter bar | ✅ | Type filter pills (Semua/Pengeluaran/Pemasukan/Transfer), URL-based state |
+| UI: Search input | ✅ | Debounced 300ms, search merchant_name + description via ilike |
+| UI: Pagination | ✅ | 20/halaman, prev/next buttons, hidden jika ≤1 halaman |
 | UI: Empty state | ✅ | Via EmptyState component |
 | UI: Skeleton loader | ✅ | Via SkeletonList in Suspense fallback |
 | **Test: filter + search** | ⏳ | |
