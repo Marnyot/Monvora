@@ -28,15 +28,10 @@ vi.mock('@/lib/utils/rate-limit', () => ({
   checkRateLimit: vi.fn().mockReturnValue({ allowed: true }),
 }))
 
-vi.mock('@/lib/gmail/sync', () => ({
-  syncUserGmail: vi.fn().mockResolvedValue({
-    userId: 'user-abc',
-    emailsProcessed: 5,
-    transactionsCreated: 3,
-    transactionsSkipped: 2,
-    errors: 0,
-    newHistoryId: 'history-123',
-  }),
+const mockInngestSend = vi.fn().mockResolvedValue(undefined)
+
+vi.mock('@/lib/inngest/client', () => ({
+  inngest: { send: (...args: unknown[]) => mockInngestSend(...args) },
 }))
 
 const VALID_USER = {
@@ -109,7 +104,7 @@ describe('POST /api/sync/gmail', () => {
     expect(json.error.code).toBe('NO_GOOGLE_TOKEN')
   })
 
-  it('returns 200 with SyncResult on success', async () => {
+  it('returns 202 and fires inngest event on success', async () => {
     mockGetUser.mockResolvedValue({ data: { user: VALID_USER }, error: null })
 
     const profileChain = makeChain({ data: VALID_PROFILE, error: null })
@@ -121,11 +116,14 @@ describe('POST /api/sync/gmail', () => {
     const req = new Request('http://localhost/api/sync/gmail', { method: 'POST' })
     const res = await POST(req)
 
-    expect(res.status).toBe(200)
+    expect(res.status).toBe(202)
     const json = await res.json()
     expect(json.error).toBeNull()
-    expect(json.data.emailsProcessed).toBe(5)
-    expect(json.data.transactionsCreated).toBe(3)
+    expect(json.data.message).toBe('Sync dimulai')
+    expect(mockInngestSend).toHaveBeenCalledWith({
+      name: 'gmail/sync.manual',
+      data: { userId: VALID_USER.id, accessToken: VALID_SESSION.provider_token },
+    })
   })
 
   it('returns 429 when rate limited', async () => {
@@ -146,16 +144,14 @@ describe('POST /api/sync/gmail', () => {
     expect(json.error.code).toBe('RATE_LIMIT')
   })
 
-  it('returns 500 when syncUserGmail throws error', async () => {
+  it('returns 500 when inngest.send throws', async () => {
     mockGetUser.mockResolvedValue({ data: { user: VALID_USER }, error: null })
 
     const profileChain = makeChain({ data: VALID_PROFILE, error: null })
     mockFrom.mockReturnValueOnce(profileChain)
 
     mockGetSession.mockResolvedValue({ data: { session: VALID_SESSION }, error: null })
-
-    const { syncUserGmail } = await import('@/lib/gmail/sync')
-    vi.mocked(syncUserGmail).mockRejectedValueOnce(new Error('Gmail API error'))
+    mockInngestSend.mockRejectedValueOnce(new Error('Inngest unavailable'))
 
     const { POST } = await import('@/app/api/sync/gmail/route')
     const req = new Request('http://localhost/api/sync/gmail', { method: 'POST' })

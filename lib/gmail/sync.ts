@@ -105,10 +105,25 @@ export async function syncUserGmail(
   const bankEmails = messages.filter(isBankEmail)
   result.emailsProcessed = bankEmails.length
 
-  // 4. Proses setiap email bank
+  // 4. Ambil default wallet sekali sebelum loop
+  const { data: wallet } = await supabase
+    .from('wallets')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('is_active', true)
+    .is('deleted_at', null)
+    .limit(1)
+    .maybeSingle()
+
+  if (!wallet) {
+    await logSyncResult(supabase, userId, 'error', result, startedAt, 'No active wallet')
+    return result
+  }
+
+  // 5. Proses setiap email bank
   for (const email of bankEmails) {
     try {
-      // 4a. Cek duplikat berdasarkan raw_email_id
+      // 5a. Cek duplikat berdasarkan raw_email_id
       const { data: existing } = await supabase
         .from('transactions')
         .select('id')
@@ -122,24 +137,23 @@ export async function syncUserGmail(
         continue
       }
 
-      // 4b. Parse email
+      // 5b. Parse email
       const parseResult = detectAndParse(email)
 
       if (!parseResult.transaction) {
-        // Tidak dapat di-parse, skip tanpa error
         result.transactionsSkipped++
         continue
       }
 
       const tx = parseResult.transaction
 
-      // 4c. Validate amount (harus integer positif)
+      // 5c. Validate amount (harus integer positif)
       if (!Number.isInteger(tx.amount) || tx.amount <= 0) {
         result.errors++
         continue
       }
 
-      // 4d. Categorize via AI pipeline (rules → gemini → fallback)
+      // 5d. Categorize via AI pipeline (rules → gemini → fallback)
       const categoryResult = await categorizeTransaction(
         tx.merchant_name,
         tx.description,
@@ -147,23 +161,7 @@ export async function syncUserGmail(
         tx.payment_method ?? 'unknown'
       )
 
-      // 4e. Ambil default wallet user (diambil dari wallets dengan is_active = true)
-      const { data: wallet } = await supabase
-        .from('wallets')
-        .select('id')
-        .eq('user_id', userId)
-        .eq('is_active', true)
-        .is('deleted_at', null)
-        .limit(1)
-        .maybeSingle()
-
-      if (!wallet) {
-        // Tidak ada wallet aktif, skip
-        result.errors++
-        continue
-      }
-
-      // 4f. Insert transaksi
+      // 5e. Insert transaksi
       const { error: insertError } = await supabase
         .from('transactions')
         .insert({
@@ -191,12 +189,11 @@ export async function syncUserGmail(
 
       result.transactionsCreated++
     } catch {
-      // Jangan log detail error (bisa mengandung info transaksi)
       result.errors++
     }
   }
 
-  // 5. Update historyId di profiles
+  // 6. Update historyId di profiles
   await supabase
     .from('profiles')
     .update({
@@ -205,7 +202,7 @@ export async function syncUserGmail(
     })
     .eq('id', userId)
 
-  // 6. Log result ke gmail_sync_logs
+  // 7. Log result ke gmail_sync_logs
   const status =
     result.errors > 0 && result.transactionsCreated === 0 ? 'error' : 'success'
 

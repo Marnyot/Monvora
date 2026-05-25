@@ -269,14 +269,12 @@ describe('syncUserGmail', () => {
     // Should not throw, handled gracefully
   })
 
-  it('increments errors when wallet is not found', async () => {
+  it('returns early when no active wallet found', async () => {
     const email = makeMockEmail('email-nowallet')
     mockFetchNewEmails.mockResolvedValue({ messages: [email], newHistoryId: 'hist-500' })
     mockIsBankEmail.mockReturnValue(true)
-    mockDetectAndParse.mockReturnValue(makeParsedTransaction('email-nowallet'))
 
     const supabase = makeSupabaseMock({
-      existingTxResult: { data: null, error: null },
       walletResult: { data: null, error: null }, // tidak ada wallet
     })
     const { syncUserGmail } = await import('@/lib/gmail/sync')
@@ -285,7 +283,7 @@ describe('syncUserGmail', () => {
     const result: SyncResult = await syncUserGmail(supabase as any, MOCK_USER_ID, MOCK_ACCESS_TOKEN)
 
     expect(result.transactionsCreated).toBe(0)
-    expect(result.errors).toBe(1)
+    expect(result.errors).toBe(0)
   })
 
   it('uses lastHistoryId from profile for incremental sync', async () => {
