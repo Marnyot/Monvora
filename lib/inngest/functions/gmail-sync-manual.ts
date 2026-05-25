@@ -28,8 +28,8 @@ export const gmailSyncManualFunction = inngest.createFunction(
     id: 'gmail-sync-manual',
     name: 'Gmail Sync — Manual Trigger',
     retries: 1,
+    triggers: [{ event: 'gmail/sync.manual' }],
   },
-  { event: 'gmail/sync.manual' },
   async ({ event, logger }) => {
     const { userId, accessToken } = event.data as { userId: string; accessToken: string }
 
