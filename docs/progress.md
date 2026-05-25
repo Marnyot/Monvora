@@ -36,16 +36,16 @@
 ```
 Status          : 🟢 Development — Phase 1
 Current Phase   : Phase 1 — Core Loop
-App Version     : v0.0.0 (project scaffold selesai)
-Last Updated    : May 24, 2026
-Next Milestone  : Auth — Google OAuth login + Supabase setup
+App Version     : v0.1.0-dev (auth + DB done)
+Last Updated    : May 25, 2026
+Next Milestone  : Onboarding flow + Wallet management
 ```
 
 ### Overall Progress
 
 ```
 Documentation   ████████████████████ 100% (10/10 docs selesai)
-Phase 1         ██░░░░░░░░░░░░░░░░░░   8% (setup project selesai, belum mulai auth)
+Phase 1         █████░░░░░░░░░░░░░░░  25% (DB + auth selesai, mulai onboarding + wallets)
 Phase 2         ░░░░░░░░░░░░░░░░░░░░   0%
 Phase 3         ░░░░░░░░░░░░░░░░░░░░   0%
 Phase 4         ░░░░░░░░░░░░░░░░░░░░   0%
@@ -66,7 +66,7 @@ Phase 4         ░░░░░░░░░░░░░░░░░░░░   0
 
 | Phase | Fokus | Target | Status | App Version |
 |---|---|---|---|---|
-| Pre-Dev | Documentation | May 24, 2026 | 🔄 In Progress | v0.0.0 |
+| Pre-Dev | Documentation | May 24, 2026 | ✅ Done | v0.0.0 |
 | Phase 1 | Core Loop (manual tracking) | Week 4 | ⏳ Pending | v0.1.0 |
 | Phase 2 | Gmail Automation | Week 10 | ⏳ Pending | v0.2.0 |
 | Phase 3 | Intelligence Layer | Week 16 | ⏳ Pending | v0.3.0 |
@@ -87,42 +87,42 @@ Phase 4         ░░░░░░░░░░░░░░░░░░░░   0
 | Install pnpm | ✅ | pnpm v10.33.0, Node v24.14.1 |
 | Create Next.js 14 project | ✅ | next@14.2.35, TypeScript, Tailwind v3, App Router, `@/*` alias |
 | Install semua dependencies | ✅ | shadcn (manual config: default style, slate, CSS vars), supabase, inngest, zod, zustand, tanstack-query, next-themes, lucide-react, sonner |
-| Setup Supabase project (cloud) | ⏳ | Region: Singapore |
-| Run database migrations | ⏳ | `supabase/migrations/001_initial_schema.sql` |
+| Setup Supabase project (cloud) | ✅ | Migrations applied via MCP (region: Singapore) |
+| Run database migrations | ✅ | 001_initial_schema.sql + 002_seed_categories.sql applied |
 | Setup Google Cloud Console | ⏳ | Enable Gmail API + OAuth |
 | Configure OAuth credentials | ⏳ | Authorized origins + redirect URIs |
 | Setup Inngest account | ⏳ | |
 | Setup Gemini API key | ⏳ | Google AI Studio |
 | Setup .env.local | ⏳ | Dari .env.example |
-| Add .env.local ke .gitignore | ⏳ | Wajib sebelum commit pertama |
+| Add .env.local ke .gitignore | ✅ | Covered oleh `.env*.local` pattern |
 | Init git + push ke GitHub | ⏳ | |
 | Deploy ke Vercel (awal) | ⏳ | Setup CI dari awal |
-| Setup Vitest + Testing Library | ⏳ | |
+| Setup Vitest + Testing Library | ✅ | 21 tests passing (currency + date + auth) |
 
 ### Authentication
 
 | Task | Status | Notes |
 |---|---|---|
-| Google OAuth login page | ⏳ | `/login` dengan "Sign in with Google" |
-| OAuth callback handler | ⏳ | `/auth/callback/route.ts` |
-| Session middleware | ⏳ | `middleware.ts` — guard semua `/dashboard/*` |
-| Auto-create profile on first login | ⏳ | Trigger atau handler di callback |
-| Redirect logic (login ↔ dashboard) | ⏳ | |
-| Logout endpoint | ⏳ | Invalidate session di server |
+| Google OAuth login page | ✅ | `app/(auth)/login/page.tsx` dengan GoogleLoginButton + error state |
+| OAuth callback handler | ✅ | `app/auth/callback/route.ts` — exchange code → redirect /dashboard |
+| Session middleware | ✅ | `middleware.ts` — guard semua `/dashboard/*` |
+| Auto-create profile on first login | ✅ | DB trigger `on_auth_user_created` di migration |
+| Redirect logic (login ↔ dashboard) | ✅ | Di middleware + root page redirect |
+| Logout endpoint | ✅ | `app/api/auth/logout/route.ts` — POST → signOut → /login |
 | **Test: auth flow** | ⏳ | E2E: login → dashboard → logout |
 
 ### Database Schema
 
 | Task | Status | Notes |
 |---|---|---|
-| Migration: profiles table + RLS | ⏳ | |
-| Migration: wallets table + RLS | ⏳ | |
-| Migration: categories table + RLS | ⏳ | |
-| Migration: transactions table + RLS | ⏳ | |
-| Migration: budgets table + RLS | ⏳ | |
-| Migration: gmail_sync_logs table + RLS | ⏳ | |
-| Seed: default categories | ⏳ | `002_seed_categories.sql` |
-| Generate Supabase TypeScript types | ⏳ | `supabase gen types typescript` |
+| Migration: profiles table + RLS | ✅ | Applied via Supabase MCP |
+| Migration: wallets table + RLS | ✅ | Applied via Supabase MCP |
+| Migration: categories table + RLS | ✅ | Applied via Supabase MCP |
+| Migration: transactions table + RLS | ✅ | Applied via Supabase MCP |
+| Migration: budgets table + RLS | ✅ | Applied via Supabase MCP |
+| Migration: gmail_sync_logs table + RLS | ✅ | Applied via Supabase MCP |
+| Seed: default categories | ✅ | 20 kategori sistem (12 expense, 7 income, 1 transfer) |
+| Generate Supabase TypeScript types | ✅ | `types/database.ts` ter-generate dari schema live |
 | **Test: RLS policies** | ⏳ | Verifikasi user A tidak bisa akses data user B |
 
 ### Onboarding
@@ -139,10 +139,10 @@ Phase 4         ░░░░░░░░░░░░░░░░░░░░   0
 
 | Task | Status | Notes |
 |---|---|---|
-| API: GET /api/wallets | ⏳ | |
-| API: POST /api/wallets | ⏳ | |
-| API: PATCH /api/wallets/:id | ⏳ | |
-| API: DELETE /api/wallets/:id (soft) | ⏳ | |
+| API: GET /api/wallets | ✅ | Auth-gated, filters deleted_at IS NULL |
+| API: POST /api/wallets | ✅ | Zod validation, user_id dari session |
+| API: PATCH /api/wallets/:id | ✅ | Ownership check → 404 jika bukan milik user |
+| API: DELETE /api/wallets/:id (soft) | ✅ | Soft delete via deleted_at |
 | UI: Wallet list page | ⏳ | |
 | UI: Add wallet form | ⏳ | |
 | UI: Edit wallet | ⏳ | |
@@ -220,16 +220,16 @@ Phase 4         ░░░░░░░░░░░░░░░░░░░░   0
 
 | Task | Status | Notes |
 |---|---|---|
-| Setup next-themes ThemeProvider | ⏳ | defaultTheme="system" |
-| Configure Tailwind dark mode | ⏳ | darkMode: 'class' |
-| Theme toggle component | ⏳ | Light / Dark / System |
+| Setup next-themes ThemeProvider | ✅ | `components/providers.tsx`, lang="id", suppressHydrationWarning |
+| Configure Tailwind dark mode | ✅ | darkMode: ["class"], font-sans → Geist via CSS var |
+| Theme toggle component | ✅ | `components/shared/theme-toggle.tsx` — dropdown Light/Dark/System |
 | Bottom navigation (mobile) | ⏳ | |
 | Sidebar navigation (desktop) | ⏳ | |
-| AmountDisplay component | ⏳ | Hijau/merah sesuai tipe |
-| CurrencyDisplay component | ⏳ | Format Rp X.XXX |
-| EmptyState component | ⏳ | Reusable |
-| SkeletonCard component | ⏳ | Reusable |
-| ConfirmDialog component | ⏳ | Sebelum delete |
+| AmountDisplay component | ✅ | Hijau income / merah expense / neutral transfer, prefix ±− |
+| CurrencyDisplay component | ✅ | Wraps formatIDR, tabular-nums |
+| EmptyState component | ✅ | Icon + title + desc + optional action button |
+| SkeletonCard component | ✅ | SkeletonCard + SkeletonList helper |
+| ConfirmDialog component | ✅ | Dialog wrapper, destructive variant, isPending state |
 | Toast notifications (Sonner) | ⏳ | |
 | **Test: light + dark mode** | ⏳ | Visual check semua halaman |
 
