@@ -3,8 +3,9 @@ import { NextResponse } from 'next/server'
 import { updateCategorySchema } from '@/lib/validations/category'
 import { checkRateLimit } from '@/lib/utils/rate-limit'
 
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
-  const supabase = createClient()
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const supabase = await createClient()
 
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) {
@@ -23,7 +24,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   const { data: existing } = await supabase
     .from('categories')
     .select('id, is_system')
-    .eq('id', params.id)
+    .eq('id', id)
     .eq('user_id', user.id)
     .is('deleted_at', null)
     .single()
@@ -52,7 +53,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   const { data, error } = await supabase
     .from('categories')
     .update(parsed.data)
-    .eq('id', params.id)
+    .eq('id', id)
     .eq('user_id', user.id)
     .select('id, name, icon, color, type, is_system, user_id')
     .single()
@@ -64,8 +65,9 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   return NextResponse.json({ data, error: null })
 }
 
-export async function DELETE(_request: Request, { params }: { params: { id: string } }) {
-  const supabase = createClient()
+export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const supabase = await createClient()
 
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) {
@@ -83,7 +85,7 @@ export async function DELETE(_request: Request, { params }: { params: { id: stri
   const { data: existing } = await supabase
     .from('categories')
     .select('id, is_system')
-    .eq('id', params.id)
+    .eq('id', id)
     .eq('user_id', user.id)
     .is('deleted_at', null)
     .single()
@@ -99,7 +101,7 @@ export async function DELETE(_request: Request, { params }: { params: { id: stri
   const { error } = await supabase
     .from('categories')
     .update({ deleted_at: new Date().toISOString() })
-    .eq('id', params.id)
+    .eq('id', id)
     .eq('user_id', user.id)
 
   if (error) {

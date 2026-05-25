@@ -4,7 +4,7 @@ import { createTransactionSchema, listTransactionSchema } from '@/lib/validation
 import { checkRateLimit } from '@/lib/utils/rate-limit'
 
 export async function GET(request: Request) {
-  const supabase = createClient()
+  const supabase = await createClient()
 
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) {
@@ -65,7 +65,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const supabase = createClient()
+  const supabase = await createClient()
 
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) {

@@ -3,8 +3,9 @@ import { NextResponse } from 'next/server'
 import { updateTransactionSchema } from '@/lib/validations/transaction'
 import { checkRateLimit } from '@/lib/utils/rate-limit'
 
-export async function GET(_request: Request, { params }: { params: { id: string } }) {
-  const supabase = createClient()
+export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const supabase = await createClient()
 
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) {
@@ -27,7 +28,7 @@ export async function GET(_request: Request, { params }: { params: { id: string 
       wallet:wallets(id, name, color),
       category:categories(id, name, icon, color)
     `)
-    .eq('id', params.id)
+    .eq('id', id)
     .eq('user_id', user.id)
     .is('deleted_at', null)
     .single()
@@ -39,8 +40,9 @@ export async function GET(_request: Request, { params }: { params: { id: string 
   return NextResponse.json({ data, error: null })
 }
 
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
-  const supabase = createClient()
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const supabase = await createClient()
 
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) {
@@ -58,7 +60,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   const { data: existing } = await supabase
     .from('transactions')
     .select('id, amount, type, wallet_id')
-    .eq('id', params.id)
+    .eq('id', id)
     .eq('user_id', user.id)
     .is('deleted_at', null)
     .single()
@@ -83,7 +85,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   const { data: updated, error: updateError } = await supabase
     .from('transactions')
     .update(parsed.data)
-    .eq('id', params.id)
+    .eq('id', id)
     .eq('user_id', user.id)
     .select('id, amount, type, description, merchant_name, transacted_at, updated_at')
     .single()
@@ -120,8 +122,9 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   return NextResponse.json({ data: updated, error: null })
 }
 
-export async function DELETE(_request: Request, { params }: { params: { id: string } }) {
-  const supabase = createClient()
+export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const supabase = await createClient()
 
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) {
@@ -139,7 +142,7 @@ export async function DELETE(_request: Request, { params }: { params: { id: stri
   const { data: existing } = await supabase
     .from('transactions')
     .select('id, amount, type, wallet_id')
-    .eq('id', params.id)
+    .eq('id', id)
     .eq('user_id', user.id)
     .is('deleted_at', null)
     .single()
@@ -151,7 +154,7 @@ export async function DELETE(_request: Request, { params }: { params: { id: stri
   const { error } = await supabase
     .from('transactions')
     .update({ deleted_at: new Date().toISOString() })
-    .eq('id', params.id)
+    .eq('id', id)
     .eq('user_id', user.id)
 
   if (error) {

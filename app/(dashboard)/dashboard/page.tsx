@@ -9,7 +9,7 @@ import { List } from 'lucide-react'
 export const metadata = { title: 'Dashboard — Monvora' }
 
 export default async function DashboardPage() {
-  const supabase = createClient()
+  const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
