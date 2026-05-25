@@ -1,10 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/shared/empty-state'
 import { GmailSettingsClient, type SyncLog } from './gmail-settings-client'
 import { Suspense } from 'react'
-import { Mail } from 'lucide-react'
+import { Mail, ChevronLeft } from 'lucide-react'
 
 export const metadata = { title: 'Sinkronisasi Gmail — Monvora' }
 
@@ -83,8 +84,15 @@ async function GmailSettingsContent() {
 export default function GmailSettingsPage() {
   return (
     <div className="max-w-lg mx-auto px-4 py-6 space-y-6">
-      {/* Header */}
+      {/* Back link + Header */}
       <div>
+        <Link
+          href="/settings"
+          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors mb-3"
+        >
+          <ChevronLeft className="h-3.5 w-3.5" />
+          Pengaturan
+        </Link>
         <h1 className="text-xl font-semibold text-foreground">Sinkronisasi Gmail</h1>
         <p className="text-sm text-muted-foreground mt-1">
           Hubungkan Gmail untuk mendeteksi transaksi bank secara otomatis dari email notifikasi.
