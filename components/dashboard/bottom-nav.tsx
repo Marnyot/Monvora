@@ -9,7 +9,7 @@ const NAV_ITEMS = [
   { href: '/dashboard', label: 'Beranda', icon: LayoutDashboard },
   { href: '/transactions', label: 'Transaksi', icon: List },
   { href: '/wallets', label: 'Dompet', icon: Wallet },
-  { href: '/settings/gmail', label: 'Pengaturan', icon: Settings },
+  { href: '/settings', label: 'Pengaturan', icon: Settings },
 ]
 
 export function BottomNav() {
@@ -19,7 +19,7 @@ export function BottomNav() {
     <nav className="fixed bottom-0 left-0 right-0 z-30 border-t bg-background/95 backdrop-blur md:hidden">
       <ul className="flex items-center justify-around px-2 h-16">
         {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
-          const active = pathname === href
+          const active = pathname === href || pathname.startsWith(href + '/')
           return (
             <li key={href} className="flex-1">
               <Link

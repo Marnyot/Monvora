@@ -9,7 +9,7 @@ const NAV_ITEMS = [
   { href: '/dashboard', label: 'Beranda', icon: LayoutDashboard },
   { href: '/transactions', label: 'Transaksi', icon: List },
   { href: '/wallets', label: 'Dompet', icon: Wallet },
-  { href: '/settings/gmail', label: 'Pengaturan', icon: Settings },
+  { href: '/settings', label: 'Pengaturan', icon: Settings },
 ]
 
 export function NavSidebar() {
@@ -24,7 +24,7 @@ export function NavSidebar() {
       <nav className="flex-1 px-2 py-4">
         <ul className="space-y-1">
           {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
-            const active = pathname === href
+            const active = pathname === href || pathname.startsWith(href + '/')
             return (
               <li key={href}>
                 <Link
