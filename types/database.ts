@@ -166,6 +166,9 @@ export type Database = {
           gmail_last_synced_at: string | null
           gmail_sync_enabled: boolean | null
           gmail_sync_token: string | null
+          google_access_token: string | null
+          google_refresh_token: string | null
+          google_token_expires_at: string | null
           id: string
           language: string | null
           onboarding_completed: boolean | null
@@ -181,6 +184,9 @@ export type Database = {
           gmail_last_synced_at?: string | null
           gmail_sync_enabled?: boolean | null
           gmail_sync_token?: string | null
+          google_access_token?: string | null
+          google_refresh_token?: string | null
+          google_token_expires_at?: string | null
           id: string
           language?: string | null
           onboarding_completed?: boolean | null
@@ -196,6 +202,9 @@ export type Database = {
           gmail_last_synced_at?: string | null
           gmail_sync_enabled?: boolean | null
           gmail_sync_token?: string | null
+          google_access_token?: string | null
+          google_refresh_token?: string | null
+          google_token_expires_at?: string | null
           id?: string
           language?: string | null
           onboarding_completed?: boolean | null

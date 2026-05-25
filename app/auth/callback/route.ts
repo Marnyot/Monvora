@@ -33,14 +33,25 @@ export async function GET(request: NextRequest) {
   ])
 
   if (user) {
-    // Gmail scope sekarang diminta saat login — enable sync otomatis
+    // provider_token hanya tersedia tepat setelah exchangeCodeForSession, sebelum session di-refresh.
+    // Simpan ke profiles sekarang agar sync tetap bisa berjalan setelah middleware me-refresh session.
+    const accessToken = session?.provider_token ?? null
+    const refreshToken = session?.provider_refresh_token ?? null
+    const expiresAt = accessToken
+      ? new Date(Date.now() + 3500 * 1000).toISOString() // 3500 detik (konservatif dari 3600)
+      : null
+
     await supabase
       .from('profiles')
-      .update({ gmail_sync_enabled: true })
+      .update({
+        gmail_sync_enabled: true,
+        google_access_token: accessToken,
+        google_refresh_token: refreshToken ?? undefined,
+        google_token_expires_at: expiresAt,
+      })
       .eq('id', user.id)
 
-    // Trigger initial sync langsung setelah login agar gmail_sync_token langsung terinisialisasi
-    const accessToken = session?.provider_token ?? null
+    // Trigger initial sync untuk inisialisasi gmail_sync_token
     if (accessToken) {
       try {
         await inngest.send({
@@ -48,7 +59,7 @@ export async function GET(request: NextRequest) {
           data: { userId: user.id, accessToken },
         })
       } catch {
-        // Non-blocking — user tetap redirect ke dashboard
+        // Non-blocking — user tetap diarahkan ke dashboard
       }
     }
   }

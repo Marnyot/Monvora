@@ -14,14 +14,19 @@ function makeChain(finalResult: unknown) {
 }
 
 const mockGetUser = vi.fn()
-const mockGetSession = vi.fn()
 const mockFrom = vi.fn()
 
 vi.mock('@/lib/supabase/server', () => ({
   createClient: vi.fn().mockResolvedValue({
-    auth: { getUser: mockGetUser, getSession: mockGetSession },
+    auth: { getUser: mockGetUser },
     from: mockFrom,
   }),
+}))
+
+const mockGetValidGoogleToken = vi.fn().mockResolvedValue('google-access-token-xyz')
+
+vi.mock('@/lib/utils/google-token', () => ({
+  getValidGoogleToken: (...args: unknown[]) => mockGetValidGoogleToken(...args),
 }))
 
 vi.mock('@/lib/utils/rate-limit', () => ({
@@ -40,14 +45,13 @@ const VALID_USER = {
   identities: [{ provider: 'google', identity_data: {} }]
 }
 
-const VALID_SESSION = {
-  provider_token: 'google-access-token-xyz',
-}
-
 const VALID_PROFILE = {
   id: 'user-abc',
   gmail_sync_enabled: true,
   gmail_last_synced_at: '2026-05-25T10:00:00+07:00',
+  google_access_token: 'stored-access-token',
+  google_refresh_token: 'stored-refresh-token',
+  google_token_expires_at: new Date(Date.now() + 3600 * 1000).toISOString(),
 }
 
 describe('POST /api/sync/gmail', () => {
@@ -92,8 +96,7 @@ describe('POST /api/sync/gmail', () => {
     const profileChain = makeChain({ data: VALID_PROFILE, error: null })
     mockFrom.mockReturnValueOnce(profileChain)
 
-    // No provider_token in session
-    mockGetSession.mockResolvedValue({ data: { session: { provider_token: null } }, error: null })
+    mockGetValidGoogleToken.mockResolvedValueOnce(null)
 
     const { POST } = await import('@/app/api/sync/gmail/route')
     const req = new Request('http://localhost/api/sync/gmail', { method: 'POST' })
@@ -110,8 +113,6 @@ describe('POST /api/sync/gmail', () => {
     const profileChain = makeChain({ data: VALID_PROFILE, error: null })
     mockFrom.mockReturnValueOnce(profileChain)
 
-    mockGetSession.mockResolvedValue({ data: { session: VALID_SESSION }, error: null })
-
     const { POST } = await import('@/app/api/sync/gmail/route')
     const req = new Request('http://localhost/api/sync/gmail', { method: 'POST' })
     const res = await POST(req)
@@ -122,7 +123,7 @@ describe('POST /api/sync/gmail', () => {
     expect(json.data.message).toBe('Sync dimulai')
     expect(mockInngestSend).toHaveBeenCalledWith({
       name: 'gmail/sync.manual',
-      data: { userId: VALID_USER.id, accessToken: VALID_SESSION.provider_token },
+      data: { userId: VALID_USER.id, accessToken: 'google-access-token-xyz' },
     })
   })
 
@@ -150,7 +151,6 @@ describe('POST /api/sync/gmail', () => {
     const profileChain = makeChain({ data: VALID_PROFILE, error: null })
     mockFrom.mockReturnValueOnce(profileChain)
 
-    mockGetSession.mockResolvedValue({ data: { session: VALID_SESSION }, error: null })
     mockInngestSend.mockRejectedValueOnce(new Error('Inngest unavailable'))
 
     const { POST } = await import('@/app/api/sync/gmail/route')
