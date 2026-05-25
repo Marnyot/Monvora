@@ -69,8 +69,8 @@ A transaction recorded incorrectly is worse than no transaction recorded. Data i
 ### P4 — Iterative Over Complete
 Ship a working Phase 1 before touching Phase 2. A complete Phase 1 is infinitely more valuable than an incomplete full system.
 
-### P5 — English First, Extensible Later
-All UI strings in English for MVP. i18n infrastructure added in Phase 3.
+### P5 — Bahasa Indonesia First, i18n Later
+All UI strings in Bahasa Indonesia for Phase 1–3. i18n infrastructure (next-intl) added in Phase 3 if expansion to non-Indonesian market is warranted. See ADR-023.
 
 ---
 

@@ -9,11 +9,12 @@
 
 | Version | Date | Updated By | Changes |
 |---|---|---|---|
+| v4 | May 25, 2026 | Claude | Security hardening done, OAuth login fixed, setup tasks updated, migration 003 applied — Phase 1 98% |
 | v3 | May 25, 2026 | Claude | Transaction detail/edit/delete UI, desktop sidebar, toast notifications, TransactionCard links — Phase 1 ~85% |
 | v2 | May 25, 2026 | Claude | Decisions Log dipindahkan ke decisions.md, section 7 jadi ADR index |
 | v1 | May 24, 2026 | Claude | Initial creation — project kickoff |
 
-**Current Version:** v3
+**Current Version:** v4
 **Last Updated:** May 25, 2026
 
 ---
@@ -47,7 +48,7 @@ Next Milestone  : Deploy ke Vercel
 
 ```
 Documentation   ████████████████████ 100% (10/10 docs selesai)
-Phase 1         ███████████████████░  95% (filter, search, pagination done — hanya deploy tersisa)
+Phase 1         ███████████████████░  98% (security hardening done, OAuth fixed — hanya Vercel deploy tersisa)
 Phase 2         ░░░░░░░░░░░░░░░░░░░░   0%
 Phase 3         ░░░░░░░░░░░░░░░░░░░░   0%
 Phase 4         ░░░░░░░░░░░░░░░░░░░░   0%
@@ -90,16 +91,16 @@ Phase 4         ░░░░░░░░░░░░░░░░░░░░   0
 | Create Next.js 14 project | ✅ | next@14.2.35, TypeScript, Tailwind v3, App Router, `@/*` alias |
 | Install semua dependencies | ✅ | shadcn (manual config: default style, slate, CSS vars), supabase, inngest, zod, zustand, tanstack-query, next-themes, lucide-react, sonner |
 | Setup Supabase project (cloud) | ✅ | Migrations applied via MCP (region: Singapore) |
-| Run database migrations | ✅ | 001_initial_schema.sql + 002_seed_categories.sql applied |
-| Setup Google Cloud Console | ⏳ | Enable Gmail API + OAuth |
-| Configure OAuth credentials | ⏳ | Authorized origins + redirect URIs |
-| Setup Inngest account | ⏳ | |
-| Setup Gemini API key | ⏳ | Google AI Studio |
-| Setup .env.local | ⏳ | Dari .env.example |
+| Run database migrations | ✅ | 001_initial_schema.sql + 002_seed_categories.sql + 003_missing_indexes.sql applied |
+| Setup Google Cloud Console | ✅ | OAuth Client configured. Authorized redirect URI: supabase callback. Gmail API scope di Phase 2 |
+| Configure OAuth credentials | ✅ | Redirect URI + Supabase Auth provider configured. Google login berfungsi |
+| Setup Inngest account | ⏳ | Phase 2 |
+| Setup Gemini API key | ⏳ | Phase 2 |
+| Setup .env.local | ✅ | Semua vars set: SUPABASE_URL, ANON_KEY, SERVICE_ROLE_KEY, GOOGLE_CLIENT_ID/SECRET, GEMINI_API_KEY, INNGEST keys, APP_URL |
 | Add .env.local ke .gitignore | ✅ | Covered oleh `.env*.local` pattern |
-| Init git + push ke GitHub | ⏳ | |
-| Deploy ke Vercel (awal) | ⏳ | Setup CI dari awal |
-| Setup Vitest + Testing Library | ✅ | 21 tests passing (currency + date + auth) |
+| Init git + push ke GitHub | ✅ | github.com/Marnyot/Monvora — branch develop → main |
+| Deploy ke Vercel (awal) | ⏳ | Next step |
+| Setup Vitest + Testing Library | ✅ | 50+ tests passing (unit + component) |
 
 ### Authentication
 
@@ -233,6 +234,10 @@ Phase 4         ░░░░░░░░░░░░░░░░░░░░   0
 | SkeletonCard component | ✅ | SkeletonCard + SkeletonList helper |
 | ConfirmDialog component | ✅ | Dialog wrapper, destructive variant, isPending state |
 | Toast notifications (Sonner) | ✅ | Wired di providers.tsx, dipakai di quick-entry + wallet-form + transaction detail |
+| Security headers (CSP, X-Frame-Options, dll) | ✅ | Dikonfigurasi di next.config.mjs |
+| Rate limiting (in-memory per user) | ✅ | `lib/utils/rate-limit.ts` — wired di semua 7 API routes |
+| Dependabot | ✅ | `.github/dependabot.yml` — weekly, pnpm, skip major |
+| Supabase SSR cookie fix (PKCE) | ✅ | `lib/supabase/server.ts` — getAll/setAll, OAuth login berfungsi |
 | **Test: light + dark mode** | ⏳ | Visual check semua halaman |
 
 ### Phase 1 Completion Criteria
@@ -476,6 +481,7 @@ Phase 4         ░░░░░░░░░░░░░░░░░░░░   0
 | ADR-020 | pnpm sebagai package manager | ✅ Active |
 | ADR-021 | Dependabot + pnpm audit | ✅ Active |
 | ADR-022 | Gemini API untuk AI categorization | ✅ Active |
+| ADR-023 | Bahasa Indonesia sebagai default language UI | ✅ Active |
 
 Lihat `decisions.md` untuk detail konteks, alternatif, dan review trigger setiap keputusan.
 
