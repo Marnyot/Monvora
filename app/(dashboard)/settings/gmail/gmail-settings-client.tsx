@@ -10,7 +10,7 @@ import { SyncStatusBadge } from '@/components/dashboard/sync-status-badge'
 import { formatDate } from '@/lib/utils/date'
 import { Mail, RefreshCw, Unlink, CheckCircle2, XCircle, AlertCircle, Loader2 } from 'lucide-react'
 
-interface SyncLog {
+export interface SyncLog {
   id: string
   status: 'started' | 'completed' | 'failed' | 'partial'
   emails_scanned: number

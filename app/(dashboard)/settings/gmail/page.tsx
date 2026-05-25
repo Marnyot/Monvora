@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/shared/empty-state'
-import { GmailSettingsClient } from './gmail-settings-client'
+import { GmailSettingsClient, type SyncLog } from './gmail-settings-client'
 import { Suspense } from 'react'
 import { Mail } from 'lucide-react'
 
@@ -57,7 +57,8 @@ async function GmailSettingsContent() {
       .select('id, status, emails_scanned, transactions_found, transactions_created, error_message, started_at, completed_at')
       .eq('user_id', user.id)
       .order('started_at', { ascending: false })
-      .limit(5),
+      .limit(5)
+      .returns<SyncLog[]>(),
   ])
 
   if (profileError) {
