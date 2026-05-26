@@ -5,7 +5,7 @@ import { Plus } from 'lucide-react'
 import { QuickEntry } from '@/components/transactions/quick-entry'
 
 interface QuickEntryFabProps {
-  wallets: { id: string; name: string; color: string | null }[]
+  wallets: { id: string; name: string; color: string | null; type: string }[]
   categories: { id: string; name: string; icon: string; color: string; type: string; is_system: boolean | null }[]
 }
 

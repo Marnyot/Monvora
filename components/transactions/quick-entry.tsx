@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+import { Landmark, Banknote, Smartphone, Wallet } from 'lucide-react'
 import {
   Sheet,
   SheetContent,
@@ -24,6 +25,18 @@ import {
 import { PAYMENT_METHODS } from '@/lib/validations/transaction'
 import { formatIDR } from '@/lib/utils/currency'
 import { toDatetimeLocalInput } from '@/lib/utils/date'
+
+const WALLET_TYPE_ICON: Record<string, React.ElementType> = {
+  bank: Landmark,
+  cash: Banknote,
+  ewallet: Smartphone,
+  other: Wallet,
+}
+
+function WalletIcon({ type, className }: { type: string; className?: string }) {
+  const Icon = WALLET_TYPE_ICON[type] ?? Wallet
+  return <Icon className={className} />
+}
 
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
   qris: 'QRIS',
@@ -50,6 +63,7 @@ interface Wallet {
   id: string
   name: string
   color: string | null
+  type: string
 }
 
 interface QuickEntryProps {
@@ -160,8 +174,10 @@ export function QuickEntry({ open, onOpenChange, wallets, categories }: QuickEnt
     transfer: 'text-foreground',
   }[type]
 
-  const merchantLabel = type === 'transfer' ? 'Nama' : 'Merchant / Toko'
-  const merchantPlaceholder = type === 'transfer' ? 'cth: Budi Santoso' : 'cth: Indomaret, Grab'
+  const merchantPlaceholder =
+    type === 'transfer' ? 'cth: Budi Santoso' :
+    type === 'income' ? 'cth: PT Maju Jaya, Freelance' :
+    'cth: Indomaret, Grab'
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -206,7 +222,7 @@ export function QuickEntry({ open, onOpenChange, wallets, categories }: QuickEnt
             <div className="space-y-3 pb-4">
               {/* Merchant / Nama */}
               <div className="space-y-1.5">
-                <Label htmlFor="qe-merchant">{merchantLabel}</Label>
+                <Label htmlFor="qe-merchant">Nama</Label>
                 <Input
                   id="qe-merchant"
                   placeholder={merchantPlaceholder}
@@ -250,7 +266,12 @@ export function QuickEntry({ open, onOpenChange, wallets, categories }: QuickEnt
                   </SelectTrigger>
                   <SelectContent>
                     {wallets.map(w => (
-                      <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+                      <SelectItem key={w.id} value={w.id}>
+                        <span className="flex items-center gap-2">
+                          <WalletIcon type={w.type} className="h-3.5 w-3.5 text-muted-foreground" />
+                          {w.name}
+                        </span>
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -266,7 +287,12 @@ export function QuickEntry({ open, onOpenChange, wallets, categories }: QuickEnt
                     </SelectTrigger>
                     <SelectContent>
                       {wallets.filter(w => w.id !== walletId).map(w => (
-                        <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+                        <SelectItem key={w.id} value={w.id}>
+                          <span className="flex items-center gap-2">
+                            <WalletIcon type={w.type} className="h-3.5 w-3.5 text-muted-foreground" />
+                            {w.name}
+                          </span>
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>

@@ -1,6 +1,6 @@
 'use client'
 
-import { Pencil, Trash2, MoreVertical, Banknote, SlidersHorizontal } from 'lucide-react'
+import { Pencil, Trash2, MoreVertical, Banknote, Landmark, Smartphone, Wallet, SlidersHorizontal } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -18,6 +18,13 @@ const TYPE_LABELS: Record<string, string> = {
   ewallet: 'E-Wallet',
   cash: 'Tunai',
   other: 'Lainnya',
+}
+
+const TYPE_ICONS: Record<string, React.ElementType> = {
+  bank: Landmark,
+  cash: Banknote,
+  ewallet: Smartphone,
+  other: Wallet,
 }
 
 interface Wallet {
@@ -43,6 +50,7 @@ interface WalletCardProps {
 export function WalletCard({ wallet, onEdit, onDelete, onAdjustBalance }: WalletCardProps) {
   const balance = wallet.balance ?? 0
   const color = wallet.color ?? '#6366f1'
+  const Icon = TYPE_ICONS[wallet.type] ?? Wallet
 
   return (
     <div className="flex items-center gap-4 rounded-xl border bg-card p-4">
@@ -51,7 +59,7 @@ export function WalletCard({ wallet, onEdit, onDelete, onAdjustBalance }: Wallet
         className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
         style={{ backgroundColor: `${color}20` }}
       >
-        <Banknote className="h-5 w-5" style={{ color }} aria-hidden />
+        <Icon className="h-5 w-5" style={{ color }} aria-hidden />
       </div>
 
       {/* Info */}

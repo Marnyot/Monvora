@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { createTransactionSchema, listTransactionSchema } from '@/lib/validations/transaction'
 import { checkRateLimit } from '@/lib/utils/rate-limit'
 
@@ -161,5 +162,7 @@ export async function POST(request: Request) {
       .eq('user_id', user.id)
   }
 
+  revalidatePath('/dashboard')
+  revalidatePath('/transactions')
   return NextResponse.json({ data: transaction, error: null }, { status: 201 })
 }

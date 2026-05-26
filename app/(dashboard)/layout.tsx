@@ -14,7 +14,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const [{ data: wallets }, { data: categories }] = await Promise.all([
     supabase
       .from('wallets')
-      .select('id, name, color')
+      .select('id, name, color, type')
       .eq('user_id', user.id)
       .is('deleted_at', null)
       .eq('is_active', true)
