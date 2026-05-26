@@ -37,7 +37,7 @@ export const gmailSyncFunction = inngest.createFunction(
     id: 'gmail-sync',
     name: 'Gmail Sync — All Active Users',
     concurrency: { limit: 10 },
-    retries: 3,
+    retries: 0,
     triggers: [{ cron: '*/15 * * * *' }],
   },
   async ({ step, logger }) => {

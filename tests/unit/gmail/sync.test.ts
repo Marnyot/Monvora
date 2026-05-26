@@ -54,6 +54,7 @@ function makeSupabaseMock(overrides: {
   insertResult?: ChainResult
   updateResult?: ChainResult
   logResult?: ChainResult
+  runningLogResult?: ChainResult
 } = {}) {
   const profileResult = overrides.profileResult ?? {
     data: { gmail_sync_token: null, gmail_sync_enabled: true },
@@ -64,6 +65,7 @@ function makeSupabaseMock(overrides: {
   const insertResult = overrides.insertResult ?? { data: null, error: null }
   const updateResult = overrides.updateResult ?? { data: null, error: null }
   const logResult = overrides.logResult ?? { data: { id: 'sync-log-001' }, error: null }
+  const runningLogResult = overrides.runningLogResult ?? { data: null, error: null }
 
   // Track per-table call counts
   const tableCallCounts: Record<string, number> = {}
@@ -95,7 +97,10 @@ function makeSupabaseMock(overrides: {
     }
 
     if (table === 'gmail_sync_logs') {
-      const chain = makeQueryChain(logResult)
+      // callNum 1 = concurrency guard check (maybeSingle)
+      // callNum 2+ = insert / update
+      const result = callNum === 1 ? runningLogResult : logResult
+      const chain = makeQueryChain(result)
       chain['update'] = vi.fn().mockReturnValue(makeQueryChain(updateResult))
       return chain
     }
@@ -381,6 +386,60 @@ describe('syncUserGmail', () => {
     expect(insertSpy?.insert).toHaveBeenCalledWith(
       expect.objectContaining({ wallet_id: 'wallet-bca' })
     )
+  })
+
+  // ─── Concurrency guard tests ──────────────────────────────────────────────────
+
+  it('skips sync when a recent started log exists (concurrency guard)', async () => {
+    const recentStarted = new Date(Date.now() - 60_000).toISOString() // 1 menit lalu
+    const supabase = makeSupabaseMock({
+      runningLogResult: { data: { id: 'running-001', started_at: recentStarted }, error: null },
+    })
+    mockFetchNewEmails.mockResolvedValue({ messages: [], newHistoryId: 'hist-800' })
+
+    const { syncUserGmail } = await import('@/lib/gmail/sync')
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const result: SyncResult = await syncUserGmail(supabase as any, MOCK_USER_ID, MOCK_ACCESS_TOKEN)
+
+    // Harus return early tanpa fetch email atau insert log baru
+    expect(result.emailsProcessed).toBe(0)
+    expect(result.transactionsCreated).toBe(0)
+    expect(mockFetchNewEmails).not.toHaveBeenCalled()
+  })
+
+  it('proceeds with sync when existing started log is stale (>=30 menit)', async () => {
+    const staleStarted = new Date(Date.now() - 45 * 60 * 1000).toISOString() // 45 menit lalu
+    const supabase = makeSupabaseMock({
+      runningLogResult: { data: { id: 'stale-001', started_at: staleStarted }, error: null },
+    })
+    mockFetchNewEmails.mockResolvedValue({ messages: [], newHistoryId: 'hist-900' })
+    mockIsBankEmail.mockReturnValue(false)
+
+    const { syncUserGmail } = await import('@/lib/gmail/sync')
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const result: SyncResult = await syncUserGmail(supabase as any, MOCK_USER_ID, MOCK_ACCESS_TOKEN)
+
+    // Sync tetap jalan (stale log sudah di-mark sebagai failed)
+    expect(result.emailsProcessed).toBe(0)
+    expect(mockFetchNewEmails).toHaveBeenCalled()
+  })
+
+  it('does not trigger concurrency guard when no started log exists', async () => {
+    const supabase = makeSupabaseMock({
+      runningLogResult: { data: null, error: null },
+    })
+    mockFetchNewEmails.mockResolvedValue({ messages: [], newHistoryId: 'hist-1000' })
+    mockIsBankEmail.mockReturnValue(false)
+
+    const { syncUserGmail } = await import('@/lib/gmail/sync')
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const result: SyncResult = await syncUserGmail(supabase as any, MOCK_USER_ID, MOCK_ACCESS_TOKEN)
+
+    expect(result.emailsProcessed).toBe(0)
+    expect(mockFetchNewEmails).toHaveBeenCalled()
   })
 
   it('updates wallet balance after successful transaction insert', async () => {

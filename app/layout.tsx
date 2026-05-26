@@ -13,6 +13,9 @@ const geistSans = localFont({
 export const metadata: Metadata = {
   title: 'Monvora',
   description: 'Personal finance OS untuk pengguna Indonesia',
+  verification: {
+    google: 'F3KFDQWVWLlTgaOrAcmYl3rrUg-BgjpbwTqUKvOBVrg',
+  },
 }
 
 export default function RootLayout({

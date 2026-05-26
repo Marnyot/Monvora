@@ -54,6 +54,7 @@ function makeSupabaseMock(overrides: {
   insertResult?: ChainResult
   updateResult?: ChainResult
   logResult?: ChainResult
+  runningLogResult?: ChainResult
 } = {}) {
   const profileResult = overrides.profileResult ?? {
     data: { gmail_sync_token: null, gmail_sync_enabled: true },
@@ -64,6 +65,7 @@ function makeSupabaseMock(overrides: {
   const insertResult = overrides.insertResult ?? { data: null, error: null }
   const updateResult = overrides.updateResult ?? { data: null, error: null }
   const logResult = overrides.logResult ?? { data: { id: 'sync-log-001' }, error: null }
+  const runningLogResult = overrides.runningLogResult ?? { data: null, error: null }
 
   // Track per-table call counts
   const tableCallCounts: Record<string, number> = {}
@@ -95,7 +97,8 @@ function makeSupabaseMock(overrides: {
     }
 
     if (table === 'gmail_sync_logs') {
-      const chain = makeQueryChain(logResult)
+      const result = callNum === 1 ? runningLogResult : logResult
+      const chain = makeQueryChain(result)
       chain['update'] = vi.fn().mockReturnValue(makeQueryChain(updateResult))
       return chain
     }

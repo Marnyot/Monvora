@@ -69,9 +69,9 @@ describe('gmailSyncFunction — Inngest Cron Job', () => {
   })
 
   // ── Test 4: Retries harus 3 ─────────────────────────────────────────────────
-  it('should have 3 retries', () => {
+  it('should have 0 retries (cron retries naturally every 15m)', () => {
     const opts = getFunctionOpts(gmailSyncFunction)
-    expect(opts.retries).toBe(3)
+    expect(opts.retries).toBe(0)
   })
 
   // ── Test 5: gmailSyncFunction adalah object yang valid ───────────────────────

@@ -24,6 +24,15 @@ export class GmailAPIError extends Error {
   }
 }
 
+export class GmailRateLimitError extends Error {
+  retryAfter: number
+  constructor(retryAfter = 60) {
+    super('Gmail API rate limit exceeded')
+    this.name = 'GmailRateLimitError'
+    this.retryAfter = retryAfter
+  }
+}
+
 // ─── Gmail Client Factory ──────────────────────────────────────────────────────
 
 /**
@@ -44,6 +53,31 @@ export function createGmailClient(accessToken: string): ReturnType<typeof google
  * - Jika historyId ada → incremental sync menggunakan Gmail History API
  * - Return: array GmailMessage + historyId baru
  */
+const MAX_RETRIES = 2
+const BASE_DELAY = 1000
+
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  retries = MAX_RETRIES
+): Promise<T> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      return await fn()
+    } catch (err) {
+      const error = err as { code?: number; status?: number }
+      const status = error.code ?? error.status
+
+      if (status === 429 && attempt < retries) {
+        await new Promise(r => setTimeout(r, BASE_DELAY * Math.pow(2, attempt)))
+        continue
+      }
+
+      throw err
+    }
+  }
+  throw new Error('unreachable')
+}
+
 export async function fetchNewEmails(
   accessToken: string,
   lastHistoryId: string | null
@@ -52,16 +86,13 @@ export async function fetchNewEmails(
 
   try {
     if (lastHistoryId === null) {
-      // Initial sync: ambil 50 email terbaru dari inbox
-      return await fetchInitialEmails(gmail)
+      return await withRetry(() => fetchInitialEmails(gmail))
     } else {
-      // Incremental sync: gunakan History API
-      return await fetchEmailsFromHistory(gmail, lastHistoryId)
+      return await withRetry(() => fetchEmailsFromHistory(gmail, lastHistoryId))
     }
   } catch (err) {
     const error = err as { code?: number; message?: string; status?: number }
 
-    // Detect token expired / revoked
     if (
       error.code === 401 ||
       error.status === 401 ||
@@ -72,6 +103,11 @@ export async function fetchNewEmails(
       ))
     ) {
       throw new GmailTokenExpiredError()
+    }
+
+    if (error.status === 429 || error.code === 429) {
+      const retryAfter = (err as { retryAfter?: number }).retryAfter ?? 60
+      throw new GmailRateLimitError(retryAfter)
     }
 
     throw new GmailAPIError(error.message ?? 'Unknown error')

@@ -7,7 +7,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database'
-import { fetchNewEmails, isBankEmail, GmailTokenExpiredError } from '@/lib/gmail/client'
+import { fetchNewEmails, isBankEmail, GmailTokenExpiredError, GmailRateLimitError } from '@/lib/gmail/client'
 import { detectAndParse } from '@/lib/gmail/parsers/index'
 import { categorizeTransaction } from '@/lib/ai/categorize'
 
@@ -63,6 +63,35 @@ export async function syncUserGmail(
 
   const startedAt = new Date().toISOString()
 
+  // ── Concurrency guard ──────────────────────────────────────────
+  // Cek apakah ada sync lain yang sedang berjalan untuk user ini.
+  // Jika ada dan masih fresh (<30 menit), skip untuk mencegah duplikasi log & transaksi.
+  // Jika sudah stale (>=30 menit, kemungkinan crash), finalize sebagai failed dan lanjut.
+  const { data: runningLog } = await supabase
+    .from('gmail_sync_logs')
+    .select('id, started_at')
+    .eq('user_id', userId)
+    .eq('status', 'started')
+    .maybeSingle()
+
+  if (runningLog) {
+    const elapsed = Date.now() - new Date(runningLog.started_at ?? startedAt).getTime()
+    const STALE_TIMEOUT = 30 * 60 * 1000 // 30 menit
+
+    if (elapsed < STALE_TIMEOUT) {
+      return result
+    }
+
+    await supabase
+      .from('gmail_sync_logs')
+      .update({
+        status: 'failed',
+        error_message: 'Sync sebelumnya tidak selesai (timeout)',
+        completed_at: startedAt,
+      })
+      .eq('id', runningLog.id)
+  }
+
   // Insert 'started' log dulu — UI polling butuh ini untuk tahu job sedang berjalan
   const { data: logRow } = await supabase
     .from('gmail_sync_logs')
@@ -115,11 +144,13 @@ export async function syncUserGmail(
     messages = fetched.messages
     newHistoryId = fetched.newHistoryId
   } catch (err) {
-    const errorMsg = err instanceof GmailTokenExpiredError
-      ? 'Gmail token expired'
-      : 'Gmail API fetch failed'
-
-    await finalize('failed', errorMsg)
+    if (err instanceof GmailTokenExpiredError) {
+      await finalize('failed', 'Token Gmail kadaluarsa. Silakan login ulang.')
+    } else if (err instanceof GmailRateLimitError) {
+      await finalize('failed', `Gmail API batasi permintaan. Coba ${Math.ceil(err.retryAfter / 60)} menit lagi.`)
+    } else {
+      await finalize('failed', 'Gagal mengambil email. Coba lagi nanti.')
+    }
     return result
   }
 

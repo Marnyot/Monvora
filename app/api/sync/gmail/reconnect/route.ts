@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { checkRateLimit } from '@/lib/utils/rate-limit'
 import { getValidGoogleToken } from '@/lib/utils/google-token'
 import { inngest } from '@/lib/inngest/client'
+import { setupWatch } from '@/lib/gmail/watch'
 
 export async function POST() {
   const supabase = await createClient()
@@ -49,6 +50,13 @@ export async function POST() {
       { data: { needsOAuth: true }, error: null },
       { status: 200 }
     )
+  }
+
+  // Setup Gmail push notification watch
+  try {
+    await setupWatch(accessToken, supabase, user.id)
+  } catch {
+    // Non-blocking — cron will handle renewal if watch setup fails
   }
 
   // Kick off initial sync

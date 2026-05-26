@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { checkRateLimit } from '@/lib/utils/rate-limit'
+import { stopWatch } from '@/lib/gmail/watch'
 
 export async function POST() {
   const supabase = await createClient()
@@ -20,6 +21,9 @@ export async function POST() {
       { status: 429, headers: { 'Retry-After': String(rl.retryAfter ?? 30) } }
     )
   }
+
+  // Stop Gmail push notification
+  await stopWatch(supabase, user.id)
 
   const { error: updateError } = await supabase
     .from('profiles')
