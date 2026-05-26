@@ -49,23 +49,19 @@ function DashboardSkeleton() {
 
 async function DashboardContent() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
 
   const now = new Date()
   const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
 
-  const [{ data: wallets }, { data: txThisMonth }, { data: recentTx }] = await Promise.all([
+  const [{ data: wallets }, { data: txThisMonth }, { data: recentTx }, { data: profile }] = await Promise.all([
     supabase
       .from('wallets')
       .select('id, name, balance, color')
-      .eq('user_id', user.id)
       .is('deleted_at', null)
       .eq('is_active', true),
     supabase
       .from('transactions')
       .select('amount, type')
-      .eq('user_id', user.id)
       .is('deleted_at', null)
       .gte('transacted_at', firstOfMonth),
     supabase
@@ -75,17 +71,20 @@ async function DashboardContent() {
         wallet:wallets!wallet_id(id, name, color),
         category:categories(id, name, icon, color)
       `)
-      .eq('user_id', user.id)
       .is('deleted_at', null)
       .order('transacted_at', { ascending: false })
       .limit(10),
+    supabase
+      .from('profiles')
+      .select('full_name')
+      .single(),
   ])
+
+  const firstName = profile?.full_name?.split(' ')[0] ?? 'Kamu'
 
   const totalBalance = (wallets ?? []).reduce((sum, w) => sum + (w.balance ?? 0), 0)
   const monthIncome = (txThisMonth ?? []).filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)
   const monthExpense = (txThisMonth ?? []).filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
-
-  const firstName = user.user_metadata?.full_name?.split(' ')[0] ?? 'Kamu'
 
   return (
     <div className="max-w-lg mx-auto">
