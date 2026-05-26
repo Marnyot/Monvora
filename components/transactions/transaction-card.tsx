@@ -36,21 +36,6 @@ export function TransactionCard({ transaction }: TransactionCardProps) {
 
   return (
     <Link href={`/transactions/${transaction.id}`} className="flex items-center gap-3 py-3 px-4 hover:bg-accent/40 transition-colors rounded-lg block">
-      {/* Category color dot */}
-      <div
-        className="h-9 w-9 rounded-full flex items-center justify-center shrink-0 text-sm"
-        style={{
-          backgroundColor: category ? `${category.color}20` : '#94a3b820',
-          color: category?.color ?? '#94a3b8',
-        }}
-      >
-        {category?.icon ? (
-          <span className="text-base">{category.icon.slice(0, 1)}</span>
-        ) : (
-          <span className="text-xs font-bold">{label.slice(0, 1).toUpperCase()}</span>
-        )}
-      </div>
-
       {/* Info */}
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-foreground truncate">{label}</p>
