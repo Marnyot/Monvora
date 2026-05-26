@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const mockGetUserById = vi.fn()
-const mockSend = vi.fn()
+const mockSyncUserGmail = vi.fn()
 const mockFrom = vi.fn()
 
 vi.mock('@supabase/supabase-js', () => ({
@@ -15,21 +15,12 @@ vi.mock('@supabase/supabase-js', () => ({
   }),
 }))
 
-vi.mock('@/lib/supabase/server', () => ({
-  createClient: () => ({
-    from: vi.fn(() => ({
-      select: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      single: vi.fn().mockResolvedValue({ data: null, error: null }),
-    })),
-    auth: {
-      getUser: vi.fn().mockResolvedValue({ data: { user: null }, error: null }),
-    },
-  }),
+vi.mock('@/lib/gmail/sync', () => ({
+  syncUserGmail: mockSyncUserGmail,
 }))
 
-vi.mock('@/lib/inngest/client', () => ({
-  inngest: { send: mockSend },
+vi.mock('@/lib/utils/google-token', () => ({
+  getValidGoogleToken: vi.fn().mockResolvedValue('mock-access-token'),
 }))
 
 vi.mock('@/lib/gmail/watch', () => ({}))
@@ -115,7 +106,7 @@ describe('POST /api/sync/gmail/webhook', () => {
     expect(body.data.ack).toBe(true)
   })
 
-  it('triggers Inngest sync when valid notification arrives for known user', async () => {
+  it('calls syncUserGmail when valid notification arrives for known user', async () => {
     process.env.GOOGLE_PUBSUB_VERIFICATION_TOKEN = ''
     mockFrom.mockReturnValue({
       select: vi.fn().mockReturnThis(),
@@ -125,7 +116,7 @@ describe('POST /api/sync/gmail/webhook', () => {
         error: null,
       }),
     })
-    mockSend.mockResolvedValue({ ids: ['evt-1'] })
+    mockSyncUserGmail.mockResolvedValue({ emailsProcessed: 2, transactionsCreated: 1 })
 
     const { POST } = await import('@/app/api/sync/gmail/webhook/route')
 
@@ -139,10 +130,11 @@ describe('POST /api/sync/gmail/webhook', () => {
     }))
 
     expect(res.status).toBe(200)
-    expect(mockSend).toHaveBeenCalledWith(expect.objectContaining({
-      name: 'gmail/sync.push',
-      data: { userId: 'user-123' },
-    }))
+    expect(mockSyncUserGmail).toHaveBeenCalledWith(
+      expect.anything(),
+      'user-123',
+      'mock-access-token'
+    )
   })
 
   it('skips sync when historyId has not changed (duplicate notification)', async () => {
@@ -168,6 +160,6 @@ describe('POST /api/sync/gmail/webhook', () => {
     }))
 
     expect(res.status).toBe(200)
-    expect(mockSend).not.toHaveBeenCalled()
+    expect(mockSyncUserGmail).not.toHaveBeenCalled()
   })
 })

@@ -9,10 +9,10 @@
  */
 
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database'
-import { inngest } from '@/lib/inngest/client'
+import { syncUserGmail } from '@/lib/gmail/sync'
+import { getValidGoogleToken } from '@/lib/utils/google-token'
 
 const VERIFICATION_TOKEN = process.env.GOOGLE_PUBSUB_VERIFICATION_TOKEN ?? ''
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -91,7 +91,7 @@ export async function POST(request: Request) {
 
   const { data: profile } = await adminSupabase
     .from('profiles')
-    .select('id, gmail_watch_history_id')
+    .select('id, gmail_watch_history_id, google_access_token, google_refresh_token, google_token_expires_at')
     .eq('email', notification.emailAddress)
     .eq('gmail_sync_enabled', true)
     .single()
@@ -106,15 +106,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ data: { ack: true, skipped: true }, error: null })
   }
 
-  // ─── 5. TRIGGER SYNC ───────────────────────────────────
-  try {
-    await inngest.send({
-      name: 'gmail/sync.push',
-      data: { userId: profile.id },
-    })
-  } catch {
-    // Non-blocking — cron akan pick up eventually
+  // ─── 5. JALANKAN SYNC LANGSUNG ─────────────────────────
+  const accessToken = await getValidGoogleToken(profile, adminSupabase, profile.id)
+  if (!accessToken) {
+    return NextResponse.json({ data: { ack: true }, error: null })
   }
+
+  await syncUserGmail(adminSupabase, profile.id, accessToken)
 
   return NextResponse.json({ data: { ack: true }, error: null })
 }
