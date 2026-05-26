@@ -39,6 +39,18 @@ vi.mock('@/lib/inngest/client', () => ({
   inngest: { send: (...args: unknown[]) => mockInngestSend(...args) },
 }))
 
+const mockSyncUserGmail = vi.fn().mockResolvedValue({
+  emailsProcessed: 5,
+  transactionsCreated: 3,
+  transactionsSkipped: 2,
+  errors: 0,
+  newHistoryId: 'hist-500',
+})
+
+vi.mock('@/lib/gmail/sync', () => ({
+  syncUserGmail: (...args: unknown[]) => mockSyncUserGmail(...args),
+}))
+
 const VALID_USER = {
   id: 'user-abc',
   email: 'user@example.com',
@@ -57,6 +69,8 @@ const VALID_PROFILE = {
 describe('POST /api/sync/gmail', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co'
+    process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-role-key'
   })
 
   it('returns 401 when user is not authenticated', async () => {
@@ -107,24 +121,46 @@ describe('POST /api/sync/gmail', () => {
     expect(json.error.code).toBe('NO_GOOGLE_TOKEN')
   })
 
-  it('returns 202 and fires inngest event on success', async () => {
+  it('returns 200 and sync result on success', async () => {
     mockGetUser.mockResolvedValue({ data: { user: VALID_USER }, error: null })
 
     const profileChain = makeChain({ data: VALID_PROFILE, error: null })
     mockFrom.mockReturnValueOnce(profileChain)
 
+    mockSyncUserGmail.mockResolvedValueOnce({
+      emailsProcessed: 5,
+      transactionsCreated: 3,
+      transactionsSkipped: 2,
+      errors: 0,
+      newHistoryId: 'hist-500',
+    })
+
     const { POST } = await import('@/app/api/sync/gmail/route')
     const req = new Request('http://localhost/api/sync/gmail', { method: 'POST' })
     const res = await POST(req)
 
-    expect(res.status).toBe(202)
+    expect(res.status).toBe(200)
     const json = await res.json()
     expect(json.error).toBeNull()
-    expect(json.data.message).toBe('Sync dimulai')
-    expect(mockInngestSend).toHaveBeenCalledWith({
-      name: 'gmail/sync.manual',
-      data: { userId: VALID_USER.id, accessToken: 'google-access-token-xyz' },
-    })
+    expect(json.data.emailsProcessed).toBe(5)
+    expect(json.data.transactionsCreated).toBe(3)
+  })
+
+  it('returns 500 when sync throws', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: VALID_USER }, error: null })
+
+    const profileChain = makeChain({ data: VALID_PROFILE, error: null })
+    mockFrom.mockReturnValueOnce(profileChain)
+
+    mockSyncUserGmail.mockRejectedValueOnce(new Error('Gmail API error'))
+
+    const { POST } = await import('@/app/api/sync/gmail/route')
+    const req = new Request('http://localhost/api/sync/gmail', { method: 'POST' })
+    const res = await POST(req)
+
+    expect(res.status).toBe(500)
+    const json = await res.json()
+    expect(json.error.code).toBe('SYNC_ERROR')
   })
 
   it('returns 429 when rate limited', async () => {
@@ -143,23 +179,6 @@ describe('POST /api/sync/gmail', () => {
     expect(res.status).toBe(429)
     const json = await res.json()
     expect(json.error.code).toBe('RATE_LIMIT')
-  })
-
-  it('returns 500 when inngest.send throws', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: VALID_USER }, error: null })
-
-    const profileChain = makeChain({ data: VALID_PROFILE, error: null })
-    mockFrom.mockReturnValueOnce(profileChain)
-
-    mockInngestSend.mockRejectedValueOnce(new Error('Inngest unavailable'))
-
-    const { POST } = await import('@/app/api/sync/gmail/route')
-    const req = new Request('http://localhost/api/sync/gmail', { method: 'POST' })
-    const res = await POST(req)
-
-    expect(res.status).toBe(500)
-    const json = await res.json()
-    expect(json.error.code).toBe('SYNC_ERROR')
   })
 })
 

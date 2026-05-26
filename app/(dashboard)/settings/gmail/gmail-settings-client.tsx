@@ -139,8 +139,14 @@ export function GmailSettingsClient({ isConnected, lastSyncedAt, syncLogs }: Gma
           const data = await res.json().catch(() => ({}))
           throw new Error(data?.error?.message ?? 'Sync gagal')
         }
-        toast.success('Sync dimulai', { description: 'Transaksi baru akan muncul dalam beberapa detik.' })
-        startPolling()
+        const { data } = await res.json()
+        const count = data?.transactionsCreated ?? 0
+        toast.success('Sync selesai', {
+          description: count > 0
+            ? `${count} transaksi baru ditambahkan`
+            : 'Tidak ada transaksi baru ditemukan',
+        })
+        router.refresh()
       } catch (err) {
         toast.error('Sync gagal', {
           description: err instanceof Error ? err.message : 'Coba lagi nanti.',

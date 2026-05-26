@@ -1,8 +1,13 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { checkRateLimit } from '@/lib/utils/rate-limit'
-import { inngest } from '@/lib/inngest/client'
 import { getValidGoogleToken } from '@/lib/utils/google-token'
+import { createClient as createAdminClient } from '@supabase/supabase-js'
+import type { Database } from '@/types/database'
+import { syncUserGmail } from '@/lib/gmail/sync'
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
 /**
  * POST /api/sync/gmail
@@ -10,6 +15,11 @@ import { getValidGoogleToken } from '@/lib/utils/google-token'
  *
  * Auth required: Yes (session check)
  * Rate limit: 1 request per 5 menit per user (300 detik)
+ *
+ * Catatan: sync dijalankan langsung (synchronous) di route ini,
+ * bukan via Inngest background job, karena Inngest Cloud signature
+ * validation belum stabil. Jika timeout di Vercel (10s default),
+ * upgrade ke fungsi Hobby/Pro atau naikkan maxDuration di vercel.json.
  */
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -24,8 +34,6 @@ export async function POST(request: Request) {
   }
 
   // ─── 2. CHECK GMAIL SYNC ENABLED + BACA TOKEN DARI DB ─────
-  // Check before rate limit so unenabled attempts don't consume quota.
-  // Token dibaca dari DB karena provider_token hilang setelah middleware me-refresh session.
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('gmail_sync_enabled, google_access_token, google_refresh_token, google_token_expires_at')
@@ -65,21 +73,26 @@ export async function POST(request: Request) {
     )
   }
 
-  // ─── 5. FIRE BACKGROUND JOB ───────────────────────────────
+  // ─── 5. JALANKAN SYNC LANGSUNG ─────────────────────────────
   try {
-    await inngest.send({
-      name: 'gmail/sync.manual',
-      data: { userId: user.id, accessToken },
+    const adminSupabase = createAdminClient<Database>(SUPABASE_URL, SERVICE_ROLE_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
     })
-  } catch {
+
+    const result = await syncUserGmail(adminSupabase, user.id, accessToken)
+
+    return NextResponse.json({
+      data: {
+        message: 'Sync selesai',
+        emailsProcessed: result.emailsProcessed,
+        transactionsCreated: result.transactionsCreated,
+      },
+      error: null,
+    }, { status: 200 })
+  } catch (err) {
     return NextResponse.json(
-      { data: null, error: { code: 'SYNC_ERROR', message: 'Sync gagal. Coba lagi nanti.' } },
+      { data: null, error: { code: 'SYNC_ERROR', message: err instanceof Error ? err.message : 'Sync gagal. Coba lagi nanti.' } },
       { status: 500 }
     )
   }
-
-  return NextResponse.json(
-    { data: { message: 'Sync dimulai' }, error: null },
-    { status: 202 }
-  )
 }
