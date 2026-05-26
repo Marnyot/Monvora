@@ -39,7 +39,6 @@ export async function POST() {
 
   const accessToken = await getValidGoogleToken(profile, supabase, user.id)
 
-  // Re-enable sync regardless — if no token, user will need OAuth
   await supabase
     .from('profiles')
     .update({ gmail_sync_enabled: !!accessToken })
@@ -52,24 +51,24 @@ export async function POST() {
     )
   }
 
-  // Reset historyId agar initial sync mengambil email bank terbaru
   await supabase
     .from('profiles')
-    .update({ gmail_sync_token: null })
+    .update({
+      gmail_last_synced_at: new Date().toISOString(),
+      gmail_sync_token: null,
+    })
     .eq('id', user.id)
 
-  // Setup Gmail push notification watch
   try {
     await setupWatch(accessToken, supabase, user.id)
   } catch {
-    // Non-blocking — cron will handle renewal if watch setup fails
+    // Watch gagal — tidak fatal, cron akan coba lagi nanti
   }
 
-  // Jalankan initial sync langsung (tidak via Inngest)
   try {
     await syncUserGmail(supabase, user.id, accessToken)
   } catch {
-    // Non-blocking — sync enabled, akan retry berikutnya
+    // Sync awal gagal — user bisa sync manual nanti
   }
 
   return NextResponse.json(
