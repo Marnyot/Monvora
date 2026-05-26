@@ -58,7 +58,8 @@ export function useTransactions({ page = 1, type, q }: UseTransactionsParams = {
         totalPages,
       }
     },
-    staleTime: 30_000,
+    staleTime: 0,
+    gcTime: 5 * 60 * 1000,
   })
 
   return { ...query, sessionLoading }
