@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { createCategorySchema } from '@/lib/validations/category'
 import { checkRateLimit } from '@/lib/utils/rate-limit'
 
@@ -74,5 +75,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ data: null, error: { code: 'DB_ERROR', message: 'Terjadi kesalahan database' } }, { status: 500 })
   }
 
+  revalidatePath('/settings/categories')
   return NextResponse.json({ data, error: null }, { status: 201 })
 }

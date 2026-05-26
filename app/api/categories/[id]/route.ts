@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { updateCategorySchema } from '@/lib/validations/category'
 import { validateUUID } from '@/lib/validations/common'
 import { checkRateLimit } from '@/lib/utils/rate-limit'
@@ -66,6 +67,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     return NextResponse.json({ data: null, error: { code: 'DB_ERROR', message: 'Terjadi kesalahan database' } }, { status: 500 })
   }
 
+  revalidatePath('/settings/categories')
   return NextResponse.json({ data, error: null })
 }
 
@@ -115,5 +117,6 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
     return NextResponse.json({ data: null, error: { code: 'DB_ERROR', message: 'Terjadi kesalahan database' } }, { status: 500 })
   }
 
+  revalidatePath('/settings/categories')
   return new NextResponse(null, { status: 204 })
 }

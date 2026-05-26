@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { Mail, ChevronRight } from 'lucide-react'
+import { Mail, ChevronRight, Tag } from 'lucide-react'
 import { LogoutButton } from './logout-button'
 
 export const metadata = { title: 'Pengaturan — Monvora' }
@@ -37,6 +37,28 @@ export default async function SettingsPage() {
           </div>
         </div>
         <LogoutButton />
+      </section>
+
+      {/* Kelola */}
+      <section className="space-y-2">
+        <h2 className="text-sm font-semibold text-foreground px-1">Kelola</h2>
+        <div className="rounded-xl border border-border bg-card overflow-hidden">
+          <Link
+            href="/settings/categories"
+            className="flex items-center justify-between p-4 hover:bg-accent/50 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <div className="rounded-full p-2 bg-muted">
+                <Tag className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-foreground">Kategori</p>
+                <p className="text-xs text-muted-foreground">Tambah dan kelola kategori transaksi</p>
+              </div>
+            </div>
+            <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+          </Link>
+        </div>
       </section>
 
       {/* Integrasi */}

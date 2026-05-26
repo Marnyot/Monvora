@@ -276,7 +276,7 @@ export function QuickEntry({ open, onOpenChange, wallets, categories }: QuickEnt
                   if (toWalletId === v) setToWalletId('')
                   const newWallet = wallets.find(w => w.id === v)
                   const allowed = newWallet ? (WALLET_TYPE_PAYMENT_METHODS[newWallet.type] ?? PAYMENT_METHODS) : PAYMENT_METHODS
-                  if (paymentMethod && !allowed.includes(paymentMethod)) setPaymentMethod('')
+                  if (paymentMethod && !allowed.includes(paymentMethod as typeof PAYMENT_METHODS[number])) setPaymentMethod('')
                 }}>
                   <SelectTrigger>
                     <SelectValue placeholder="Pilih dompet" />
