@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter, usePathname } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import {
   Sheet,
@@ -61,7 +61,6 @@ interface QuickEntryProps {
 
 export function QuickEntry({ open, onOpenChange, wallets, categories }: QuickEntryProps) {
   const router = useRouter()
-  const pathname = usePathname()
   const [isPending, setIsPending] = useState(false)
   const [serverError, setServerError] = useState<string | null>(null)
 
@@ -149,7 +148,7 @@ export function QuickEntry({ open, onOpenChange, wallets, categories }: QuickEnt
 
       toast.success('Transaksi berhasil disimpan')
       onOpenChange(false)
-      router.push(pathname)
+      router.refresh()
     } finally {
       setIsPending(false)
     }
