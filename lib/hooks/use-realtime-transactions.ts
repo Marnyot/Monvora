@@ -14,13 +14,14 @@ export function useRealtimeTransactions(userId: string) {
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'INSERT',
           schema: 'public',
           table: 'transactions',
           filter: `user_id=eq.${userId}`,
         },
         () => {
           queryClient.invalidateQueries({ queryKey: ['transactions'] })
+          queryClient.invalidateQueries({ queryKey: ['dashboard'] })
         }
       )
       .subscribe((status) => {

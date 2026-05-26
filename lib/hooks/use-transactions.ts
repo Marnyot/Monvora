@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
+import { useSession } from '@/lib/hooks/use-session'
 import type { Database } from '@/types/database'
 
 type TransactionRow = Database['public']['Tables']['transactions']['Row']
@@ -10,7 +11,6 @@ interface TransactionWithRelations extends TransactionRow {
 }
 
 interface UseTransactionsParams {
-  userId: string
   page?: number
   type?: string | null
   q?: string | null
@@ -18,36 +18,38 @@ interface UseTransactionsParams {
 
 const PAGE_SIZE = 20
 
-export function useTransactions({ userId, page = 1, type, q }: UseTransactionsParams) {
-  return useQuery({
-    queryKey: ['transactions', { userId, page, type, q }],
+export function useTransactions({ page = 1, type, q }: UseTransactionsParams = {}) {
+  const { user, loading: sessionLoading } = useSession()
+
+  const query = useQuery({
+    queryKey: ['transactions', { userId: user?.id, page, type, q }],
+    enabled: !!user?.id,
     queryFn: async () => {
       const supabase = createClient()
 
       const from = (page - 1) * PAGE_SIZE
       const to = from + PAGE_SIZE - 1
 
-      let query = supabase
+      let q_ = supabase
         .from('transactions')
         .select(`
           id, amount, type, description, merchant_name, payment_method, transacted_at,
           wallet:wallets!wallet_id(id, name, color),
           category:categories(id, name, icon, color)
         `, { count: 'exact' })
-        .eq('user_id', userId)
         .is('deleted_at', null)
         .order('transacted_at', { ascending: false })
         .range(from, to)
 
       if (type && ['expense', 'income', 'transfer'].includes(type)) {
-        query = query.eq('type', type)
+        q_ = q_.eq('type', type)
       }
 
       if (q) {
-        query = query.or(`merchant_name.ilike.%${q}%,description.ilike.%${q}%`)
+        q_ = q_.or(`merchant_name.ilike.%${q}%,description.ilike.%${q}%`)
       }
 
-      const { data: transactions, count } = await query
+      const { data: transactions, count } = await q_
       const totalPages = Math.ceil((count ?? 0) / PAGE_SIZE)
 
       return {
@@ -56,7 +58,8 @@ export function useTransactions({ userId, page = 1, type, q }: UseTransactionsPa
         totalPages,
       }
     },
-    refetchInterval: 10_000,
-    staleTime: 5_000,
+    staleTime: 30_000,
   })
+
+  return { ...query, sessionLoading }
 }
