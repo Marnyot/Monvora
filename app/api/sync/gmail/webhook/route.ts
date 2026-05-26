@@ -34,13 +34,17 @@ interface PubSubNotification {
 
 export async function POST(request: Request) {
   // ─── 1. VERIFY AUTH TOKEN ──────────────────────────────
-  const authHeader = request.headers.get('authorization') ?? ''
+  // Pub/Sub push bisa pakai OIDC JWT (bukan Bearer token biasa).
+  // Kalau tidak pakai authentication di subscription, skip check.
+  const authHeader = request.headers.get('authorization')
 
-  if (VERIFICATION_TOKEN && authHeader !== `Bearer ${VERIFICATION_TOKEN}`) {
-    return NextResponse.json(
-      { data: null, error: { code: 'UNAUTHORIZED', message: 'Invalid token' } },
-      { status: 401 }
-    )
+  if (VERIFICATION_TOKEN && authHeader) {
+    if (authHeader !== `Bearer ${VERIFICATION_TOKEN}`) {
+      return NextResponse.json(
+        { data: null, error: { code: 'UNAUTHORIZED', message: 'Invalid token' } },
+        { status: 401 }
+      )
+    }
   }
 
   // ─── 2. PARSE PAYLOAD ──────────────────────────────────

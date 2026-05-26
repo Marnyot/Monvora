@@ -39,7 +39,20 @@
       "mcp__context7__query-docs",
       "Bash(node -e ' *)",
       "mcp__inngest-dev__list_functions",
-      "Bash(xargs grep *)"
+      "Bash(xargs grep *)",
+      "mcp__vercel__list_teams",
+      "mcp__vercel__list_projects",
+      "Bash(vercel --version)",
+      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(d.get\\('token','not found'\\)[:20]+'...'\\)\")",
+      "Read(//c/Users/PC/.vercel/**)",
+      "Bash(python *)",
+      "Bash(node *)",
+      "mcp__vercel__get_project",
+      "Read(//c/Users/PC/.local/share/com.vercel.cli/**)",
+      "Read(//c/Users/PC/.config/com.vercel.cli/**)",
+      "mcp__vercel__get_runtime_logs",
+      "mcp__supabase__execute_sql",
+      "mcp__vercel__deploy_to_vercel"
     ]
   },
   "enableAllProjectMcpServers": true,
