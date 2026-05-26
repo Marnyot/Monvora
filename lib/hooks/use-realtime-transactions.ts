@@ -1,9 +1,13 @@
+'use client'
+
 import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 
 export function useRealtimeTransactions(userId: string) {
   const queryClient = useQueryClient()
+  const router = useRouter()
 
   useEffect(() => {
     if (!userId) return
@@ -21,7 +25,7 @@ export function useRealtimeTransactions(userId: string) {
         },
         () => {
           queryClient.invalidateQueries({ queryKey: ['transactions'] })
-          queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+          router.refresh()
         }
       )
       .subscribe((status) => {
@@ -33,5 +37,5 @@ export function useRealtimeTransactions(userId: string) {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [userId, queryClient])
+  }, [userId, queryClient, router])
 }
