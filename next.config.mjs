@@ -18,7 +18,7 @@ const securityHeaders = [
       "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' blob: data: lh3.googleusercontent.com",
-      "connect-src 'self' *.supabase.co accounts.google.com",
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co accounts.google.com",
     ].join('; '),
   },
 ]
