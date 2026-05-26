@@ -31,12 +31,12 @@ describe('BCA Parser', () => {
       expect(bcaParser.canParse(email)).toBe(true)
     })
 
-    it('should detect emails with BCA in subject', () => {
+    it('should not detect emails from non-BCA sender even if subject contains BCA', () => {
       const email = makeEmail({
         from: 'notifications@example.com',
         subject: 'Notifikasi Transaksi BCA',
       })
-      expect(bcaParser.canParse(email)).toBe(true)
+      expect(bcaParser.canParse(email)).toBe(false)
     })
 
     it('should return false for non-BCA emails', () => {

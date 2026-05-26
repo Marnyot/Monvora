@@ -1,157 +1,170 @@
 import type { BankParser, GmailMessage, ParsedTransaction } from '@/types/parser'
 import { parseIDRAmount, normalizeText, isFromSender, parseEmailDate } from './base'
 import { registerParser } from './index'
+import { calculateConfidence } from './confidence'
+import { parseAmountToInteger } from '@/lib/utils/currency'
+import { parseTransactionDate } from '@/lib/utils/date'
 
-/**
- * BCA Parser - Handles email notifications from Bank Central Asia (BCA)
- * Detects emails from @klikbca.com, @bca.co.id, or subject containing "BCA"
- * and parses transaction details from the email body
- */
+const KNOWN_SENDERS = ['klikbca.com', 'bca.co.id']
+
+const KNOWN_SUBJECTS = [
+  'internet transaction journal',
+  'bca card transaction',
+  'bca',
+  'notifikasi bca',
+]
+
+function detectBCAType(body: string): ParsedTransaction['type'] {
+  const match = body.match(/Transfer Type\s*:\s*([^\n]+)/i)
+  if (!match) return 'transfer'
+  const t = match[1].toLowerCase()
+  if (t.includes('transfer')) return 'transfer'
+  return 'expense'
+}
+
+function detectBCAPaymentMethod(body: string, normalized: string): ParsedTransaction['payment_method'] {
+  const match = body.match(/Transfer Type\s*:\s*([^\n]+)/i)
+  if (match) {
+    const t = match[1].toLowerCase()
+    if (t.includes('qris')) return 'qris'
+    if (t.includes('transfer')) return 'transfer'
+    if (t.includes('debit') || t.includes('card')) return 'debit'
+    if (t.includes('credit')) return 'credit'
+    return 'other'
+  }
+
+  // Fallback to body keywords
+  if (normalized.includes('pembayaran qris') || normalized.includes('qris')) return 'qris'
+  if (normalized.includes('transfer masuk') || normalized.includes('kredit') || normalized.includes('transfer dari')) return 'transfer'
+  if (normalized.includes('transfer ke') || normalized.includes('transfer keluar') || normalized.includes('tujuan')) return 'transfer'
+  if (normalized.includes('debet') || normalized.includes('pembelian') || normalized.includes('belanja')) return 'debit'
+  return 'debit'
+}
+
 export const bcaParser: BankParser = {
   name: 'bca',
 
   canParse(email: GmailMessage): boolean {
-    // Check if email is from BCA domain
-    if (isFromSender(email, 'klikbca.com') || isFromSender(email, 'bca.co.id')) {
-      return true
-    }
-
-    // Check if subject contains BCA
-    if (email.subject && email.subject.toLowerCase().includes('bca')) {
-      return true
-    }
-
-    return false
+    const fromLower = email.from.toLowerCase()
+    const subjectLower = email.subject.toLowerCase()
+    const validSender = KNOWN_SENDERS.some((s) => fromLower.includes(s))
+    const validSubject = KNOWN_SUBJECTS.some((s) => subjectLower.includes(s))
+    return validSender && validSubject
   },
 
   parse(email: GmailMessage): ParsedTransaction | null {
-    const body = email.body
-    if (!body) return null
+    try {
+      const body = email.body
+      if (!body) return null
 
-    const normalized = normalizeText(body)
+      const normalized = normalizeText(body)
 
-    // Extract amount from body
-    const amount = parseIDRAmount(body)
-    if (!amount) return null
+      // Skip non-successful transactions
+      const statusMatch = body.match(/Status\s*:\s*(\w+)/i)
+      if (statusMatch && !statusMatch[1].toLowerCase().includes('success')) return null
 
-    // Determine transaction type based on keywords
-    let type: 'expense' | 'income' | 'transfer' = 'expense'
-    let paymentMethod: 'qris' | 'transfer' | 'cash' | 'debit' | 'credit' | 'ewallet' | 'other' =
-      'debit'
+      // Amount: try bank-specific pattern, fall back to generic
+      let amount: number | null = null
+      const specificAmountMatch = body.match(/Transfer Amount\s*:\s*IDR\s*([\d,. ]+)/i)
+      if (specificAmountMatch) {
+        amount = parseAmountToInteger(specificAmountMatch[1].trim())
+      }
+      if (!amount) amount = parseIDRAmount(body)
+      if (!amount) return null
 
-    // Check for income indicators
-    if (
-      normalized.includes('transfer masuk') ||
-      normalized.includes('kredit') ||
-      normalized.includes('transfer dari')
-    ) {
-      type = 'income'
-      paymentMethod = 'transfer'
-    }
-    // Check for transfer out
-    else if (
-      normalized.includes('transfer ke') ||
-      normalized.includes('transfer keluar') ||
-      normalized.includes('tujuan')
-    ) {
-      type = 'expense'
-      paymentMethod = 'transfer'
-    }
-    // Check for QRIS specifically
-    else if (
-      normalized.includes('pembayaran qris') ||
-      normalized.includes('qris') ||
-      normalized.includes('scan qr')
-    ) {
-      type = 'expense'
-      paymentMethod = 'qris'
-    }
-    // Check for ATM withdrawal
-    else if (
-      normalized.includes('penarikan tunai') ||
-      normalized.includes('atm') ||
-      normalized.includes('cash withdrawal')
-    ) {
-      type = 'expense'
-      paymentMethod = 'debit'
-    }
-    // Check for debit/purchase
-    else if (
-      normalized.includes('debet') ||
-      normalized.includes('pembelian') ||
-      normalized.includes('belanja')
-    ) {
-      type = 'expense'
-      paymentMethod = 'debit'
-    }
+      // Type detection
+      let type: 'expense' | 'income' | 'transfer' = 'expense'
+      if (
+        normalized.includes('transfer masuk') ||
+        normalized.includes('kredit') ||
+        normalized.includes('transfer dari')
+      ) {
+        type = 'income'
+      } else if (body.match(/Transfer Type\s*:\s*([^\n]+)/i)) {
+        type = detectBCAType(body)
+      } else if (
+        normalized.includes('transfer ke') ||
+        normalized.includes('transfer keluar') ||
+        normalized.includes('tujuan')
+      ) {
+        type = 'expense'
+      }
 
-    // Extract merchant name
-    let merchantName: string | null = null
-    const merchantPatterns = [
-      /(?:merchant|merchant:)\s+([^\n]+)/i,
-      /(?:pembelian|belanja)\s+(?:di|at|di\s+)?([^\n]+)/i,
-      /(?:tujuan|transfer ke|dari)\s+([^\n]+)/i,
-    ]
+      const paymentMethod = detectBCAPaymentMethod(body, normalized)
 
-    for (const pattern of merchantPatterns) {
-      const match = body.match(pattern)
-      if (match && match[1]) {
-        const candidate = normalizeText(match[1]).split(/\n/)[0].substring(0, 100)
-        // Filter out common non-merchant patterns
-        if (
-          candidate &&
-          !candidate.includes('nominal') &&
-          !candidate.includes('rp') &&
-          !candidate.includes('waktu') &&
-          !candidate.includes('jenis')
-        ) {
-          merchantName = candidate
-          break
+      // Merchant: try bank-specific (Beneficiary Name) first, fall back to generic
+      let merchantName: string | null = null
+      const specificMerchantMatch = body.match(/Beneficiary Name\s*:\s*([^\n]+)/i)
+      if (specificMerchantMatch) {
+        merchantName = normalizeText(specificMerchantMatch[1]).substring(0, 100) || null
+      }
+      if (!merchantName) {
+        const merchantPatterns = [
+          /(?:merchant:|merchant)\s+([^\n]+)/i,
+          /(?:pembelian|belanja)\s+(?:di|at|di\s+)?([^\n]+)/i,
+          /(?:tujuan|transfer ke|dari)\s+([^\n]+)/i,
+        ]
+        for (const pattern of merchantPatterns) {
+          const match = body.match(pattern)
+          if (match?.[1]) {
+            const candidate = normalizeText(match[1]).split(/\n/)[0].substring(0, 100)
+            if (
+              candidate &&
+              !candidate.includes('nominal') &&
+              !candidate.includes('rp') &&
+              !candidate.includes('waktu') &&
+              !candidate.includes('jenis')
+            ) {
+              merchantName = candidate
+              break
+            }
+          }
         }
       }
-    }
 
-    // Extract reference number
-    let referenceNumber: string | null = null
-    const refPatterns = [
-      /(?:nomor\s+referensi|reference\s+number|nomor\s+ref|ref)[:\s]+([A-Z0-9]+)/i,
-    ]
-
-    for (const pattern of refPatterns) {
-      const match = body.match(pattern)
-      if (match && match[1]) {
-        referenceNumber = match[1].trim()
-        break
+      // Reference: try bank-specific, fall back to generic
+      let referenceNumber: string | null = null
+      const specificRefMatch = body.match(/Reference No\.\s*:\s*([A-F0-9-]+)/i)
+      if (specificRefMatch) {
+        referenceNumber = specificRefMatch[1].trim()
       }
-    }
+      if (!referenceNumber) {
+        const refMatch = body.match(
+          /(?:nomor\s+referensi|reference\s+number|nomor\s+ref|ref)[:\s]+([A-Z0-9]+)/i,
+        )
+        if (refMatch?.[1]) referenceNumber = refMatch[1].trim()
+      }
 
-    // Parse transaction date
-    const transactedAt = parseEmailDate(email.date)
+      // Date: try bank-specific (Transaction Date), fall back to email header
+      let transactedAt: Date = parseEmailDate(email.date)
+      const dateMatch = body.match(
+        /Transaction Date\s*:\s*(\d{1,2}\s+\w+\s+\d{4}\s+\d{2}:\d{2}:\d{2})/i,
+      )
+      if (dateMatch) {
+        const parsed = parseTransactionDate(dateMatch[1])
+        if (parsed) transactedAt = parsed
+      }
 
-    // Calculate confidence
-    // High confidence if amount, type, and merchant are present
-    // Medium confidence if merchant is missing
-    const hasFullDetails = amount && type && merchantName
-    const confidence = hasFullDetails ? 0.9 : 0.7
+      const result: ParsedTransaction = {
+        amount,
+        type,
+        merchant_name: merchantName,
+        description: null,
+        payment_method: paymentMethod,
+        transacted_at: transactedAt,
+        reference_number: referenceNumber,
+        raw_email_id: email.id,
+        raw_snippet: body.substring(0, 200).replace(/\n/g, ' ').trim(),
+        confidence: 0,
+        bank: 'bca',
+      }
 
-    // Create raw snippet (first 200 chars of body)
-    const rawSnippet = body.substring(0, 200).replace(/\n/g, ' ').trim()
-
-    return {
-      amount,
-      type,
-      merchant_name: merchantName,
-      description: null,
-      payment_method: paymentMethod,
-      transacted_at: transactedAt,
-      reference_number: referenceNumber,
-      raw_email_id: email.id,
-      raw_snippet: rawSnippet,
-      confidence,
-      bank: 'bca',
+      result.confidence = calculateConfidence(result)
+      return result
+    } catch {
+      return null
     }
   },
 }
 
-// Auto-register the parser when module is loaded
 registerParser(bcaParser)

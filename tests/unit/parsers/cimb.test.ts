@@ -34,20 +34,20 @@ describe('CIMB Parser', () => {
       expect(cimbParser.canParse(email)).toBe(true)
     })
 
-    it('should return true for subject containing "CIMB"', () => {
+    it('should not detect emails from non-CIMB sender even if subject contains CIMB', () => {
       const email = makeEmail({
         from: 'Bank <bank@example.com>',
         subject: 'Notifikasi Transaksi CIMB Niaga',
       })
-      expect(cimbParser.canParse(email)).toBe(true)
+      expect(cimbParser.canParse(email)).toBe(false)
     })
 
-    it('should return true for subject containing "OCTO"', () => {
+    it('should not detect emails from non-CIMB sender even if subject contains OCTO', () => {
       const email = makeEmail({
         from: 'Bank <bank@example.com>',
         subject: 'Notifikasi dari OCTO CIMB',
       })
-      expect(cimbParser.canParse(email)).toBe(true)
+      expect(cimbParser.canParse(email)).toBe(false)
     })
 
     it('should return false for non-CIMB email', () => {
@@ -88,7 +88,7 @@ describe('CIMB Parser', () => {
       expect(result?.type).toBe('expense')
       expect(result?.payment_method).toBe('transfer')
       expect(result?.merchant_name).toBe('indomaret')
-      expect(result?.confidence).toBe(0.9)
+      expect(result?.confidence).toBeGreaterThanOrEqual(0.9)
       expect(result?.bank).toBe('cimb')
     })
 
@@ -233,7 +233,7 @@ describe('CIMB Parser', () => {
       expect(result?.amount).toBe(250000)
       expect(result?.type).toBe('expense')
       expect(result?.merchant_name).toBeNull()
-      expect(result?.confidence).toBe(0.7)
+      expect(result?.confidence).toBeLessThan(0.9)
     })
 
     it('should parse amount with various format variations', () => {

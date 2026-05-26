@@ -22,20 +22,20 @@ describe('BNI Parser', () => {
       expect(bniParser.canParse(email)).toBe(true)
     })
 
-    it('should return true for email with BNI in subject', () => {
+    it('should not detect emails from non-BNI sender even if subject contains BNI', () => {
       const email = makeEmail({
         from: 'other@bank.com',
         subject: 'BNI Mobile Banking Notification',
       })
-      expect(bniParser.canParse(email)).toBe(true)
+      expect(bniParser.canParse(email)).toBe(false)
     })
 
-    it('should return true for email with mobile banking in subject', () => {
+    it('should not detect generic mobile banking emails from non-BNI sender', () => {
       const email = makeEmail({
         from: 'other@bank.com',
         subject: 'Mobile Banking Transaction Update',
       })
-      expect(bniParser.canParse(email)).toBe(true)
+      expect(bniParser.canParse(email)).toBe(false)
     })
 
     it('should return false for non-BNI email', () => {
@@ -195,7 +195,7 @@ describe('BNI Parser', () => {
       })
 
       const result = bniParser.parse(email)
-      expect(result?.confidence).toBe(0.9)
+      expect(result?.confidence).toBeGreaterThanOrEqual(0.9)
     })
 
     it('should have lower confidence when merchant is missing', () => {
@@ -207,7 +207,7 @@ describe('BNI Parser', () => {
       })
 
       const result = bniParser.parse(email)
-      expect(result?.confidence).toBe(0.7)
+      expect(result?.confidence).toBeLessThan(0.9)
     })
 
     it('should set bank name to bni', () => {

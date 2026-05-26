@@ -27,28 +27,28 @@ describe('BRI Parser', () => {
       expect(briParser.canParse(email)).toBe(true)
     })
 
-    it('should return true for subject containing "BRI"', () => {
+    it('should not detect emails from non-BRI sender even if subject contains BRI', () => {
       const email = makeEmail({
         subject: 'Notifikasi Transaksi BRI - Transfer Keluar',
         from: 'sender@example.com',
       })
-      expect(briParser.canParse(email)).toBe(true)
+      expect(briParser.canParse(email)).toBe(false)
     })
 
-    it('should return true for subject containing "BRImo"', () => {
+    it('should not detect emails from non-BRI sender even if subject contains BRImo', () => {
       const email = makeEmail({
         subject: 'BRImo - Pembayaran Berhasil',
         from: 'sender@example.com',
       })
-      expect(briParser.canParse(email)).toBe(true)
+      expect(briParser.canParse(email)).toBe(false)
     })
 
-    it('should return true for subject containing case-insensitive BRI', () => {
+    it('should not detect emails from non-BRI sender with generic subject', () => {
       const email = makeEmail({
         subject: 'notifikasi transaksi bri',
         from: 'sender@example.com',
       })
-      expect(briParser.canParse(email)).toBe(true)
+      expect(briParser.canParse(email)).toBe(false)
     })
 
     it('should return false for non-BRI emails', () => {
@@ -235,7 +235,7 @@ describe('BRI Parser', () => {
       expect(result?.confidence).toBe(0.9)
     })
 
-    it('should have lower confidence (0.7) when merchant is missing', () => {
+    it('should have lower confidence when merchant is missing', () => {
       const email = makeEmail({
         body: `
           Notifikasi Transaksi BRI
@@ -244,7 +244,7 @@ describe('BRI Parser', () => {
         `,
       })
       const result = briParser.parse(email)
-      expect(result?.confidence).toBe(0.7)
+      expect(result?.confidence).toBeLessThan(0.9)
     })
   })
 

@@ -22,3 +22,27 @@ export function parseIDR(value: string): number | null {
   if (isNaN(num) || !Number.isInteger(num)) return null
   return num
 }
+
+export function parseAmountToInteger(raw: string): number | null {
+  if (!raw) return null
+
+  const cleaned = raw.replace(/[^\d.,]/g, '').trim()
+  if (!cleaned) return null
+
+  let normalized: string
+
+  if (/\.\d{3},\d{2}$/.test(cleaned)) {
+    normalized = cleaned.replace(/\./g, '').replace(/,\d+$/, '')
+  } else if (/,\d{3}\.\d{2}$/.test(cleaned)) {
+    normalized = cleaned.replace(/,/g, '').replace(/\.\d+$/, '')
+  } else if (/^\d+,\d{2}$/.test(cleaned)) {
+    normalized = cleaned.replace(/,\d+$/, '')
+  } else if (/^\d+\.\d{2}$/.test(cleaned)) {
+    normalized = cleaned.replace(/\.\d+$/, '')
+  } else {
+    normalized = cleaned.replace(/[.,]/g, '')
+  }
+
+  const result = parseInt(normalized, 10)
+  return isNaN(result) || result <= 0 ? null : result
+}
