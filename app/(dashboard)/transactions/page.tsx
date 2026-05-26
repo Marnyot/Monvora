@@ -4,6 +4,7 @@ import { TransactionFilters } from '@/components/transactions/transaction-filter
 import { TransactionPagination } from '@/components/transactions/transaction-pagination'
 import { EmptyState } from '@/components/shared/empty-state'
 import { SkeletonList } from '@/components/shared/skeleton-card'
+import { AutoRefresh } from '@/components/shared/auto-refresh'
 import { List } from 'lucide-react'
 import { Suspense } from 'react'
 
@@ -87,6 +88,7 @@ export default async function TransactionsPage({ searchParams }: PageProps) {
         <h1 className="text-lg font-semibold text-foreground">Transaksi</h1>
       </div>
 
+      <AutoRefresh interval={15_000} />
       <TransactionFilters />
 
       <Suspense fallback={<div className="px-4 py-4"><SkeletonList count={5} /></div>}>
