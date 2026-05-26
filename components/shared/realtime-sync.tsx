@@ -1,12 +1,10 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 export function RealtimeSync() {
-  const router = useRouter()
-  const ref = useRef<ReturnType<typeof setInterval>>()
+  const unsubscribe = useRef<() => void>()
 
   useEffect(() => {
     const supabase = createClient()
@@ -15,14 +13,13 @@ export function RealtimeSync() {
       .channel('transactions-realtime')
       .on('postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'transactions' },
-        () => router.refresh()
+        () => window.location.reload()
       )
       .subscribe()
 
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [router])
+    unsubscribe.current = () => { supabase.removeChannel(channel) }
+    return () => unsubscribe.current?.()
+  }, [])
 
   return null
 }
