@@ -2,15 +2,46 @@
 
 import { useState } from 'react'
 import { Plus } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
+import { createClient } from '@/lib/supabase/client'
+import { useSession } from '@/lib/hooks/use-session'
 import { QuickEntry } from '@/components/transactions/quick-entry'
 
-interface QuickEntryFabProps {
-  wallets: { id: string; name: string; color: string | null; type: string }[]
-  categories: { id: string; name: string; icon: string; color: string; type: string; is_system: boolean | null }[]
-}
-
-export function QuickEntryFab({ wallets, categories }: QuickEntryFabProps) {
+export function QuickEntryFab() {
   const [open, setOpen] = useState(false)
+  const { user } = useSession()
+
+  const { data: wallets } = useQuery({
+    queryKey: ['fab-wallets', user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      const supabase = createClient()
+      const { data } = await supabase
+        .from('wallets')
+        .select('id, name, color, type')
+        .eq('user_id', user!.id)
+        .is('deleted_at', null)
+        .eq('is_active', true)
+        .order('created_at', { ascending: true })
+      return data ?? []
+    },
+    staleTime: 300_000,
+  })
+
+  const { data: categories } = useQuery({
+    queryKey: ['fab-categories', user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      const supabase = createClient()
+      const { data } = await supabase
+        .from('categories')
+        .select('id, name, icon, color, type, is_system')
+        .is('deleted_at', null)
+        .or(`user_id.eq.${user!.id},user_id.is.null`)
+      return data ?? []
+    },
+    staleTime: 300_000,
+  })
 
   return (
     <>
@@ -26,8 +57,8 @@ export function QuickEntryFab({ wallets, categories }: QuickEntryFabProps) {
       <QuickEntry
         open={open}
         onOpenChange={setOpen}
-        wallets={wallets}
-        categories={categories}
+        wallets={wallets ?? []}
+        categories={categories ?? []}
       />
     </>
   )
