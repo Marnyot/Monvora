@@ -495,6 +495,13 @@ Lihat `decisions.md` untuk detail konteks, alternatif, dan review trigger setiap
 ### Active Blockers
 *Tidak ada saat ini*
 
+### Recently Fixed
+
+| Tanggal | Bug | Fix |
+|---|---|---|
+| May 27, 2026 | `GET /transactions?user_id=eq.` 400 — query fire sebelum session ready | `enabled: !!user?.id` di `useTransactions`, userId diambil dari session dalam hook, hapus explicit `.eq('user_id')` filter (RLS handles it) |
+| May 27, 2026 | Realtime tidak update UI tanpa navigasi | Migration 007 (explicit SELECT policy), fix `useRealtimeTransactions` (guard userId, unique channel name, event INSERT), `RealtimeProvider` di-mount global di dashboard layout |
+
 ### Resolved Blockers
 
 | # | Tanggal | Blocker | Resolusi |

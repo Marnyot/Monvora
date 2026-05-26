@@ -1,8 +1,6 @@
 'use client'
 
-import { useCallback, useMemo } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
-import { useSession } from '@/lib/hooks/use-session'
+import { useSearchParams } from 'next/navigation'
 import { useTransactions } from '@/lib/hooks/use-transactions'
 import { TransactionCard } from '@/components/transactions/transaction-card'
 import { TransactionFilters } from '@/components/transactions/transaction-filters'
@@ -11,28 +9,18 @@ import { EmptyState } from '@/components/shared/empty-state'
 import { SkeletonList } from '@/components/shared/skeleton-card'
 import { List } from 'lucide-react'
 
-const PAGE_SIZE = 20
-
 export default function TransactionsPage() {
-  const { user, loading: sessionLoading } = useSession()
   const searchParams = useSearchParams()
-  const router = useRouter()
 
   const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10))
   const type = searchParams.get('type')
   const q = searchParams.get('q')?.trim() || null
 
-  const { data, isLoading, isFetching } = useTransactions({
-    userId: user?.id ?? '',
-    page,
-    type,
-    q,
-  })
+  const { data, isLoading, isFetching, sessionLoading } = useTransactions({ page, type, q })
 
   const transactions = data?.transactions ?? []
   const totalPages = data?.totalPages ?? 0
-
-  const isEmpty = !isLoading && !transactions.length
+  const isEmpty = !isLoading && !sessionLoading && !transactions.length
 
   if (sessionLoading) {
     return (
