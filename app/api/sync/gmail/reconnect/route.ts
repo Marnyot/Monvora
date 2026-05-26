@@ -52,6 +52,12 @@ export async function POST() {
     )
   }
 
+  // Set lastSyncedAt ke sekarang agar UI langsung "Tersinkron"
+  await supabase
+    .from('profiles')
+    .update({ gmail_last_synced_at: new Date().toISOString() })
+    .eq('id', user.id)
+
   // Setup Gmail push notification watch
   try {
     await setupWatch(accessToken, supabase, user.id)
