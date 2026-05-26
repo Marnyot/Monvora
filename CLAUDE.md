@@ -1,6 +1,6 @@
 # CLAUDE.md
 d> Entry point untuk Claude Code — dibaca otomatis di setiap sesi
-> Versi: v1 | May 24, 2026
+> Versi: v2 | May 26, 2026 | Tambah PARSER_GUIDE.md
 
 ---
 
@@ -33,7 +33,10 @@ Sebelum mengerjakan task apapun, Claude wajib membaca dokumen yang relevan. Urut
 | UI / komponen | `ui-rules.md` |
 | API route | `api-conventions.md` → `security.md` |
 | Database / schema | `architecture.md` → `security.md` |
-| Gmail sync / parsing | `architecture.md` → `security.md` |
+| Gmail sync / parsing | `architecture.md` → `security.md` → `PARSER_GUIDE.md` |
+| Parser bank (tulis/edit/debug) | `PARSER_GUIDE.md` — baca ini DULU sebelum menyentuh kode parser |
+| Tambah bank baru ke parser | `PARSER_GUIDE.md` → ikuti template di bagian "Template Parser Baru" |
+| OCR screenshot (Phase 3) | `PARSER_GUIDE.md` → bagian "OCR Compatibility" |
 | Auth / session | `security.md` |
 | Test | `tdd.md` |
 | Keputusan product | `decisions.md` → `product.md` |
@@ -52,6 +55,8 @@ api-conventions.md → URL structure, request/response format, semua routes
 ui-rules.md        → Design tokens, component rules, accessibility, copy
 tdd.md             → Testing philosophy, tools, RED-GREEN-REFACTOR cycle
 progress.md        → Status per task, blockers, lessons learned
+PARSER_GUIDE.md    → Panduan lengkap parser email bank: interface, regex, amount/date parsing,
+                     confidence scoring, template tambah bank baru, OCR compatibility
 CLAUDE.md          → File ini — entry point
 ```
 
@@ -311,5 +316,5 @@ Urutan prioritas saat ada konflik atau ketidakjelasan:
 
 ---
 
-*CLAUDE.md v2 | May 24, 2026*
+*CLAUDE.md v2 | May 26, 2026*
 *Update dokumen ini setiap kali ada perubahan major pada struktur project atau keputusan fundamental*

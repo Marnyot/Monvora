@@ -63,6 +63,30 @@ export async function syncUserGmail(
 
   const startedAt = new Date().toISOString()
 
+  // Insert 'started' log dulu — UI polling butuh ini untuk tahu job sedang berjalan
+  const { data: logRow } = await supabase
+    .from('gmail_sync_logs')
+    .insert({ user_id: userId, status: 'started', started_at: startedAt })
+    .select('id')
+    .single()
+  const logId = logRow?.id ?? null
+
+  // Helper: UPDATE log yang sudah ada (tidak insert baru)
+  async function finalize(status: 'completed' | 'partial' | 'failed', errorMessage?: string) {
+    if (!logId) return
+    await supabase
+      .from('gmail_sync_logs')
+      .update({
+        status,
+        emails_scanned: result.emailsProcessed,
+        transactions_found: result.transactionsCreated + result.transactionsSkipped,
+        transactions_created: result.transactionsCreated,
+        completed_at: new Date().toISOString(),
+        error_message: errorMessage ?? null,
+      })
+      .eq('id', logId)
+  }
+
   // 1. Ambil gmail_sync_token dari profiles
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
@@ -71,12 +95,12 @@ export async function syncUserGmail(
     .single()
 
   if (profileError || !profile) {
-    await logSyncResult(supabase, userId, 'failed', result, startedAt, 'Profile not found')
+    await finalize('failed', 'Profile not found')
     return result
   }
 
   if (!profile.gmail_sync_enabled) {
-    await logSyncResult(supabase, userId, 'failed', result, startedAt, 'Gmail sync disabled')
+    await finalize('failed', 'Gmail sync disabled')
     return result
   }
 
@@ -95,7 +119,7 @@ export async function syncUserGmail(
       ? 'Gmail token expired'
       : 'Gmail API fetch failed'
 
-    await logSyncResult(supabase, userId, 'failed', result, startedAt, errorMsg)
+    await finalize('failed', errorMsg)
     return result
   }
 
@@ -114,7 +138,7 @@ export async function syncUserGmail(
     .is('deleted_at', null)
 
   if (!wallets || wallets.length === 0) {
-    await logSyncResult(supabase, userId, 'failed', result, startedAt, 'No active wallet')
+    await finalize('failed', 'No active wallet')
     return result
   }
 
@@ -228,35 +252,13 @@ export async function syncUserGmail(
     })
     .eq('id', userId)
 
-  // 8. Log result ke gmail_sync_logs
+  // 8. Update sync log dengan hasil akhir
   const status: 'completed' | 'partial' | 'failed' =
     result.errors > 0 && result.transactionsCreated === 0 ? 'failed'
     : result.errors > 0 ? 'partial'
     : 'completed'
 
-  await logSyncResult(supabase, userId, status, result, startedAt)
+  await finalize(status)
 
   return result
-}
-
-// ─── Helpers ───────────────────────────────────────────────────────────────────
-
-async function logSyncResult(
-  supabase: SupabaseClient<Database>,
-  userId: string,
-  status: string,
-  result: SyncResult,
-  startedAt: string,
-  errorMessage?: string
-): Promise<void> {
-  await supabase.from('gmail_sync_logs').insert({
-    user_id: userId,
-    status,
-    emails_scanned: result.emailsProcessed,
-    transactions_found: result.transactionsCreated + result.transactionsSkipped,
-    transactions_created: result.transactionsCreated,
-    started_at: startedAt,
-    completed_at: new Date().toISOString(),
-    error_message: errorMessage ?? null,
-  })
 }

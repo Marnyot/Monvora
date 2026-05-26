@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
@@ -55,8 +55,39 @@ export function GmailSettingsClient({ isConnected, lastSyncedAt, syncLogs }: Gma
   const [disconnectOpen, setDisconnectOpen] = useState(false)
   const [isSyncing, startSyncTransition] = useTransition()
   const [isDisconnecting, startDisconnectTransition] = useTransition()
+  const [liveLogs, setLiveLogs] = useState<SyncLog[] | null>(null)
+  const [isPolling, setIsPolling] = useState(false)
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  function handleConnectGmail() {
+  useEffect(() => {
+    return () => { if (pollRef.current) clearInterval(pollRef.current) }
+  }, [])
+
+  function stopPolling() {
+    if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null }
+    setIsPolling(false)
+    setLiveLogs(null)
+    router.refresh()
+  }
+
+  function startPolling() {
+    setIsPolling(true)
+    const deadline = Date.now() + 30_000
+    pollRef.current = setInterval(async () => {
+      if (Date.now() > deadline) { stopPolling(); return }
+      try {
+        const res = await fetch('/api/sync/status')
+        if (!res.ok) return
+        const { data } = await res.json()
+        if (!data?.recent_logs) return
+        setLiveLogs(data.recent_logs)
+        const stillRunning = data.recent_logs.some((l: SyncLog) => l.status === 'started')
+        if (!stillRunning) stopPolling()
+      } catch { /* network error — keep polling */ }
+    }, 2000)
+  }
+
+  function triggerOAuth() {
     const supabase = createClient()
     supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -68,6 +99,27 @@ export function GmailSettingsClient({ isConnected, lastSyncedAt, syncLogs }: Gma
     })
   }
 
+  async function handleReconnect() {
+    try {
+      const res = await fetch('/api/sync/gmail/reconnect', { method: 'POST' })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data?.error?.message ?? 'Gagal menyambungkan')
+      }
+      const { data } = await res.json()
+      if (data?.needsOAuth) {
+        triggerOAuth()
+      } else {
+        toast.success('Gmail tersambung kembali', { description: 'Sync otomatis aktif.' })
+        window.location.reload()
+      }
+    } catch (err) {
+      toast.error('Gagal menyambungkan Gmail', {
+        description: err instanceof Error ? err.message : 'Coba lagi nanti.',
+      })
+    }
+  }
+
   function handleSyncNow() {
     startSyncTransition(async () => {
       try {
@@ -77,8 +129,7 @@ export function GmailSettingsClient({ isConnected, lastSyncedAt, syncLogs }: Gma
           throw new Error(data?.error?.message ?? 'Sync gagal')
         }
         toast.success('Sync dimulai', { description: 'Transaksi baru akan muncul dalam beberapa detik.' })
-        // Refresh setelah sync selesai di background (~5 detik)
-        setTimeout(() => router.refresh(), 3000)
+        startPolling()
       } catch (err) {
         toast.error('Sync gagal', {
           description: err instanceof Error ? err.message : 'Coba lagi nanti.',
@@ -120,9 +171,9 @@ export function GmailSettingsClient({ isConnected, lastSyncedAt, syncLogs }: Gma
             </p>
           </div>
         </div>
-        <Button size="sm" variant="outline" onClick={handleConnectGmail} className="w-full sm:w-auto">
+        <Button size="sm" variant="outline" onClick={handleReconnect} className="w-full sm:w-auto">
           <Mail className="h-4 w-4 mr-2" />
-          Sambungkan Kembali
+          Aktifkan Sync
         </Button>
       </div>
     )
@@ -153,14 +204,14 @@ export function GmailSettingsClient({ isConnected, lastSyncedAt, syncLogs }: Gma
           <Button
             size="sm"
             onClick={handleSyncNow}
-            disabled={isSyncing}
+            disabled={isSyncing || isPolling}
           >
-            {isSyncing ? (
+            {(isSyncing || isPolling) ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             ) : (
               <RefreshCw className="h-4 w-4 mr-2" />
             )}
-            {isSyncing ? 'Menyinkronkan...' : 'Sync Sekarang'}
+            {(isSyncing || isPolling) ? 'Menyinkronkan...' : 'Sync Sekarang'}
           </Button>
 
           <Button
@@ -178,15 +229,18 @@ export function GmailSettingsClient({ isConnected, lastSyncedAt, syncLogs }: Gma
 
       {/* Sync logs */}
       <div className="rounded-xl border border-border bg-card p-6 space-y-3">
-        <h2 className="text-sm font-semibold text-foreground">Riwayat Sync</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-foreground">Riwayat Sync</h2>
+          {isPolling && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
+        </div>
 
-        {syncLogs.length === 0 ? (
+        {(liveLogs ?? syncLogs).length === 0 ? (
           <p className="text-xs text-muted-foreground py-4 text-center">
             Belum ada aktivitas sync
           </p>
         ) : (
           <div className="space-y-2">
-            {syncLogs.map((log) => (
+            {(liveLogs ?? syncLogs).map((log) => (
               <div
                 key={log.id}
                 className="flex items-start gap-3 py-2 border-b border-border/50 last:border-0"

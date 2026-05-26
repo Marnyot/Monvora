@@ -2,7 +2,6 @@ import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { z } from 'zod'
-import { inngest } from '@/lib/inngest/client'
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
@@ -50,18 +49,6 @@ export async function GET(request: NextRequest) {
         google_token_expires_at: expiresAt,
       })
       .eq('id', user.id)
-
-    // Trigger initial sync untuk inisialisasi gmail_sync_token
-    if (accessToken) {
-      try {
-        await inngest.send({
-          name: 'gmail/sync.manual',
-          data: { userId: user.id, accessToken },
-        })
-      } catch {
-        // Non-blocking — user tetap diarahkan ke dashboard
-      }
-    }
   }
 
   return NextResponse.redirect(`${origin}${next}`)

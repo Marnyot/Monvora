@@ -47,7 +47,7 @@ export async function GET(request: Request) {
   // ─── 4. FETCH RECENT SYNC LOGS ────────────────────────────
   const { data: logs, error: logsError } = await supabase
     .from('gmail_sync_logs')
-    .select('id, status, emails_scanned, transactions_created, started_at, completed_at')
+    .select('id, status, emails_scanned, transactions_found, transactions_created, error_message, started_at, completed_at')
     .eq('user_id', user.id)
     .order('started_at', { ascending: false })
     .limit(5)
@@ -68,7 +68,9 @@ export async function GET(request: Request) {
         id: log.id,
         status: log.status,
         emails_scanned: log.emails_scanned,
+        transactions_found: log.transactions_found,
         transactions_created: log.transactions_created,
+        error_message: log.error_message,
         started_at: log.started_at,
         completed_at: log.completed_at,
       })),

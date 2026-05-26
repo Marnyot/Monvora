@@ -63,33 +63,26 @@ function makeSupabaseMock(overrides: {
   const walletResult = overrides.walletResult ?? { data: [{ id: 'wallet-001', provider: 'mandiri', balance: 1000000 }], error: null }
   const insertResult = overrides.insertResult ?? { data: null, error: null }
   const updateResult = overrides.updateResult ?? { data: null, error: null }
-  const logResult = overrides.logResult ?? { data: null, error: null }
+  const logResult = overrides.logResult ?? { data: { id: 'sync-log-001' }, error: null }
 
-  // Track call count to route from() calls in sequence
-  let fromCallCount = 0
+  // Track per-table call counts
+  const tableCallCounts: Record<string, number> = {}
 
   const mockFrom = vi.fn().mockImplementation((table: string) => {
-    fromCallCount++
+    tableCallCounts[table] = (tableCallCounts[table] ?? 0) + 1
+    const callNum = tableCallCounts[table]
 
     if (table === 'profiles') {
-      // Could be select or update
-      const chain = makeQueryChain(
-        fromCallCount === 1 ? profileResult : updateResult
-      )
+      const chain = makeQueryChain(callNum === 1 ? profileResult : updateResult)
       chain['update'] = vi.fn().mockReturnValue(makeQueryChain(updateResult))
       return chain
     }
 
     if (table === 'transactions') {
-      // Could be check-duplicate (select) or insert
       const chain: Record<string, unknown> = {}
       const methods = ['select', 'eq', 'is', 'limit', 'insert', 'order']
-      methods.forEach((m) => {
-        chain[m] = vi.fn().mockReturnValue(chain)
-      })
+      methods.forEach((m) => { chain[m] = vi.fn().mockReturnValue(chain) })
       chain['maybeSingle'] = vi.fn().mockResolvedValue(existingTxResult)
-      chain['insert'] = vi.fn().mockResolvedValue(insertResult)
-      // Allow chaining after insert
       const insertChain = makeQueryChain(insertResult)
       chain['insert'] = vi.fn().mockReturnValue(insertChain)
       return chain
@@ -102,7 +95,9 @@ function makeSupabaseMock(overrides: {
     }
 
     if (table === 'gmail_sync_logs') {
-      return makeQueryChain(logResult)
+      const chain = makeQueryChain(logResult)
+      chain['update'] = vi.fn().mockReturnValue(makeQueryChain(updateResult))
+      return chain
     }
 
     return makeQueryChain({ data: null, error: null })
