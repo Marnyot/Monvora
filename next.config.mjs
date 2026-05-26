@@ -15,7 +15,7 @@ const securityHeaders = [
     key: 'Content-Security-Policy',
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
+      "script-src 'self' 'unsafe-eval' 'unsafe-inline' va.vercel-scripts.com",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' blob: data: lh3.googleusercontent.com",
       "connect-src 'self' https://*.supabase.co wss://*.supabase.co accounts.google.com",
