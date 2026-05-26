@@ -473,7 +473,7 @@ let query = supabase
   .select(`
     *,
     category:categories(id, name, icon, color),
-    wallet:wallets(id, name)
+    wallet:wallets!wallet_id(id, name, color)
   `)
   .eq('user_id', userId)
   .is('deleted_at', null)  // exclude soft deleted

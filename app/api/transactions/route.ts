@@ -37,7 +37,7 @@ export async function GET(request: Request) {
     .select(`
       id, amount, type, description, merchant_name, payment_method,
       source, is_verified, transacted_at, created_at,
-      wallet:wallets(id, name, color),
+      wallet:wallets!wallet_id(id, name, color),
       category:categories(id, name, icon, color)
     `, { count: 'exact' })
     .eq('user_id', user.id)
