@@ -56,6 +56,7 @@ export function useTransactions({ userId, page = 1, type, q }: UseTransactionsPa
         totalPages,
       }
     },
-    staleTime: 30_000,
+    refetchInterval: 10_000,
+    staleTime: 5_000,
   })
 }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Landmark, Banknote, Smartphone, Wallet } from 'lucide-react'
 import {
@@ -82,6 +83,7 @@ interface QuickEntryProps {
 
 export function QuickEntry({ open, onOpenChange, wallets, categories }: QuickEntryProps) {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const [isPending, setIsPending] = useState(false)
   const [serverError, setServerError] = useState<string | null>(null)
 
@@ -173,6 +175,7 @@ export function QuickEntry({ open, onOpenChange, wallets, categories }: QuickEnt
 
       toast.success('Transaksi berhasil disimpan')
       onOpenChange(false)
+      queryClient.invalidateQueries({ queryKey: ['transactions'] })
       router.refresh()
     } finally {
       setIsPending(false)

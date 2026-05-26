@@ -4,11 +4,13 @@ import { createClient } from '@/lib/supabase/client'
 
 export function useRealtimeTransactions(userId: string) {
   const queryClient = useQueryClient()
-  const supabase = createClient()
 
   useEffect(() => {
+    if (!userId) return
+
+    const supabase = createClient()
     const channel = supabase
-      .channel('transactions-changes')
+      .channel(`transactions-changes-${userId}`)
       .on(
         'postgres_changes',
         {
@@ -30,5 +32,5 @@ export function useRealtimeTransactions(userId: string) {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [userId])
+  }, [userId, queryClient])
 }

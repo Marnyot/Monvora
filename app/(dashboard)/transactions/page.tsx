@@ -3,7 +3,6 @@
 import { useCallback, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from '@/lib/hooks/use-session'
-import { useRealtimeTransactions } from '@/lib/hooks/use-realtime-transactions'
 import { useTransactions } from '@/lib/hooks/use-transactions'
 import { TransactionCard } from '@/components/transactions/transaction-card'
 import { TransactionFilters } from '@/components/transactions/transaction-filters'
@@ -29,8 +28,6 @@ export default function TransactionsPage() {
     type,
     q,
   })
-
-  useRealtimeTransactions(user?.id ?? '')
 
   const transactions = data?.transactions ?? []
   const totalPages = data?.totalPages ?? 0
