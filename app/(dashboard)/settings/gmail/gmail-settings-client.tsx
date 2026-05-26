@@ -197,7 +197,7 @@ export function GmailSettingsClient({ isConnected, lastSyncedAt, syncLogs }: Gma
               )}
             </div>
           </div>
-          <SyncStatusBadge gmailSyncEnabled={true} lastSyncedAt={lastSyncedAt} />
+          <SyncStatusBadge gmailSyncEnabled={true} lastSyncedAt={lastSyncedAt} isSyncing={isPolling} />
         </div>
 
         <div className="flex flex-wrap gap-2 pt-1">

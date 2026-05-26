@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 interface SyncStatusBadgeProps {
   gmailSyncEnabled: boolean
   lastSyncedAt: string | null
+  isSyncing?: boolean
 }
 
 function getRelativeTime(isoString: string): string {
@@ -22,7 +23,24 @@ function getRelativeTime(isoString: string): string {
   return `${diffDays} hari lalu`
 }
 
-export function SyncStatusBadge({ gmailSyncEnabled, lastSyncedAt }: SyncStatusBadgeProps) {
+export function SyncStatusBadge({ gmailSyncEnabled, lastSyncedAt, isSyncing }: SyncStatusBadgeProps) {
+  if (isSyncing) {
+    return (
+      <Badge
+        variant="outline"
+        className={cn(
+          'text-blue-600 dark:text-blue-400',
+          'border-blue-500/40 bg-blue-50 dark:bg-blue-950/30'
+        )}
+      >
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse" />
+          Menyinkronkan...
+        </span>
+      </Badge>
+    )
+  }
+
   if (!gmailSyncEnabled) {
     return (
       <Badge
