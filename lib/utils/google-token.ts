@@ -36,7 +36,7 @@ export async function getValidGoogleToken(
   // Token expired atau tidak ada — coba refresh
   if (!profile.google_refresh_token) return null
 
-  const clientId = process.env.GOOGLE_CLIENT_ID
+  const clientId = process.env.GOOGLE_CLIENT_ID ?? process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET
   if (!clientId || !clientSecret) return null
 

@@ -72,6 +72,7 @@ export function GmailSettingsClient({ isConnected, lastSyncedAt, syncLogs }: Gma
 
   function startPolling() {
     setIsPolling(true)
+    const pollingStartedAt = new Date()
     const deadline = Date.now() + 30_000
     pollRef.current = setInterval(async () => {
       if (Date.now() > deadline) { stopPolling(); return }
@@ -81,8 +82,12 @@ export function GmailSettingsClient({ isConnected, lastSyncedAt, syncLogs }: Gma
         const { data } = await res.json()
         if (!data?.recent_logs) return
         setLiveLogs(data.recent_logs)
-        const stillRunning = data.recent_logs.some((l: SyncLog) => l.status === 'started')
-        if (!stillRunning) stopPolling()
+        // Hanya stop jika ada log baru (setelah polling dimulai) yang sudah selesai.
+        // Tanpa ini, polling langsung stop karena log lama sudah 'completed'.
+        const hasNewCompletedLog = data.recent_logs.some(
+          (l: SyncLog) => l.status !== 'started' && new Date(l.started_at) > pollingStartedAt
+        )
+        if (hasNewCompletedLog) stopPolling()
       } catch { /* network error — keep polling */ }
     }, 2000)
   }
