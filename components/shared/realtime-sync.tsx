@@ -1,11 +1,9 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 export function RealtimeSync() {
-  const unsubscribe = useRef<() => void>()
-
   useEffect(() => {
     const supabase = createClient()
 
@@ -17,8 +15,13 @@ export function RealtimeSync() {
       )
       .subscribe()
 
-    unsubscribe.current = () => { supabase.removeChannel(channel) }
-    return () => unsubscribe.current?.()
+    // Fallback: polling setiap 10 detik kalau Realtime gak konek
+    const fallback = setInterval(() => window.location.reload(), 10_000)
+
+    return () => {
+      supabase.removeChannel(channel)
+      clearInterval(fallback)
+    }
   }, [])
 
   return null

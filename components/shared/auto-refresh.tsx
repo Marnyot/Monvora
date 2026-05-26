@@ -1,16 +1,12 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { useEffect } from 'react'
 
-export function AutoRefresh({ interval = 15_000 }: { interval?: number }) {
-  const router = useRouter()
-  const ref = useRef<ReturnType<typeof setInterval>>()
-
+export function AutoRefresh({ interval = 10_000 }: { interval?: number }) {
   useEffect(() => {
-    ref.current = setInterval(() => router.refresh(), interval)
-    return () => { if (ref.current) clearInterval(ref.current) }
-  }, [router, interval])
+    const id = setInterval(() => window.location.reload(), interval)
+    return () => clearInterval(id)
+  }, [interval])
 
   return null
 }
