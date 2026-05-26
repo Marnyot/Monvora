@@ -11,22 +11,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  // Fetch wallets + categories for the FAB (available on all dashboard pages)
-  const [{ data: wallets }, { data: categories }] = await Promise.all([
-    supabase
-      .from('wallets')
-      .select('id, name, color, type')
-      .eq('user_id', user.id)
-      .is('deleted_at', null)
-      .eq('is_active', true)
-      .order('created_at', { ascending: true }),
-    supabase
-      .from('categories')
-      .select('id, name, icon, color, type, is_system')
-      .is('deleted_at', null)
-      .or(`user_id.eq.${user.id},user_id.is.null`),
-  ])
-
   return (
     <div className="min-h-screen bg-background flex">
       <RealtimeProvider />
@@ -37,10 +21,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         </main>
         <BottomNav />
       </div>
-      <QuickEntryFab
-        wallets={wallets ?? []}
-        categories={categories ?? []}
-      />
+      <QuickEntryFab />
     </div>
   )
 }
