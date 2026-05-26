@@ -9,20 +9,6 @@ interface SyncStatusBadgeProps {
   isSyncing?: boolean
 }
 
-function getRelativeTime(isoString: string): string {
-  const now = Date.now()
-  const then = new Date(isoString).getTime()
-  const diffSeconds = Math.floor((now - then) / 1000)
-
-  if (diffSeconds < 60) return 'baru saja'
-  const diffMinutes = Math.floor(diffSeconds / 60)
-  if (diffMinutes < 60) return `${diffMinutes} menit lalu`
-  const diffHours = Math.floor(diffMinutes / 60)
-  if (diffHours < 24) return `${diffHours} jam lalu`
-  const diffDays = Math.floor(diffHours / 24)
-  return `${diffDays} hari lalu`
-}
-
 export function SyncStatusBadge({ gmailSyncEnabled, lastSyncedAt, isSyncing }: SyncStatusBadgeProps) {
   if (isSyncing) {
     return (
@@ -77,7 +63,7 @@ export function SyncStatusBadge({ gmailSyncEnabled, lastSyncedAt, isSyncing }: S
         'border-emerald-500/40 bg-emerald-50 dark:bg-emerald-950/30'
       )}
     >
-      Tersinkron {lastSyncedAt ? `(${getRelativeTime(lastSyncedAt)})` : ''}
+      Tersinkron
     </Badge>
   )
 }

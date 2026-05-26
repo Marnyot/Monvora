@@ -10,10 +10,10 @@ describe('SyncStatusBadge', () => {
     expect(screen.getByText(/Tersinkron/)).toBeInTheDocument()
   })
 
-  it('menampilkan waktu relatif saat gmail aktif dan lastSyncedAt tersedia', () => {
+  it('menampilkan "Tersinkron" saat gmail aktif dan lastSyncedAt tersedia (waktu kapanpun)', () => {
     const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString()
     render(<SyncStatusBadge gmailSyncEnabled={true} lastSyncedAt={twoMinutesAgo} />)
-    expect(screen.getByText(/2 menit lalu/)).toBeInTheDocument()
+    expect(screen.getByText('Tersinkron')).toBeInTheDocument()
   })
 
   it('menampilkan "Menunggu sync" saat gmail aktif tapi belum pernah sync', () => {
