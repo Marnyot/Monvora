@@ -21,7 +21,11 @@ export function useRealtimeTransactions(userId: string) {
           queryClient.invalidateQueries({ queryKey: ['transactions'] })
         }
       )
-      .subscribe()
+      .subscribe((status) => {
+        if (status !== 'SUBSCRIBED') {
+          console.warn('Realtime transactions: unexpected status', status)
+        }
+      })
 
     return () => {
       supabase.removeChannel(channel)
