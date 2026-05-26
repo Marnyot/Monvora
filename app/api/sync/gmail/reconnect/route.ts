@@ -2,8 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { checkRateLimit } from '@/lib/utils/rate-limit'
 import { getValidGoogleToken } from '@/lib/utils/google-token'
-import { inngest } from '@/lib/inngest/client'
 import { setupWatch } from '@/lib/gmail/watch'
+import { syncUserGmail } from '@/lib/gmail/sync'
 
 export async function POST() {
   const supabase = await createClient()
@@ -65,14 +65,11 @@ export async function POST() {
     // Non-blocking — cron will handle renewal if watch setup fails
   }
 
-  // Kick off initial sync
+  // Sync langsung — ambil email yang sudah ada di inbox
   try {
-    await inngest.send({
-      name: 'gmail/sync.manual',
-      data: { userId: user.id, accessToken },
-    })
+    await syncUserGmail(supabase, user.id, accessToken)
   } catch {
-    // Non-blocking — sync enabled, job will retry
+    // Non-blocking — sync sudah berjalan, user bisa sync manual nanti
   }
 
   return NextResponse.json(
