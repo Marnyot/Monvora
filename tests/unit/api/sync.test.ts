@@ -69,8 +69,7 @@ const VALID_PROFILE = {
 describe('POST /api/sync/gmail', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co'
-    process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-role-key'
+
   })
 
   it('returns 401 when user is not authenticated', async () => {
@@ -126,6 +125,7 @@ describe('POST /api/sync/gmail', () => {
 
     const profileChain = makeChain({ data: VALID_PROFILE, error: null })
     mockFrom.mockReturnValueOnce(profileChain)
+    mockFrom.mockReturnValueOnce(makeChain({ data: null, error: null }))
 
     mockSyncUserGmail.mockResolvedValueOnce({
       emailsProcessed: 5,
@@ -151,6 +151,7 @@ describe('POST /api/sync/gmail', () => {
 
     const profileChain = makeChain({ data: VALID_PROFILE, error: null })
     mockFrom.mockReturnValueOnce(profileChain)
+    mockFrom.mockReturnValueOnce(makeChain({ data: null, error: null }))
 
     mockSyncUserGmail.mockRejectedValueOnce(new Error('Gmail API error'))
 

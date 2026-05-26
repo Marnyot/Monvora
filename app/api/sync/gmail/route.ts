@@ -2,24 +2,15 @@ import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { checkRateLimit } from '@/lib/utils/rate-limit'
 import { getValidGoogleToken } from '@/lib/utils/google-token'
-import { createClient as createAdminClient } from '@supabase/supabase-js'
-import type { Database } from '@/types/database'
 import { syncUserGmail } from '@/lib/gmail/sync'
-
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
 /**
  * POST /api/sync/gmail
  * Trigger manual Gmail sync untuk user yang sedang login.
  *
- * Auth required: Yes (session check)
- * Rate limit: 1 request per 5 menit per user (300 detik)
- *
- * Catatan: sync dijalankan langsung (synchronous) di route ini,
- * bukan via Inngest background job, karena Inngest Cloud signature
- * validation belum stabil. Jika timeout di Vercel (10s default),
- * upgrade ke fungsi Hobby/Pro atau naikkan maxDuration di vercel.json.
+ * Sync dijalankan langsung (synchronous) di route ini menggunakan
+ * session user (bukan admin client) karena Inngest Cloud signature
+ * validation belum stabil.
  */
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -74,12 +65,7 @@ export async function POST(request: Request) {
   }
 
   // ─── 5. CLEANUP STALE SYNC LOGS ────────────────────────────
-  // Hapus log "started" yang menggantung (dari sync sebelumnya yang gagal via Inngest)
-  const adminSupabase = createAdminClient<Database>(SUPABASE_URL, SERVICE_ROLE_KEY, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  })
-
-  await adminSupabase
+  await supabase
     .from('gmail_sync_logs')
     .update({ status: 'failed', error_message: 'Dibatalkan — sync manual baru', completed_at: new Date().toISOString() })
     .eq('user_id', user.id)
@@ -87,7 +73,7 @@ export async function POST(request: Request) {
 
   // ─── 6. JALANKAN SYNC LANGSUNG ─────────────────────────────
   try {
-    const result = await syncUserGmail(adminSupabase, user.id, accessToken)
+    const result = await syncUserGmail(supabase, user.id, accessToken)
 
     return NextResponse.json({
       data: {
