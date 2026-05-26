@@ -1,99 +1,92 @@
-import { createClient } from '@/lib/supabase/server'
+'use client'
+
+import { useCallback, useMemo } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useSession } from '@/lib/hooks/use-session'
+import { useRealtimeTransactions } from '@/lib/hooks/use-realtime-transactions'
+import { useTransactions } from '@/lib/hooks/use-transactions'
 import { TransactionCard } from '@/components/transactions/transaction-card'
 import { TransactionFilters } from '@/components/transactions/transaction-filters'
 import { TransactionPagination } from '@/components/transactions/transaction-pagination'
 import { EmptyState } from '@/components/shared/empty-state'
 import { SkeletonList } from '@/components/shared/skeleton-card'
-import { RealtimeSync } from '@/components/shared/realtime-sync'
 import { List } from 'lucide-react'
-import { Suspense } from 'react'
-
-export const metadata = { title: 'Transaksi — Monvora' }
 
 const PAGE_SIZE = 20
 
-interface PageProps {
-  searchParams: Promise<{
-    page?: string
-    type?: string
-    q?: string
-  }>
-}
+export default function TransactionsPage() {
+  const { user, loading: sessionLoading } = useSession()
+  const searchParams = useSearchParams()
+  const router = useRouter()
 
-async function TransactionList({ searchParams }: PageProps) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
+  const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10))
+  const type = searchParams.get('type')
+  const q = searchParams.get('q')?.trim() || null
 
-  const { page: pageParam, type, q: rawQ } = await searchParams
-  const page = Math.max(1, parseInt(pageParam ?? '1', 10))
-  const q = rawQ?.trim()
+  const { data, isLoading, isFetching } = useTransactions({
+    userId: user?.id ?? '',
+    page,
+    type,
+    q,
+  })
 
-  const from = (page - 1) * PAGE_SIZE
-  const to = from + PAGE_SIZE - 1
+  useRealtimeTransactions(user?.id ?? '')
 
-  let query = supabase
-    .from('transactions')
-    .select(`
-      id, amount, type, description, merchant_name, payment_method, transacted_at,
-      wallet:wallets!wallet_id(id, name, color),
-      category:categories(id, name, icon, color)
-    `, { count: 'exact' })
-    .eq('user_id', user.id)
-    .is('deleted_at', null)
-    .order('transacted_at', { ascending: false })
-    .range(from, to)
+  const transactions = data?.transactions ?? []
+  const totalPages = data?.totalPages ?? 0
 
-  if (type && ['expense', 'income', 'transfer'].includes(type)) {
-    query = query.eq('type', type)
-  }
+  const isEmpty = !isLoading && !transactions.length
 
-  if (q) {
-    query = query.or(`merchant_name.ilike.%${q}%,description.ilike.%${q}%`)
-  }
-
-  const { data: transactions, count } = await query
-  const totalPages = Math.ceil((count ?? 0) / PAGE_SIZE)
-
-  if (!transactions?.length) {
+  if (sessionLoading) {
     return (
-      <EmptyState
-        title={q || type ? 'Tidak ada hasil' : 'Belum ada transaksi'}
-        description={
-          q || type
-            ? 'Coba ubah filter atau kata kunci pencarian'
-            : 'Tap tombol + untuk mencatat transaksi pertama kamu'
-        }
-        icon={<List className="h-12 w-12" />}
-      />
+      <div className="max-w-lg mx-auto">
+        <Header title="Transaksi" />
+        <TransactionFilters />
+        <div className="px-4 py-4"><SkeletonList count={5} /></div>
+      </div>
     )
   }
 
   return (
-    <>
-      <div className="divide-y divide-border">
-        {transactions.map(tx => (
-          <TransactionCard key={tx.id} transaction={tx as any} />
-        ))}
-      </div>
-      <TransactionPagination currentPage={page} totalPages={totalPages} />
-    </>
+    <div className="max-w-lg mx-auto">
+      <Header title="Transaksi" isRefreshing={isFetching && !isLoading} />
+
+      <TransactionFilters />
+
+      {isEmpty ? (
+        <EmptyState
+          title={q || type ? 'Tidak ada hasil' : 'Belum ada transaksi'}
+          description={
+            q || type
+              ? 'Coba ubah filter atau kata kunci pencarian'
+              : 'Tap tombol + untuk mencatat transaksi pertama kamu'
+          }
+          icon={<List className="h-12 w-12" />}
+        />
+      ) : (
+        <>
+          <div className="divide-y divide-border">
+            {isLoading
+              ? <div className="px-4 py-4"><SkeletonList count={5} /></div>
+              : transactions.map(tx => (
+                  <TransactionCard key={tx.id} transaction={tx as any} />
+                ))
+            }
+          </div>
+          <TransactionPagination currentPage={page} totalPages={totalPages} />
+        </>
+      )}
+    </div>
   )
 }
 
-export default async function TransactionsPage({ searchParams }: PageProps) {
+function Header({ title, isRefreshing }: { title: string; isRefreshing?: boolean }) {
   return (
-    <div className="max-w-lg mx-auto">
-      <div className="flex items-center justify-between px-4 py-4 border-b">
-        <h1 className="text-lg font-semibold text-foreground">Transaksi</h1>
-      </div>
-
-      <RealtimeSync />
-      <TransactionFilters />
-
-      <Suspense fallback={<div className="px-4 py-4"><SkeletonList count={5} /></div>}>
-        <TransactionList searchParams={searchParams} />
-      </Suspense>
+    <div className="flex items-center justify-between px-4 py-4 border-b">
+      <h1 className="text-lg font-semibold text-foreground">{title}</h1>
+      {isRefreshing && (
+        <span className="text-xs text-muted-foreground animate-pulse">Memuat...</span>
+      )}
     </div>
   )
 }
