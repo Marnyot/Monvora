@@ -48,6 +48,13 @@ const PAYMENT_METHOD_LABELS: Record<string, string> = {
   other: 'Lainnya',
 }
 
+const WALLET_TYPE_PAYMENT_METHODS: Record<string, string[]> = {
+  bank: ['qris', 'transfer', 'debit', 'credit'],
+  ewallet: ['qris', 'transfer', 'ewallet'],
+  cash: ['cash'],
+  other: ['qris', 'transfer', 'cash', 'debit', 'credit', 'ewallet', 'other'],
+}
+
 type TransactionType = 'expense' | 'income' | 'transfer'
 
 interface Category {
@@ -118,6 +125,10 @@ export function QuickEntry({ open, onOpenChange, wallets, categories }: QuickEnt
     }
   }, [type]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  const selectedWallet = wallets.find(w => w.id === walletId)
+  const filteredPaymentMethods = selectedWallet
+    ? WALLET_TYPE_PAYMENT_METHODS[selectedWallet.type] ?? PAYMENT_METHODS
+    : PAYMENT_METHODS
   const filteredCategories = categories.filter(c => c.type === type)
   const amount = parseInt(amountRaw.replace(/\D/g, ''), 10) || 0
 
@@ -260,7 +271,13 @@ export function QuickEntry({ open, onOpenChange, wallets, categories }: QuickEnt
               {/* Wallet */}
               <div className="space-y-1.5">
                 <Label>{type === 'transfer' ? 'Dompet Asal' : 'Dompet'}</Label>
-                <Select value={walletId} onValueChange={v => { setWalletId(v); if (toWalletId === v) setToWalletId('') }}>
+                <Select value={walletId} onValueChange={v => {
+                  setWalletId(v)
+                  if (toWalletId === v) setToWalletId('')
+                  const newWallet = wallets.find(w => w.id === v)
+                  const allowed = newWallet ? (WALLET_TYPE_PAYMENT_METHODS[newWallet.type] ?? PAYMENT_METHODS) : PAYMENT_METHODS
+                  if (paymentMethod && !allowed.includes(paymentMethod)) setPaymentMethod('')
+                }}>
                   <SelectTrigger>
                     <SelectValue placeholder="Pilih dompet" />
                   </SelectTrigger>
@@ -308,7 +325,7 @@ export function QuickEntry({ open, onOpenChange, wallets, categories }: QuickEnt
                       <SelectValue placeholder="Pilih metode" />
                     </SelectTrigger>
                     <SelectContent>
-                      {PAYMENT_METHODS.map(m => (
+                      {filteredPaymentMethods.map(m => (
                         <SelectItem key={m} value={m}>{PAYMENT_METHOD_LABELS[m] ?? m}</SelectItem>
                       ))}
                     </SelectContent>
@@ -329,7 +346,7 @@ export function QuickEntry({ open, onOpenChange, wallets, categories }: QuickEnt
 
               {/* Note */}
               <div className="space-y-1.5">
-                <Label htmlFor="qe-note">Catatan <span className="text-muted-foreground">(opsional)</span></Label>
+                <Label htmlFor="qe-note">Catatan</Label>
                 <Input
                   id="qe-note"
                   placeholder="Catatan tambahan"
