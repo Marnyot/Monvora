@@ -56,6 +56,7 @@ export function GmailSettingsClient({ isConnected, lastSyncedAt, syncLogs }: Gma
   const [isSyncing, startSyncTransition] = useTransition()
   const [isDisconnecting, startDisconnectTransition] = useTransition()
   const [liveLogs, setLiveLogs] = useState<SyncLog[] | null>(null)
+  const [liveLastSyncedAt, setLiveLastSyncedAt] = useState<string | null>(null)
   const [isPolling, setIsPolling] = useState(false)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -66,11 +67,15 @@ export function GmailSettingsClient({ isConnected, lastSyncedAt, syncLogs }: Gma
   function stopPolling() {
     if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null }
     setIsPolling(false)
-    setLiveLogs(null)
+    // Tidak langsung clear liveLogs — biarkan data live tetap tampil
+    // sementara router.refresh() mengambil data server terbaru.
     router.refresh()
   }
 
   function startPolling() {
+    // Reset live state dari polling sebelumnya
+    setLiveLogs(null)
+    setLiveLastSyncedAt(null)
     setIsPolling(true)
     const pollingStartedAt = new Date()
     const deadline = Date.now() + 30_000
@@ -82,6 +87,7 @@ export function GmailSettingsClient({ isConnected, lastSyncedAt, syncLogs }: Gma
         const { data } = await res.json()
         if (!data?.recent_logs) return
         setLiveLogs(data.recent_logs)
+        if (data.last_synced_at) setLiveLastSyncedAt(data.last_synced_at)
         // Hanya stop jika ada log baru (setelah polling dimulai) yang sudah selesai.
         // Tanpa ini, polling langsung stop karena log lama sudah 'completed'.
         const hasNewCompletedLog = data.recent_logs.some(
@@ -195,9 +201,9 @@ export function GmailSettingsClient({ isConnected, lastSyncedAt, syncLogs }: Gma
             </div>
             <div>
               <p className="text-sm font-medium text-foreground">Gmail terhubung</p>
-              {lastSyncedAt && (
+              {(liveLastSyncedAt ?? lastSyncedAt) && (
                 <p className="text-xs text-muted-foreground">
-                  Terakhir sync: {formatDate(lastSyncedAt)}
+                  Terakhir sync: {formatDate((liveLastSyncedAt ?? lastSyncedAt)!)}
                 </p>
               )}
             </div>

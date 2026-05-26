@@ -7,6 +7,7 @@ import { GmailSettingsClient, type SyncLog } from './gmail-settings-client'
 import { Suspense } from 'react'
 import { Mail, ChevronLeft } from 'lucide-react'
 
+export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Sinkronisasi Gmail — Monvora' }
 
 function GmailSettingsSkeleton() {
