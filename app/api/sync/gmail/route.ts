@@ -73,12 +73,20 @@ export async function POST(request: Request) {
     )
   }
 
-  // ─── 5. JALANKAN SYNC LANGSUNG ─────────────────────────────
-  try {
-    const adminSupabase = createAdminClient<Database>(SUPABASE_URL, SERVICE_ROLE_KEY, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    })
+  // ─── 5. CLEANUP STALE SYNC LOGS ────────────────────────────
+  // Hapus log "started" yang menggantung (dari sync sebelumnya yang gagal via Inngest)
+  const adminSupabase = createAdminClient<Database>(SUPABASE_URL, SERVICE_ROLE_KEY, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  })
 
+  await adminSupabase
+    .from('gmail_sync_logs')
+    .update({ status: 'failed', error_message: 'Dibatalkan — sync manual baru', completed_at: new Date().toISOString() })
+    .eq('user_id', user.id)
+    .eq('status', 'started')
+
+  // ─── 6. JALANKAN SYNC LANGSUNG ─────────────────────────────
+  try {
     const result = await syncUserGmail(adminSupabase, user.id, accessToken)
 
     return NextResponse.json({
