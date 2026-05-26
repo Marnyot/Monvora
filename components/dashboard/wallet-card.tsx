@@ -1,6 +1,6 @@
 'use client'
 
-import { Pencil, Trash2, MoreVertical, Banknote } from 'lucide-react'
+import { Pencil, Trash2, MoreVertical, Banknote, SlidersHorizontal } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -37,9 +37,10 @@ interface WalletCardProps {
   wallet: Wallet
   onEdit: (wallet: Wallet) => void
   onDelete: (wallet: Wallet) => void
+  onAdjustBalance: (wallet: Wallet) => void
 }
 
-export function WalletCard({ wallet, onEdit, onDelete }: WalletCardProps) {
+export function WalletCard({ wallet, onEdit, onDelete, onAdjustBalance }: WalletCardProps) {
   const balance = wallet.balance ?? 0
   const color = wallet.color ?? '#6366f1'
 
@@ -86,6 +87,10 @@ export function WalletCard({ wallet, onEdit, onDelete }: WalletCardProps) {
           <DropdownMenuItem onClick={() => onEdit(wallet)}>
             <Pencil className="mr-2 h-4 w-4" />
             Edit
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => onAdjustBalance(wallet)}>
+            <SlidersHorizontal className="mr-2 h-4 w-4" />
+            Sesuaikan Saldo
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem

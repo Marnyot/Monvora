@@ -4,10 +4,20 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, Wallet } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
 import { WalletCard } from '@/components/dashboard/wallet-card'
 import { WalletForm } from '@/components/dashboard/wallet-form'
 import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 import { EmptyState } from '@/components/shared/empty-state'
+import { toast } from 'sonner'
 
 interface WalletRow {
   id: string
@@ -32,6 +42,8 @@ export function WalletListClient({ wallets }: WalletListClientProps) {
   const [formOpen, setFormOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<WalletRow | undefined>()
   const [deleteTarget, setDeleteTarget] = useState<WalletRow | undefined>()
+  const [balanceTarget, setBalanceTarget] = useState<WalletRow | undefined>()
+  const [balanceRaw, setBalanceRaw] = useState('')
 
   function handleEdit(wallet: WalletRow) {
     setEditTarget(wallet)
@@ -52,6 +64,37 @@ export function WalletListClient({ wallets }: WalletListClientProps) {
     startTransition(async () => {
       await fetch(`/api/wallets/${deleteTarget.id}`, { method: 'DELETE' })
       setDeleteTarget(undefined)
+      router.refresh()
+    })
+  }
+
+  function handleAdjustBalance(wallet: WalletRow) {
+    setBalanceTarget(wallet)
+    setBalanceRaw(String(wallet.balance ?? 0))
+  }
+
+  function handleBalanceInput(e: React.ChangeEvent<HTMLInputElement>) {
+    const raw = e.target.value.replace(/\D/g, '')
+    setBalanceRaw(raw)
+  }
+
+  function confirmAdjustBalance() {
+    if (!balanceTarget) return
+    const newBalance = parseInt(balanceRaw, 10)
+    if (isNaN(newBalance) || newBalance < 0) return
+    startTransition(async () => {
+      const res = await fetch(`/api/wallets/${balanceTarget.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ balance: newBalance }),
+      })
+      const json = await res.json()
+      if (!res.ok || json.error) {
+        toast.error(json.error?.message ?? 'Terjadi kesalahan')
+        return
+      }
+      toast.success('Saldo berhasil diperbarui')
+      setBalanceTarget(undefined)
       router.refresh()
     })
   }
@@ -81,6 +124,7 @@ export function WalletListClient({ wallets }: WalletListClientProps) {
               wallet={wallet}
               onEdit={handleEdit}
               onDelete={handleDelete}
+              onAdjustBalance={handleAdjustBalance}
             />
           ))}
         </div>
@@ -101,6 +145,30 @@ export function WalletListClient({ wallets }: WalletListClientProps) {
         onConfirm={confirmDelete}
         isPending={isPending}
       />
+
+      <Dialog open={!!balanceTarget} onOpenChange={open => !open && setBalanceTarget(undefined)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Sesuaikan Saldo — {balanceTarget?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-1.5 py-2">
+            <Label htmlFor="adjust-balance">Saldo baru (Rp)</Label>
+            <Input
+              id="adjust-balance"
+              inputMode="numeric"
+              value={balanceRaw}
+              onChange={handleBalanceInput}
+              placeholder="0"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBalanceTarget(undefined)}>Batal</Button>
+            <Button onClick={confirmAdjustBalance} disabled={isPending}>
+              {isPending ? 'Menyimpan...' : 'Simpan'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

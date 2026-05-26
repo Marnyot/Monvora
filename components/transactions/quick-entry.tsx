@@ -68,6 +68,7 @@ export function QuickEntry({ open, onOpenChange, wallets, categories }: QuickEnt
   const [amountRaw, setAmountRaw] = useState('')
   const [categoryId, setCategoryId] = useState('')
   const [walletId, setWalletId] = useState(wallets[0]?.id ?? '')
+  const [toWalletId, setToWalletId] = useState('')
   const [description, setDescription] = useState('')
   const [merchantName, setMerchantName] = useState('')
   const [paymentMethod, setPaymentMethod] = useState<string>('')
@@ -80,6 +81,7 @@ export function QuickEntry({ open, onOpenChange, wallets, categories }: QuickEnt
       setAmountRaw('')
       setCategoryId('')
       setWalletId(wallets[0]?.id ?? '')
+      setToWalletId('')
       setDescription('')
       setMerchantName('')
       setPaymentMethod('')
@@ -87,9 +89,11 @@ export function QuickEntry({ open, onOpenChange, wallets, categories }: QuickEnt
     }
   }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Reset category when type changes
+  // Reset category when type changes; auto-set payment method for transfer
   useEffect(() => {
     setCategoryId('')
+    setToWalletId('')
+    if (type === 'transfer') setPaymentMethod('transfer')
   }, [type])
 
   const filteredCategories = categories.filter(c => c.type === type || c.type === 'transfer' && type === 'transfer')
@@ -115,6 +119,7 @@ export function QuickEntry({ open, onOpenChange, wallets, categories }: QuickEnt
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           wallet_id: walletId,
+          to_wallet_id: type === 'transfer' ? toWalletId : undefined,
           category_id: categoryId || undefined,
           amount,
           type,
@@ -222,8 +227,8 @@ export function QuickEntry({ open, onOpenChange, wallets, categories }: QuickEnt
 
               {/* Wallet */}
               <div className="space-y-1.5">
-                <Label>Dompet</Label>
-                <Select value={walletId} onValueChange={setWalletId}>
+                <Label>{type === 'transfer' ? 'Dompet Asal' : 'Dompet'}</Label>
+                <Select value={walletId} onValueChange={v => { setWalletId(v); if (toWalletId === v) setToWalletId('') }}>
                   <SelectTrigger>
                     <SelectValue placeholder="Pilih dompet" />
                   </SelectTrigger>
@@ -234,6 +239,23 @@ export function QuickEntry({ open, onOpenChange, wallets, categories }: QuickEnt
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Destination wallet (transfer only) */}
+              {type === 'transfer' && (
+                <div className="space-y-1.5">
+                  <Label>Dompet Tujuan</Label>
+                  <Select value={toWalletId} onValueChange={setToWalletId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih dompet tujuan" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {wallets.filter(w => w.id !== walletId).map(w => (
+                        <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               {/* Payment method */}
               <div className="space-y-1.5">
@@ -283,7 +305,7 @@ export function QuickEntry({ open, onOpenChange, wallets, categories }: QuickEnt
             <Button
               type="submit"
               className="w-full"
-              disabled={isPending || !amount || !walletId}
+              disabled={isPending || !amount || !walletId || (type === 'transfer' && !toWalletId)}
             >
               {isPending ? 'Menyimpan...' : 'Simpan Transaksi'}
             </Button>

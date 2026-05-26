@@ -21,22 +21,22 @@ const mockWallet = {
 
 describe('WalletCard', () => {
   it('renders wallet name', () => {
-    render(<WalletCard wallet={mockWallet} onEdit={() => {}} onDelete={() => {}} />)
+    render(<WalletCard wallet={mockWallet} onEdit={() => {}} onDelete={() => {}} onAdjustBalance={() => {}} />)
     expect(screen.getByText('BCA Utama')).toBeInTheDocument()
   })
 
   it('renders formatted balance', () => {
-    render(<WalletCard wallet={mockWallet} onEdit={() => {}} onDelete={() => {}} />)
+    render(<WalletCard wallet={mockWallet} onEdit={() => {}} onDelete={() => {}} onAdjustBalance={() => {}} />)
     expect(screen.getByText(/5\.000\.000/)).toBeInTheDocument()
   })
 
   it('renders wallet type label', () => {
-    render(<WalletCard wallet={mockWallet} onEdit={() => {}} onDelete={() => {}} />)
+    render(<WalletCard wallet={mockWallet} onEdit={() => {}} onDelete={() => {}} onAdjustBalance={() => {}} />)
     expect(screen.getByText(/bank|Bank/i)).toBeInTheDocument()
   })
 
   it('renders provider when available', () => {
-    render(<WalletCard wallet={mockWallet} onEdit={() => {}} onDelete={() => {}} />)
+    render(<WalletCard wallet={mockWallet} onEdit={() => {}} onDelete={() => {}} onAdjustBalance={() => {}} />)
     expect(screen.getByText(/Bank.*BCA/)).toBeInTheDocument()
   })
 })

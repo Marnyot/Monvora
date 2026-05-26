@@ -96,7 +96,17 @@ export async function POST(request: Request) {
     )
   }
 
-  // Verify wallet belongs to user
+  // Transfer requires to_wallet_id (different from source)
+  if (parsed.data.type === 'transfer') {
+    if (!parsed.data.to_wallet_id) {
+      return NextResponse.json({ data: null, error: { code: 'VALIDATION_ERROR', message: 'Wallet tujuan wajib diisi untuk transfer', details: { to_wallet_id: ['Wajib diisi'] } } }, { status: 422 })
+    }
+    if (parsed.data.to_wallet_id === parsed.data.wallet_id) {
+      return NextResponse.json({ data: null, error: { code: 'VALIDATION_ERROR', message: 'Wallet sumber dan tujuan tidak boleh sama', details: { to_wallet_id: ['Tidak boleh sama dengan wallet sumber'] } } }, { status: 422 })
+    }
+  }
+
+  // Verify source wallet belongs to user
   const { data: wallet } = await supabase
     .from('wallets')
     .select('id, balance')
@@ -107,6 +117,22 @@ export async function POST(request: Request) {
 
   if (!wallet) {
     return NextResponse.json({ data: null, error: { code: 'NOT_FOUND', message: 'Wallet tidak ditemukan' } }, { status: 404 })
+  }
+
+  // Verify destination wallet for transfers
+  let toWallet: { id: string; balance: number | null } | null = null
+  if (parsed.data.to_wallet_id) {
+    const { data } = await supabase
+      .from('wallets')
+      .select('id, balance')
+      .eq('id', parsed.data.to_wallet_id)
+      .eq('user_id', user.id)
+      .is('deleted_at', null)
+      .single()
+    if (!data) {
+      return NextResponse.json({ data: null, error: { code: 'NOT_FOUND', message: 'Wallet tujuan tidak ditemukan' } }, { status: 404 })
+    }
+    toWallet = data
   }
 
   // Insert transaction
@@ -120,9 +146,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ data: null, error: { code: 'DB_ERROR', message: 'Terjadi kesalahan database' } }, { status: 500 })
   }
 
-  // Update wallet balance
-  const balanceDelta = parsed.data.type === 'income' ? parsed.data.amount : -parsed.data.amount
-  if (parsed.data.type !== 'transfer') {
+  // Update wallet balance(s)
+  if (parsed.data.type === 'transfer' && toWallet) {
+    await Promise.all([
+      supabase.from('wallets').update({ balance: (wallet.balance ?? 0) - parsed.data.amount }).eq('id', parsed.data.wallet_id).eq('user_id', user.id),
+      supabase.from('wallets').update({ balance: (toWallet.balance ?? 0) + parsed.data.amount }).eq('id', toWallet.id).eq('user_id', user.id),
+    ])
+  } else {
+    const balanceDelta = parsed.data.type === 'income' ? parsed.data.amount : -parsed.data.amount
     await supabase
       .from('wallets')
       .update({ balance: (wallet.balance ?? 0) + balanceDelta })

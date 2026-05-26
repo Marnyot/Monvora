@@ -151,7 +151,7 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
 
   const { data: existing } = await supabase
     .from('transactions')
-    .select('id, amount, type, wallet_id')
+    .select('id, amount, type, wallet_id, to_wallet_id')
     .eq('id', id)
     .eq('user_id', user.id)
     .is('deleted_at', null)
@@ -172,7 +172,16 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
   }
 
   // Reverse balance impact
-  if (existing.type !== 'transfer') {
+  if (existing.type === 'transfer' && existing.to_wallet_id) {
+    const [{ data: srcWallet }, { data: dstWallet }] = await Promise.all([
+      supabase.from('wallets').select('balance').eq('id', existing.wallet_id).single(),
+      supabase.from('wallets').select('balance').eq('id', existing.to_wallet_id).single(),
+    ])
+    await Promise.all([
+      srcWallet ? supabase.from('wallets').update({ balance: (srcWallet.balance ?? 0) + existing.amount }).eq('id', existing.wallet_id).eq('user_id', user.id) : Promise.resolve(),
+      dstWallet ? supabase.from('wallets').update({ balance: (dstWallet.balance ?? 0) - existing.amount }).eq('id', existing.to_wallet_id).eq('user_id', user.id) : Promise.resolve(),
+    ])
+  } else if (existing.type !== 'transfer') {
     const { data: wallet } = await supabase
       .from('wallets')
       .select('balance')

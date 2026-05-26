@@ -232,6 +232,7 @@ export type Database = {
           recurring_group_id: string | null
           reference_number: string | null
           source: string
+          to_wallet_id: string | null
           transacted_at: string
           type: string
           updated_at: string | null
@@ -256,6 +257,7 @@ export type Database = {
           recurring_group_id?: string | null
           reference_number?: string | null
           source?: string
+          to_wallet_id?: string | null
           transacted_at: string
           type: string
           updated_at?: string | null
@@ -280,6 +282,7 @@ export type Database = {
           recurring_group_id?: string | null
           reference_number?: string | null
           source?: string
+          to_wallet_id?: string | null
           transacted_at?: string
           type?: string
           updated_at?: string | null
@@ -292,6 +295,13 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_to_wallet_id_fkey"
+            columns: ["to_wallet_id"]
+            isOneToOne: false
+            referencedRelation: "wallets"
             referencedColumns: ["id"]
           },
           {
