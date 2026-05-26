@@ -37,7 +37,8 @@
       "Bash(git *)",
       "mcp__context7__resolve-library-id",
       "mcp__context7__query-docs",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "mcp__inngest-dev__list_functions"
     ]
   },
   "enableAllProjectMcpServers": true,

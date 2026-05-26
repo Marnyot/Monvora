@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useTransition, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useRouter, usePathname } from 'next/navigation'
 import { toast } from 'sonner'
 import {
   Sheet,
@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/select'
 import { PAYMENT_METHODS } from '@/lib/validations/transaction'
 import { formatIDR } from '@/lib/utils/currency'
-import { formatDate, toDatetimeLocalInput } from '@/lib/utils/date'
+import { toDatetimeLocalInput } from '@/lib/utils/date'
 
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
   qris: 'QRIS',
@@ -61,7 +61,8 @@ interface QuickEntryProps {
 
 export function QuickEntry({ open, onOpenChange, wallets, categories }: QuickEntryProps) {
   const router = useRouter()
-  const [isPending, startTransition] = useTransition()
+  const pathname = usePathname()
+  const [isPending, setIsPending] = useState(false)
   const [serverError, setServerError] = useState<string | null>(null)
 
   const [type, setType] = useState<TransactionType>('expense')
@@ -74,7 +75,7 @@ export function QuickEntry({ open, onOpenChange, wallets, categories }: QuickEnt
   const [paymentMethod, setPaymentMethod] = useState<string>('')
   const [transactedAt, setTransactedAt] = useState(() => toDatetimeLocalInput(new Date()))
 
-  // Reset all fields to defaults when sheet opens
+  // Reset all fields when sheet opens
   useEffect(() => {
     if (open) {
       setType('expense')
@@ -86,17 +87,25 @@ export function QuickEntry({ open, onOpenChange, wallets, categories }: QuickEnt
       setMerchantName('')
       setPaymentMethod('')
       setTransactedAt(toDatetimeLocalInput(new Date()))
+      setServerError(null)
     }
   }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Reset category when type changes; auto-set payment method for transfer
+  // When type changes: reset fields and auto-configure transfer mode
   useEffect(() => {
-    setCategoryId('')
     setToWalletId('')
-    if (type === 'transfer') setPaymentMethod('transfer')
-  }, [type])
+    if (type === 'transfer') {
+      setPaymentMethod('transfer')
+      const transferCat = categories.find(c => c.type === 'transfer')
+      if (transferCat) setCategoryId(transferCat.id)
+      else setCategoryId('')
+    } else {
+      setCategoryId('')
+      setPaymentMethod('')
+    }
+  }, [type]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const filteredCategories = categories.filter(c => c.type === type || c.type === 'transfer' && type === 'transfer')
+  const filteredCategories = categories.filter(c => c.type === type)
   const amount = parseInt(amountRaw.replace(/\D/g, ''), 10) || 0
 
   function handleAmountInput(e: React.ChangeEvent<HTMLInputElement>) {
@@ -104,7 +113,7 @@ export function QuickEntry({ open, onOpenChange, wallets, categories }: QuickEnt
     setAmountRaw(raw ? parseInt(raw, 10).toLocaleString('id-ID') : '')
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setServerError(null)
 
@@ -112,8 +121,9 @@ export function QuickEntry({ open, onOpenChange, wallets, categories }: QuickEnt
     if (!walletId) return
 
     const transactedAtISO = new Date(transactedAt).toISOString()
+    setIsPending(true)
 
-    startTransition(async () => {
+    try {
       const res = await fetch('/api/transactions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -139,8 +149,10 @@ export function QuickEntry({ open, onOpenChange, wallets, categories }: QuickEnt
 
       toast.success('Transaksi berhasil disimpan')
       onOpenChange(false)
-      router.refresh()
-    })
+      router.push(pathname)
+    } finally {
+      setIsPending(false)
+    }
   }
 
   const typeColor = {
@@ -148,6 +160,9 @@ export function QuickEntry({ open, onOpenChange, wallets, categories }: QuickEnt
     income: 'text-emerald-600 dark:text-emerald-400',
     transfer: 'text-foreground',
   }[type]
+
+  const merchantLabel = type === 'transfer' ? 'Nama' : 'Merchant / Toko'
+  const merchantPlaceholder = type === 'transfer' ? 'cth: Budi Santoso' : 'cth: Indomaret, Grab'
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -190,40 +205,42 @@ export function QuickEntry({ open, onOpenChange, wallets, categories }: QuickEnt
 
           <ScrollArea className="flex-1 px-4">
             <div className="space-y-3 pb-4">
-              {/* Merchant */}
+              {/* Merchant / Nama */}
               <div className="space-y-1.5">
-                <Label htmlFor="qe-merchant">Merchant / Toko</Label>
+                <Label htmlFor="qe-merchant">{merchantLabel}</Label>
                 <Input
                   id="qe-merchant"
-                  placeholder="cth: Indomaret, Grab"
+                  placeholder={merchantPlaceholder}
                   value={merchantName}
                   onChange={e => setMerchantName(e.target.value)}
                 />
               </div>
 
-              {/* Category */}
-              <div className="space-y-1.5">
-                <Label>Kategori</Label>
-                <ScrollArea className="h-28">
-                  <div className="flex flex-wrap gap-2 pb-1">
-                    {filteredCategories.map(cat => (
-                      <button
-                        key={cat.id}
-                        type="button"
-                        onClick={() => setCategoryId(cat.id === categoryId ? '' : cat.id)}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
-                          categoryId === cat.id
-                            ? 'text-white border-transparent'
-                            : 'text-foreground border-border bg-background hover:bg-accent'
-                        }`}
-                        style={categoryId === cat.id ? { backgroundColor: cat.color, borderColor: cat.color } : {}}
-                      >
-                        {cat.name}
-                      </button>
-                    ))}
-                  </div>
-                </ScrollArea>
-              </div>
+              {/* Category — hidden for transfer (auto-assigned) */}
+              {type !== 'transfer' && (
+                <div className="space-y-1.5">
+                  <Label>Kategori</Label>
+                  <ScrollArea className="h-28">
+                    <div className="flex flex-wrap gap-2 pb-1">
+                      {filteredCategories.map(cat => (
+                        <button
+                          key={cat.id}
+                          type="button"
+                          onClick={() => setCategoryId(cat.id === categoryId ? '' : cat.id)}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                            categoryId === cat.id
+                              ? 'text-white border-transparent'
+                              : 'text-foreground border-border bg-background hover:bg-accent'
+                          }`}
+                          style={categoryId === cat.id ? { backgroundColor: cat.color, borderColor: cat.color } : {}}
+                        >
+                          {cat.name}
+                        </button>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </div>
+              )}
 
               {/* Wallet */}
               <div className="space-y-1.5">
@@ -240,7 +257,7 @@ export function QuickEntry({ open, onOpenChange, wallets, categories }: QuickEnt
                 </Select>
               </div>
 
-              {/* Destination wallet (transfer only) */}
+              {/* Destination wallet — transfer only */}
               {type === 'transfer' && (
                 <div className="space-y-1.5">
                   <Label>Dompet Tujuan</Label>
@@ -257,20 +274,22 @@ export function QuickEntry({ open, onOpenChange, wallets, categories }: QuickEnt
                 </div>
               )}
 
-              {/* Payment method */}
-              <div className="space-y-1.5">
-                <Label>Metode Bayar <span className="text-muted-foreground">(opsional)</span></Label>
-                <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih metode" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PAYMENT_METHODS.map(m => (
-                      <SelectItem key={m} value={m}>{PAYMENT_METHOD_LABELS[m] ?? m}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {/* Payment method — hidden for transfer */}
+              {type !== 'transfer' && (
+                <div className="space-y-1.5">
+                  <Label>Metode Bayar <span className="text-muted-foreground">(opsional)</span></Label>
+                  <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih metode" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PAYMENT_METHODS.map(m => (
+                        <SelectItem key={m} value={m}>{PAYMENT_METHOD_LABELS[m] ?? m}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               {/* Date */}
               <div className="space-y-1.5">
