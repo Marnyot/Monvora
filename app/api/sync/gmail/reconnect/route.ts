@@ -2,8 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { checkRateLimit } from '@/lib/utils/rate-limit'
 import { getValidGoogleToken } from '@/lib/utils/google-token'
-import { inngest } from '@/lib/inngest/client'
 import { setupWatch } from '@/lib/gmail/watch'
+import { syncUserGmail } from '@/lib/gmail/sync'
 
 export async function POST() {
   const supabase = await createClient()
@@ -52,10 +52,10 @@ export async function POST() {
     )
   }
 
-  // Set lastSyncedAt ke sekarang agar UI langsung "Tersinkron"
+  // Reset historyId agar initial sync mengambil email bank terbaru
   await supabase
     .from('profiles')
-    .update({ gmail_last_synced_at: new Date().toISOString() })
+    .update({ gmail_sync_token: null })
     .eq('id', user.id)
 
   // Setup Gmail push notification watch
@@ -65,14 +65,11 @@ export async function POST() {
     // Non-blocking — cron will handle renewal if watch setup fails
   }
 
-  // Kick off initial sync
+  // Jalankan initial sync langsung (tidak via Inngest)
   try {
-    await inngest.send({
-      name: 'gmail/sync.manual',
-      data: { userId: user.id, accessToken },
-    })
+    await syncUserGmail(supabase, user.id, accessToken)
   } catch {
-    // Non-blocking — sync enabled, job will retry
+    // Non-blocking — sync enabled, akan retry berikutnya
   }
 
   return NextResponse.json(
