@@ -501,6 +501,7 @@ Lihat `decisions.md` untuk detail konteks, alternatif, dan review trigger setiap
 |---|---|---|
 | May 27, 2026 | `GET /transactions?user_id=eq.` 400 — query fire sebelum session ready | `enabled: !!user?.id` di `useTransactions`, userId diambil dari session dalam hook, hapus explicit `.eq('user_id')` filter (RLS handles it) |
 | May 27, 2026 | Realtime tidak update UI tanpa navigasi | Migration 007 (explicit SELECT policy), fix `useRealtimeTransactions` (guard userId, unique channel name, event INSERT), `RealtimeProvider` di-mount global di dashboard layout |
+| May 27, 2026 | CSP blokir Realtime WebSocket (`wss://`) | `next.config.mjs`: ubah `*.supabase.co` → `https://*.supabase.co wss://*.supabase.co` di `connect-src` |
 
 ### Resolved Blockers
 
