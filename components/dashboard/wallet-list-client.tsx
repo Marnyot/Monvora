@@ -131,6 +131,7 @@ export function WalletListClient({ wallets }: WalletListClientProps) {
       )}
 
       <WalletForm
+        key={editTarget?.id ?? 'new'}
         open={formOpen}
         onOpenChange={handleFormClose}
         wallet={editTarget}

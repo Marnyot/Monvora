@@ -9,6 +9,8 @@ const KNOWN_SENDERS = ['bankmandiri.co.id']
 
 const KNOWN_SUBJECTS = [
   'pembayaran berhasil',
+  'transfer dengan bi fast berhasil',
+  'bi fast',
   'transfer berhasil',
   'dana masuk',
   'notifikasi transaksi',
@@ -33,11 +35,16 @@ export const mandiriParser: BankParser = {
 
       const normalized = normalizeText(body)
 
-      // Amount: try bank-specific pattern first, fall back to generic
+      // Amount: try bank-specific patterns first, fall back to generic
+      // Priority: Nominal Transfer (BI Fast) → Nominal Transaksi (QRIS/debit) → generic
       let amount: number | null = null
-      const specificAmountMatch = body.match(/Nominal\s+Transaksi\s+Rp\s*([\d.,]+)/i)
-      if (specificAmountMatch) {
-        amount = parseAmountToInteger(specificAmountMatch[1])
+      const biFastAmountMatch = body.match(/Nominal\s+Transfer\s+Rp\s*([\d.,]+)/i)
+      if (biFastAmountMatch) {
+        amount = parseAmountToInteger(biFastAmountMatch[1])
+      }
+      if (!amount) {
+        const specificAmountMatch = body.match(/Nominal\s+Transaksi\s+Rp\s*([\d.,]+)/i)
+        if (specificAmountMatch) amount = parseAmountToInteger(specificAmountMatch[1])
       }
       if (!amount) amount = parseIDRAmount(body)
       if (!amount) return null
@@ -48,6 +55,12 @@ export const mandiriParser: BankParser = {
 
       if (normalized.includes('transfer masuk') || normalized.includes('kredit')) {
         type = 'income'
+        paymentMethod = 'transfer'
+      } else if (
+        normalized.includes('bi fast') ||
+        normalized.includes('no. referensi bi fast')
+      ) {
+        type = 'expense'
         paymentMethod = 'transfer'
       } else if (
         normalized.includes('transfer keluar') ||
@@ -84,9 +97,18 @@ export const mandiriParser: BankParser = {
         paymentMethod = 'debit'
       }
 
-      // Merchant: try bank-specific (Penerima\n) first, fall back to generic patterns
+      // Merchant: try bank-specific patterns first, fall back to generic patterns
+      // Pattern 1 (BI Fast): person name is ALL-CAPS, bank name is mixed-case → stop at first mixed-case word
+      //   e.g. "Penerima RISQUINA ANGELICA ARVINTYANI Seabank - 901..." → "RISQUINA ANGELICA ARVINTYANI"
+      //   NOTE: no `i` flag — case-sensitivity is required for this distinction
+      // Pattern 2: text/plain format with newline separators
+      // Pattern 3: HTML-stripped with location suffix (QRIS merchant)
+      //   e.g. "Penerima CNB VETERAN SOLO - ID Tanggal ..." → "CNB VETERAN"
       let merchantName: string | null = null
-      const specificMerchantMatch = body.match(/Penerima\s*\n([^\n]+)/i)
+      const specificMerchantMatch =
+        body.match(/Penerima\s+([A-Z][A-Z\s]+?)(?:\s+[A-Z][a-z]|\s+Tanggal|\s+Jam)/) ??
+        body.match(/Penerima\s*\n([^\n]+)/i) ??
+        body.match(/Penerima\s+([A-Z0-9 ]+?)(?:\s+[A-Z]+\s*-\s*[A-Z]+\s|\s+Tanggal|\s+Jam)/i)
       if (specificMerchantMatch) {
         merchantName = normalizeText(specificMerchantMatch[1]).substring(0, 100) || null
       }
@@ -109,11 +131,20 @@ export const mandiriParser: BankParser = {
         }
       }
 
-      // Reference: try bank-specific (No. Referensi) first, fall back to generic
+      // Reference: try bank-specific patterns first, fall back to generic
+      // Priority: No. Referensi BI Fast (alphanumeric) → No. Referensi (digits) → No. Ref. QRIS → generic
       let referenceNumber: string | null = null
-      const specificRefMatch = body.match(/No\.\s*Referensi\s+(\d+)/i)
-      if (specificRefMatch) {
-        referenceNumber = specificRefMatch[1].trim()
+      const biFastRefMatch = body.match(/No\.\s*Referensi\s+BI\s*Fast\s+([A-Z0-9]+)/i)
+      if (biFastRefMatch) {
+        referenceNumber = biFastRefMatch[1].trim()
+      }
+      if (!referenceNumber) {
+        const specificRefMatch = body.match(/No\.\s*Referensi\s+(\d+)/i)
+        if (specificRefMatch) referenceNumber = specificRefMatch[1].trim()
+      }
+      if (!referenceNumber) {
+        const qrisRefMatch = body.match(/No\.\s*Ref\.?\s*QRIS\s+(\d+)/i)
+        if (qrisRefMatch) referenceNumber = qrisRefMatch[1].trim()
       }
       if (!referenceNumber) {
         const refMatch = body.match(
@@ -131,11 +162,14 @@ export const mandiriParser: BankParser = {
         if (parsed) transactedAt = parsed
       }
 
+      const description =
+        paymentMethod === 'transfer' && merchantName ? `Transfer ${merchantName}` : null
+
       const result: ParsedTransaction = {
         amount,
         type,
         merchant_name: merchantName,
-        description: null,
+        description,
         payment_method: paymentMethod,
         transacted_at: transactedAt,
         reference_number: referenceNumber,

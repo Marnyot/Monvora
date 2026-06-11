@@ -16,7 +16,7 @@ export function parseTransactionDate(dateStr: string, timeStr?: string): Date | 
     const indoMatch = dateStr.match(/(\d{1,2})\s+(\w+)\s+(\d{4})/)
     if (indoMatch) {
       const [, day, monthName, year] = indoMatch
-      const monthNum = INDONESIAN_MONTHS_MAP[monthName.toLowerCase()]
+      const monthNum = INDONESIAN_MONTHS_MAP[monthName.toLowerCase()] ?? ENGLISH_MONTHS_MAP[monthName.toLowerCase()]
       if (!monthNum) return null
 
       const time = timeStr ? timeStr.replace(/\s*WIB\s*/i, '').trim() : '00:00:00'

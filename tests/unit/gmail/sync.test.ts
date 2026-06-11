@@ -196,14 +196,15 @@ describe('syncUserGmail', () => {
     expect(result.errors).toBe(0)
   })
 
-  it('skips duplicate transaction when raw_email_id already exists', async () => {
+  it('skips duplicate transaction when DB returns 23505 unique violation on insert', async () => {
     const email = makeMockEmail('email-dup')
     mockFetchNewEmails.mockResolvedValue({ messages: [email], newHistoryId: 'hist-300' })
     mockIsBankEmail.mockReturnValue(true)
     mockDetectAndParse.mockReturnValue(makeParsedTransaction('email-dup'))
 
     const supabase = makeSupabaseMock({
-      existingTxResult: { data: { id: 'tx-existing' }, error: null }, // duplikat!
+      // Simulate DB unique constraint violation (race condition or retry)
+      insertResult: { data: null, error: { code: '23505', message: 'duplicate key value violates unique constraint' } },
     })
     const { syncUserGmail } = await import('@/lib/gmail/sync')
 

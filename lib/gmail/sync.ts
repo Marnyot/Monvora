@@ -30,7 +30,7 @@ export interface SyncResult {
   newHistoryId: string | null
 }
 
-type WalletRow = { id: string; provider: string | null; balance: number }
+type WalletRow = { id: string; name: string | null; provider: string | null; balance: number }
 
 // ─── Main Orchestrator ─────────────────────────────────────────────────────────
 
@@ -160,10 +160,10 @@ export async function syncUserGmail(
   const bankEmails = messages.filter(isBankEmail)
   result.emailsProcessed = bankEmails.length
 
-  // 4. Prefetch semua wallet aktif (id, provider, balance) untuk matching
+  // 4. Prefetch semua wallet aktif (id, name, provider, balance) untuk matching
   const { data: wallets } = await supabase
     .from('wallets')
-    .select('id, provider, balance')
+    .select('id, name, provider, balance')
     .eq('user_id', userId)
     .eq('is_active', true)
     .is('deleted_at', null)
@@ -173,27 +173,18 @@ export async function syncUserGmail(
     return result
   }
 
-  const defaultWallet = wallets[0] as WalletRow
+  // Prefer non-cash wallet as default; avoid Tunai/Cash which are rarely the right target
+  const defaultWallet =
+    (wallets as WalletRow[]).find(w =>
+      !['tunai', 'cash'].includes(w.name?.toLowerCase() ?? '')
+    ) ?? wallets[0] as WalletRow
   // Balance delta per wallet — di-update sekali setelah loop
   const balanceDeltas = new Map<string, number>()
 
   // 5. Proses setiap email bank
   for (const email of bankEmails) {
     try {
-      // 5a. Cek duplikat berdasarkan raw_email_id
-      const { data: existing } = await supabase
-        .from('transactions')
-        .select('id')
-        .eq('raw_email_id', email.id)
-        .is('deleted_at', null)
-        .limit(1)
-        .maybeSingle()
-
-      if (existing) {
-        result.transactionsSkipped++
-        continue
-      }
-
+      // 5a → removed: duplicate check now handled by DB unique constraint (see step 5f)
       // 5b. Parse email
       const parseResult = detectAndParse(email)
 
@@ -210,10 +201,13 @@ export async function syncUserGmail(
         continue
       }
 
-      // 5d. Match wallet by bank name (provider ILIKE bankName), fallback ke default
+      // 5d. Match wallet by bank name — check provider AND name (case-insensitive), fallback ke default
       const bankName = parseResult.bank?.toLowerCase() ?? null
       const matchedWallet: WalletRow = bankName
-        ? ((wallets as WalletRow[]).find(w => w.provider?.toLowerCase().includes(bankName)) ?? defaultWallet)
+        ? ((wallets as WalletRow[]).find(w =>
+            w.provider?.toLowerCase().includes(bankName) ||
+            w.name?.toLowerCase().includes(bankName)
+          ) ?? defaultWallet)
         : defaultWallet
 
       // 5e. Categorize via AI pipeline (rules → gemini → fallback)
@@ -224,7 +218,8 @@ export async function syncUserGmail(
         tx.payment_method ?? 'unknown'
       )
 
-      // 5f. Insert transaksi
+      // 5f. Insert transaksi — idempotent via DB unique constraint on (user_id, raw_email_id).
+      //     23505 = unique_violation: email already processed by a concurrent sync (race condition).
       const { error: insertError } = await supabase
         .from('transactions')
         .insert({
@@ -244,9 +239,15 @@ export async function syncUserGmail(
           ai_category_confidence: categoryResult.category ? categoryResult.confidence : null,
           is_verified: false,
         })
+        .select('id')
+        .limit(1)
 
       if (insertError) {
-        result.errors++
+        if ((insertError as { code?: string }).code === '23505') {
+          result.transactionsSkipped++
+        } else {
+          result.errors++
+        }
         continue
       }
 

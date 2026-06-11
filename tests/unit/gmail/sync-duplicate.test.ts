@@ -16,6 +16,10 @@ vi.mock('@/lib/gmail/client', () => ({
       this.name = 'GmailTokenExpiredError'
     }
   },
+  GmailRateLimitError: class GmailRateLimitError extends Error {
+    retryAfter = 60
+    constructor() { super('rate limit'); this.name = 'GmailRateLimitError' }
+  },
   GmailAPIError: class GmailAPIError extends Error {
     constructor(msg: string) {
       super(`Gmail API error: ${msg}`)
@@ -41,33 +45,20 @@ function makeQueryChain(result: ChainResult) {
   })
   chain['single'] = vi.fn().mockResolvedValue(result)
   chain['maybeSingle'] = vi.fn().mockResolvedValue(result)
-  // Allow direct `await chain` (for list queries and updates without terminal call)
   chain['then'] = (onFulfilled: (v: ChainResult) => unknown, onRejected?: (e: unknown) => unknown) =>
     Promise.resolve(result).then(onFulfilled, onRejected)
   return chain
 }
 
-function makeSupabaseMock(overrides: {
-  profileResult?: ChainResult
-  existingTxResult?: ChainResult
-  walletResult?: ChainResult
-  insertResult?: ChainResult
-  updateResult?: ChainResult
-  logResult?: ChainResult
-  runningLogResult?: ChainResult
-} = {}) {
-  const profileResult = overrides.profileResult ?? {
-    data: { gmail_sync_token: null, gmail_sync_enabled: true },
-    error: null,
-  }
-  const existingTxResult = overrides.existingTxResult ?? { data: null, error: null }
-  const walletResult = overrides.walletResult ?? { data: [{ id: 'wallet-001', provider: 'mandiri', balance: 1000000 }], error: null }
-  const insertResult = overrides.insertResult ?? { data: null, error: null }
-  const updateResult = overrides.updateResult ?? { data: null, error: null }
-  const logResult = overrides.logResult ?? { data: { id: 'sync-log-001' }, error: null }
-  const runningLogResult = overrides.runningLogResult ?? { data: null, error: null }
+const DEFAULT_WALLETS = [{ id: 'wallet-001', name: 'Mandiri', provider: 'mandiri', balance: 1000000 }]
 
-  // Track per-table call counts
+function makeSupabaseMock(overrides: {
+  insertResult?: ChainResult
+  logResult?: ChainResult
+} = {}) {
+  const insertResult = overrides.insertResult ?? { data: [{ id: 'tx-new' }], error: null }
+  const logResult = overrides.logResult ?? { data: { id: 'sync-log-001' }, error: null }
+
   const tableCallCounts: Record<string, number> = {}
 
   const mockFrom = vi.fn().mockImplementation((table: string) => {
@@ -75,31 +66,32 @@ function makeSupabaseMock(overrides: {
     const callNum = tableCallCounts[table]
 
     if (table === 'profiles') {
-      const chain = makeQueryChain(callNum === 1 ? profileResult : updateResult)
-      chain['update'] = vi.fn().mockReturnValue(makeQueryChain(updateResult))
+      const chain = makeQueryChain({ data: { gmail_sync_token: null, gmail_sync_enabled: true }, error: null })
+      chain['update'] = vi.fn().mockReturnValue(makeQueryChain({ data: null, error: null }))
       return chain
     }
 
     if (table === 'transactions') {
       const chain: Record<string, unknown> = {}
-      const methods = ['select', 'eq', 'is', 'limit', 'insert', 'order']
+      const methods = ['select', 'eq', 'is', 'limit', 'order']
       methods.forEach((m) => { chain[m] = vi.fn().mockReturnValue(chain) })
-      chain['maybeSingle'] = vi.fn().mockResolvedValue(existingTxResult)
+      chain['maybeSingle'] = vi.fn().mockResolvedValue({ data: null, error: null })
       const insertChain = makeQueryChain(insertResult)
       chain['insert'] = vi.fn().mockReturnValue(insertChain)
       return chain
     }
 
     if (table === 'wallets') {
-      const chain = makeQueryChain(walletResult)
-      chain['update'] = vi.fn().mockReturnValue(makeQueryChain(updateResult))
+      const chain = makeQueryChain({ data: DEFAULT_WALLETS, error: null })
+      chain['update'] = vi.fn().mockReturnValue(makeQueryChain({ data: null, error: null }))
       return chain
     }
 
     if (table === 'gmail_sync_logs') {
-      const result = callNum === 1 ? runningLogResult : logResult
-      const chain = makeQueryChain(result)
-      chain['update'] = vi.fn().mockReturnValue(makeQueryChain(updateResult))
+      // callNum 1 = concurrency guard (maybeSingle) → no running log
+      if (callNum === 1) return makeQueryChain({ data: null, error: null })
+      const chain = makeQueryChain(logResult)
+      chain['update'] = vi.fn().mockReturnValue(makeQueryChain({ data: null, error: null }))
       return chain
     }
 
@@ -146,7 +138,12 @@ function makeParsedTransaction(emailId = 'email-001') {
   }
 }
 
-// ─── Duplicate Detection Tests ──────────────────────────────────────────────────
+// ─── Duplicate Detection Tests (via DB unique constraint + 23505) ─────────────
+//
+// Duplicate detection no longer uses a SELECT check (removed).
+// The DB unique index on (user_id, raw_email_id) WHERE deleted_at IS NULL
+// returns error code 23505 when a duplicate is inserted.
+// syncUserGmail must count 23505 as transactionsSkipped, not errors.
 
 describe('syncUserGmail — Duplicate Detection', () => {
   beforeEach(() => {
@@ -154,52 +151,45 @@ describe('syncUserGmail — Duplicate Detection', () => {
     vi.resetModules()
   })
 
-  it('should skip email when raw_email_id already exists in database', async () => {
+  it('should skip email when insert returns 23505 (DB unique constraint violation)', async () => {
     const email = makeMockEmail('email-duplicate-001')
     mockFetchNewEmails.mockResolvedValue({ messages: [email], newHistoryId: 'hist-100' })
     mockIsBankEmail.mockReturnValue(true)
     mockDetectAndParse.mockReturnValue(makeParsedTransaction('email-duplicate-001'))
 
     const supabase = makeSupabaseMock({
-      // Simulate: raw_email_id already exists in transactions table
-      existingTxResult: { data: { id: 'tx-existing-001' }, error: null },
+      insertResult: { data: null, error: { code: '23505', message: 'duplicate key value violates unique constraint' } },
     })
 
     const { syncUserGmail } = await import('@/lib/gmail/sync')
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result: SyncResult = await syncUserGmail(supabase as any, MOCK_USER_ID, MOCK_ACCESS_TOKEN)
 
-    // Email should be marked as skipped, not created
     expect(result.transactionsCreated).toBe(0)
     expect(result.transactionsSkipped).toBe(1)
     expect(result.errors).toBe(0)
   })
 
-  it('should process email when raw_email_id does NOT exist (new email)', async () => {
+  it('should process email when insert succeeds (new email, no duplicate)', async () => {
     const email = makeMockEmail('email-new-001')
     mockFetchNewEmails.mockResolvedValue({ messages: [email], newHistoryId: 'hist-200' })
     mockIsBankEmail.mockReturnValue(true)
     mockDetectAndParse.mockReturnValue(makeParsedTransaction('email-new-001'))
 
     const supabase = makeSupabaseMock({
-      // Simulate: raw_email_id does NOT exist (maybeSingle returns null)
-      existingTxResult: { data: null, error: null },
-      walletResult: { data: [{ id: 'wallet-001', provider: 'mandiri', balance: 1000000 }], error: null },
-      insertResult: { data: { id: 'tx-new-001' }, error: null },
+      insertResult: { data: [{ id: 'tx-new-001' }], error: null },
     })
 
     const { syncUserGmail } = await import('@/lib/gmail/sync')
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result: SyncResult = await syncUserGmail(supabase as any, MOCK_USER_ID, MOCK_ACCESS_TOKEN)
 
-    // New email should be processed and created
     expect(result.transactionsCreated).toBe(1)
     expect(result.transactionsSkipped).toBe(0)
     expect(result.errors).toBe(0)
   })
 
-  it('should increment transactionsSkipped for each duplicate email', async () => {
-    // Simulate 3 emails: 2 duplicates + 1 new
+  it('should increment transactionsSkipped for each 23505 (multiple duplicates)', async () => {
     const email1 = makeMockEmail('email-dup-1')
     const email2 = makeMockEmail('email-dup-2')
     const email3 = makeMockEmail('email-new-1')
@@ -209,99 +199,130 @@ describe('syncUserGmail — Duplicate Detection', () => {
       newHistoryId: 'hist-300',
     })
     mockIsBankEmail.mockReturnValue(true)
-    mockDetectAndParse.mockReturnValue(makeParsedTransaction())
+    mockDetectAndParse.mockImplementation((email: { id: string }) =>
+      makeParsedTransaction(email.id)
+    )
 
-    // Mock: first two exist, third does not
-    let callCount = 0
-    const supabase = makeSupabaseMock()
-    const originalFrom = supabase.from as any
+    // First two inserts return 23505; third succeeds
+    let insertCallCount = 0
+    const tableCallCounts: Record<string, number> = {}
 
-    supabase.from = vi.fn().mockImplementation((table: string) => {
-      const result = originalFrom(table)
+    const mockFrom = vi.fn().mockImplementation((table: string) => {
+      tableCallCounts[table] = (tableCallCounts[table] ?? 0) + 1
+      const callNum = tableCallCounts[table]
 
-      if (table === 'transactions') {
-        // Modify maybeSingle to return duplicate for first 2 calls
-        const originalMaybeSingle = result.maybeSingle
-        result.maybeSingle = vi.fn().mockImplementation(() => {
-          callCount++
-          if (callCount <= 2) {
-            return Promise.resolve({ data: { id: 'existing-tx' }, error: null })
-          }
-          return Promise.resolve({ data: null, error: null })
-        })
+      if (table === 'profiles') {
+        const chain = makeQueryChain({ data: { gmail_sync_token: null, gmail_sync_enabled: true }, error: null })
+        chain['update'] = vi.fn().mockReturnValue(makeQueryChain({ data: null, error: null }))
+        return chain
       }
-
-      return result
+      if (table === 'wallets') {
+        const chain = makeQueryChain({ data: DEFAULT_WALLETS, error: null })
+        chain['update'] = vi.fn().mockReturnValue(makeQueryChain({ data: null, error: null }))
+        return chain
+      }
+      if (table === 'transactions') {
+        const txChain: Record<string, unknown> = {}
+        const methods = ['select', 'eq', 'is', 'limit', 'order']
+        methods.forEach(m => { txChain[m] = vi.fn().mockReturnValue(txChain) })
+        txChain['maybeSingle'] = vi.fn().mockResolvedValue({ data: null, error: null })
+        txChain['insert'] = vi.fn().mockImplementation(() => {
+          insertCallCount++
+          const result: ChainResult =
+            insertCallCount <= 2
+              ? { data: null, error: { code: '23505', message: 'duplicate key' } }
+              : { data: [{ id: 'tx-new' }], error: null }
+          return makeQueryChain(result)
+        })
+        return txChain
+      }
+      if (table === 'gmail_sync_logs') {
+        if (callNum === 1) return makeQueryChain({ data: null, error: null })
+        const chain = makeQueryChain({ data: { id: 'log-001' }, error: null })
+        chain['update'] = vi.fn().mockReturnValue(makeQueryChain({ data: null, error: null }))
+        return chain
+      }
+      return makeQueryChain({ data: null, error: null })
     })
 
     const { syncUserGmail } = await import('@/lib/gmail/sync')
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const result: SyncResult = await syncUserGmail(supabase as any, MOCK_USER_ID, MOCK_ACCESS_TOKEN)
+    const result: SyncResult = await syncUserGmail({ from: mockFrom } as any, MOCK_USER_ID, MOCK_ACCESS_TOKEN)
 
-    // 2 duplicates skipped, 1 new created
     expect(result.transactionsSkipped).toBe(2)
     expect(result.transactionsCreated).toBe(1)
+    expect(result.errors).toBe(0)
   })
 
-  it('should NOT increment transactionsCreated when duplicate is found', async () => {
+  it('should NOT increment transactionsCreated when 23505 is returned', async () => {
     const email = makeMockEmail('email-dup-final')
     mockFetchNewEmails.mockResolvedValue({ messages: [email], newHistoryId: 'hist-400' })
     mockIsBankEmail.mockReturnValue(true)
     mockDetectAndParse.mockReturnValue(makeParsedTransaction('email-dup-final'))
 
     const supabase = makeSupabaseMock({
-      existingTxResult: { data: { id: 'tx-existing-final' }, error: null },
+      insertResult: { data: null, error: { code: '23505', message: 'duplicate key' } },
     })
 
     const { syncUserGmail } = await import('@/lib/gmail/sync')
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result: SyncResult = await syncUserGmail(supabase as any, MOCK_USER_ID, MOCK_ACCESS_TOKEN)
 
-    // Verify transactionsCreated is not incremented for duplicate
     expect(result.transactionsCreated).toBe(0)
     expect(result.transactionsSkipped).toBe(1)
   })
 
-  it('should check for duplicates using raw_email_id field from parsed transaction', async () => {
+  it('should call insert with raw_email_id so the DB constraint can detect duplicates', async () => {
     const email = makeMockEmail('email-with-raw-id')
-    const parsed = makeParsedTransaction('email-with-raw-id')
-
     mockFetchNewEmails.mockResolvedValue({ messages: [email], newHistoryId: 'hist-500' })
     mockIsBankEmail.mockReturnValue(true)
-    mockDetectAndParse.mockReturnValue(parsed)
+    mockDetectAndParse.mockReturnValue(makeParsedTransaction('email-with-raw-id'))
 
-    // Create a spy supabase to track the duplicate check query
-    const checkDuplicateSpy = vi.fn().mockResolvedValue({
-      data: null,
-      error: null,
-    })
-    const supabase = makeSupabaseMock()
-    const originalFrom = supabase.from as any
+    const insertSpy = vi.fn().mockReturnValue(makeQueryChain({ data: [{ id: 'tx-001' }], error: null }))
+    const tableCallCounts: Record<string, number> = {}
 
-    let checkDuplicateQueried = false
+    const mockFrom = vi.fn().mockImplementation((table: string) => {
+      tableCallCounts[table] = (tableCallCounts[table] ?? 0) + 1
+      const callNum = tableCallCounts[table]
 
-    supabase.from = vi.fn().mockImplementation((table: string) => {
-      if (table === 'transactions') {
-        const result = originalFrom(table)
-        const originalMaybeSingle = result.maybeSingle
-        result.maybeSingle = vi.fn().mockImplementation(() => {
-          checkDuplicateQueried = true
-          return originalMaybeSingle()
-        })
-        return result
+      if (table === 'profiles') {
+        const chain = makeQueryChain({ data: { gmail_sync_token: null, gmail_sync_enabled: true }, error: null })
+        chain['update'] = vi.fn().mockReturnValue(makeQueryChain({ data: null, error: null }))
+        return chain
       }
-      return originalFrom(table)
+      if (table === 'wallets') {
+        const chain = makeQueryChain({ data: DEFAULT_WALLETS, error: null })
+        chain['update'] = vi.fn().mockReturnValue(makeQueryChain({ data: null, error: null }))
+        return chain
+      }
+      if (table === 'transactions') {
+        const txChain: Record<string, unknown> = {}
+        const methods = ['select', 'eq', 'is', 'limit', 'order']
+        methods.forEach(m => { txChain[m] = vi.fn().mockReturnValue(txChain) })
+        txChain['maybeSingle'] = vi.fn().mockResolvedValue({ data: null, error: null })
+        txChain['insert'] = insertSpy
+        return txChain
+      }
+      if (table === 'gmail_sync_logs') {
+        if (callNum === 1) return makeQueryChain({ data: null, error: null })
+        const chain = makeQueryChain({ data: { id: 'log-001' }, error: null })
+        chain['update'] = vi.fn().mockReturnValue(makeQueryChain({ data: null, error: null }))
+        return chain
+      }
+      return makeQueryChain({ data: null, error: null })
     })
 
     const { syncUserGmail } = await import('@/lib/gmail/sync')
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await syncUserGmail(supabase as any, MOCK_USER_ID, MOCK_ACCESS_TOKEN)
+    await syncUserGmail({ from: mockFrom } as any, MOCK_USER_ID, MOCK_ACCESS_TOKEN)
 
-    // Verify duplicate check was performed
-    expect(checkDuplicateQueried).toBe(true)
+    // Verify insert was called with raw_email_id so DB constraint can enforce uniqueness
+    expect(insertSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ raw_email_id: 'email-with-raw-id' })
+    )
   })
 
-  it('should continue processing remaining emails after encountering duplicate', async () => {
+  it('should continue processing remaining emails after encountering a 23505 skip', async () => {
     const email1 = makeMockEmail('email-dup')
     const email2 = makeMockEmail('email-new')
 
@@ -310,41 +331,57 @@ describe('syncUserGmail — Duplicate Detection', () => {
       newHistoryId: 'hist-600',
     })
     mockIsBankEmail.mockReturnValue(true)
-    mockDetectAndParse.mockImplementation((email: any) => {
-      if (email.id === 'email-dup') {
-        return makeParsedTransaction('email-dup')
+    mockDetectAndParse.mockImplementation((email: { id: string }) =>
+      makeParsedTransaction(email.id)
+    )
+
+    let insertCallCount = 0
+    const tableCallCounts: Record<string, number> = {}
+
+    const mockFrom = vi.fn().mockImplementation((table: string) => {
+      tableCallCounts[table] = (tableCallCounts[table] ?? 0) + 1
+      const callNum = tableCallCounts[table]
+
+      if (table === 'profiles') {
+        const chain = makeQueryChain({ data: { gmail_sync_token: null, gmail_sync_enabled: true }, error: null })
+        chain['update'] = vi.fn().mockReturnValue(makeQueryChain({ data: null, error: null }))
+        return chain
       }
-      return makeParsedTransaction('email-new')
-    })
-
-    let duplicateCheckCount = 0
-    const supabase = makeSupabaseMock()
-    const originalFrom = supabase.from as any
-
-    supabase.from = vi.fn().mockImplementation((table: string) => {
-      const result = originalFrom(table)
+      if (table === 'wallets') {
+        const chain = makeQueryChain({ data: DEFAULT_WALLETS, error: null })
+        chain['update'] = vi.fn().mockReturnValue(makeQueryChain({ data: null, error: null }))
+        return chain
+      }
       if (table === 'transactions') {
-        const originalMaybeSingle = result.maybeSingle
-        result.maybeSingle = vi.fn().mockImplementation(() => {
-          duplicateCheckCount++
-          if (duplicateCheckCount === 1) {
-            // First email is duplicate
-            return Promise.resolve({ data: { id: 'existing' }, error: null })
-          }
-          // Second email is new
-          return Promise.resolve({ data: null, error: null })
+        const txChain: Record<string, unknown> = {}
+        const methods = ['select', 'eq', 'is', 'limit', 'order']
+        methods.forEach(m => { txChain[m] = vi.fn().mockReturnValue(txChain) })
+        txChain['maybeSingle'] = vi.fn().mockResolvedValue({ data: null, error: null })
+        txChain['insert'] = vi.fn().mockImplementation(() => {
+          insertCallCount++
+          const result: ChainResult =
+            insertCallCount === 1
+              ? { data: null, error: { code: '23505', message: 'duplicate key' } }
+              : { data: [{ id: 'tx-new' }], error: null }
+          return makeQueryChain(result)
         })
+        return txChain
       }
-      return result
+      if (table === 'gmail_sync_logs') {
+        if (callNum === 1) return makeQueryChain({ data: null, error: null })
+        const chain = makeQueryChain({ data: { id: 'log-001' }, error: null })
+        chain['update'] = vi.fn().mockReturnValue(makeQueryChain({ data: null, error: null }))
+        return chain
+      }
+      return makeQueryChain({ data: null, error: null })
     })
 
     const { syncUserGmail } = await import('@/lib/gmail/sync')
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const result: SyncResult = await syncUserGmail(supabase as any, MOCK_USER_ID, MOCK_ACCESS_TOKEN)
+    const result: SyncResult = await syncUserGmail({ from: mockFrom } as any, MOCK_USER_ID, MOCK_ACCESS_TOKEN)
 
-    // Should continue and process the second email
     expect(result.transactionsSkipped).toBe(1)
     expect(result.transactionsCreated).toBe(1)
-    expect(duplicateCheckCount).toBe(2) // Both emails were checked
+    expect(insertCallCount).toBe(2) // both emails attempted insert
   })
 })

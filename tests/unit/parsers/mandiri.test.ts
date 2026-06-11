@@ -242,6 +242,95 @@ describe('Mandiri Parser', () => {
       expect(result).not.toBeNull()
       expect(result?.transacted_at).toEqual(new Date('2026-05-25T17:45:30+07:00'))
     })
+
+    it('should parse HTML-stripped QRIS email from Livin by Mandiri (space-separated body)', () => {
+      // Simulates body after extractEmailBody strips HTML tags:
+      // all tags collapsed to spaces, no newlines between fields
+      const email = makeEmail({
+        subject: 'Pembayaran Berhasil',
+        from: 'Mandiri <noreply@bankmandiri.co.id>',
+        body: 'Pembayaran Berhasil Halo MARIO VALENTINO ARDHANA, Berikut adalah detail transaksi Anda dengan QR: Penerima CNB VETERAN SOLO - ID Tanggal 7 Jun 2026 Jam 19:07:14 WIB Nominal Transaksi Rp 33.000,00 No. Referensi 260607122518808257 No. Ref. QRIS 606476612797 Merchant PAN 9360000915040618223 Customer PAN 936000008122564203961 Pengakuisisi Bank BNI Terminal ID 17224706 Sumber Dana MARIO VALENTINO ARDH ****2039',
+        date: '2026-06-07T12:07:14.000Z',
+      })
+
+      const result = mandiriParser.parse(email)
+
+      expect(result).not.toBeNull()
+      expect(result?.amount).toBe(33000)
+      expect(result?.merchant_name).toBe('cnb veteran')
+      expect(result?.payment_method).toBe('qris')
+      expect(result?.type).toBe('expense')
+      expect(result?.reference_number).toBe('260607122518808257')
+      expect(result?.transacted_at).toEqual(new Date('2026-06-07T12:07:14.000Z'))
+      expect(result?.bank).toBe('mandiri')
+    })
+
+    it('should use No. Ref. QRIS as fallback when No. Referensi is absent', () => {
+      const email = makeEmail({
+        subject: 'Pembayaran Berhasil',
+        from: 'Mandiri <noreply@bankmandiri.co.id>',
+        body: 'Pembayaran Berhasil Penerima TOKOPEDIA SELLER Tanggal 7 Jun 2026 Jam 10:00:00 WIB Nominal Transaksi Rp 50.000,00 No. Ref. QRIS 606476612799',
+        date: '2026-06-07T03:00:00.000Z',
+      })
+
+      const result = mandiriParser.parse(email)
+
+      expect(result).not.toBeNull()
+      expect(result?.amount).toBe(50000)
+      expect(result?.payment_method).toBe('qris')
+      expect(result?.reference_number).toBe('606476612799')
+    })
+  })
+
+  describe('BI Fast transfer', () => {
+    const BI_FAST_BODY =
+      'Transfer dengan BI Fast Berhasil Halo MARIO VALENTINO ARDHANA, Berikut adalah detail transaksi Anda: ' +
+      'Penerima RISQUINA ANGELICA ARVINTYANI Seabank - 901960783547 ' +
+      'Tanggal 5 Jun 2026 Jam 10:25:04 WIB ' +
+      'Nominal Transfer Rp 150.000,00 Biaya Transfer Rp 2.500,00 Total Transaksi Rp 152.500,00 ' +
+      'Tujuan Transaksi Lainnya No. Referensi BI Fast 20260605BMRIIDJA010O0226409055 ' +
+      'Keterangan - Rekening Sumber MARIO VALENTINO ARDH ****2039'
+
+    it('should be detected by canParse for BI Fast subject', () => {
+      const email = makeEmail({
+        subject: 'Transfer dengan BI Fast Berhasil',
+        from: 'Mandiri <noreply@bankmandiri.co.id>',
+        body: BI_FAST_BODY,
+      })
+      expect(mandiriParser.canParse(email)).toBe(true)
+    })
+
+    it('should parse amount from Nominal Transfer (not Total Transaksi)', () => {
+      const email = makeEmail({
+        subject: 'Transfer dengan BI Fast Berhasil',
+        from: 'Mandiri <noreply@bankmandiri.co.id>',
+        body: BI_FAST_BODY,
+        date: '2026-06-05T03:25:04.000Z',
+      })
+      const result = mandiriParser.parse(email)
+      expect(result).not.toBeNull()
+      expect(result?.amount).toBe(150000)
+    })
+
+    it('should parse all fields of HTML-stripped BI Fast email', () => {
+      const email = makeEmail({
+        subject: 'Transfer dengan BI Fast Berhasil',
+        from: 'Mandiri <noreply@bankmandiri.co.id>',
+        body: BI_FAST_BODY,
+        date: '2026-06-05T03:25:04.000Z',
+      })
+      const result = mandiriParser.parse(email)
+
+      expect(result).not.toBeNull()
+      expect(result?.amount).toBe(150000)
+      expect(result?.type).toBe('expense')
+      expect(result?.payment_method).toBe('transfer')
+      expect(result?.merchant_name).toBe('risquina angelica arvintyani')
+      expect(result?.description).toBe('Transfer risquina angelica arvintyani')
+      expect(result?.reference_number).toBe('20260605BMRIIDJA010O0226409055')
+      expect(result?.transacted_at).toEqual(new Date('2026-06-05T03:25:04.000Z'))
+      expect(result?.bank).toBe('mandiri')
+    })
   })
 
   describe('parser name', () => {

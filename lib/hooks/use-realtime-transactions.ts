@@ -28,11 +28,7 @@ export function useRealtimeTransactions(userId: string) {
           router.refresh()
         }
       )
-      .subscribe((status) => {
-        if (status !== 'SUBSCRIBED') {
-          console.warn('Realtime transactions: unexpected status', status)
-        }
-      })
+      .subscribe()
 
     return () => {
       supabase.removeChannel(channel)
