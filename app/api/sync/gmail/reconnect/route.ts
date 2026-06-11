@@ -61,15 +61,24 @@ export async function POST() {
   // Setup Gmail push notification watch
   try {
     await setupWatch(accessToken, supabase, user.id)
-  } catch {
-    // Non-blocking — cron will handle renewal if watch setup fails
+  } catch (err) {
+    // Non-blocking — cron will handle renewal if watch setup fails.
+    // Log error agar kegagalan registrasi watch bisa didiagnosa.
+    console.error(
+      '[gmail-reconnect] setupWatch gagal:',
+      err instanceof Error ? err.message : String(err)
+    )
   }
 
   // Sync langsung — ambil email yang sudah ada di inbox
   try {
     await syncUserGmail(supabase, user.id, accessToken)
-  } catch {
-    // Non-blocking — sync sudah berjalan, user bisa sync manual nanti
+  } catch (err) {
+    // Non-blocking — user bisa sync manual nanti
+    console.error(
+      '[gmail-reconnect] sync gagal:',
+      err instanceof Error ? err.message : String(err)
+    )
   }
 
   return NextResponse.json(

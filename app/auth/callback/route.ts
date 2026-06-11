@@ -1,8 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
-import { NextResponse } from 'next/server'
+import { createClient as createAdminClient } from '@supabase/supabase-js'
+import { NextResponse, after } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { z } from 'zod'
 import { setupWatch } from '@/lib/gmail/watch'
+import { syncUserGmail } from '@/lib/gmail/sync'
+import type { Database } from '@/types/database'
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
@@ -51,10 +54,40 @@ export async function GET(request: NextRequest) {
       })
       .eq('id', user.id)
 
-    // Daftarkan Gmail Watch ke Pub/Sub agar push notification aktif.
-    // Non-blocking — kalau gagal, cron renewal akan retry setiap 6 jam.
+    // Daftarkan Gmail Watch + jalankan sync awal SETELAH response terkirim.
+    // after() menjaga function tetap hidup di Vercel sampai selesai, jadi user
+    // langsung di-redirect tanpa menunggu sync. Hasil backfill muncul live di
+    // dashboard via Supabase Realtime.
     if (accessToken) {
-      setupWatch(accessToken, supabase, user.id).catch(() => {})
+      const userId = user.id
+      after(async () => {
+        const admin = createAdminClient<Database>(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.SUPABASE_SERVICE_ROLE_KEY!,
+          { auth: { autoRefreshToken: false, persistSession: false } }
+        )
+
+        // 1. Registrasi Gmail push watch ke Pub/Sub.
+        //    Error di-LOG (bukan ditelan diam-diam) agar bisa didiagnosa di Vercel logs.
+        try {
+          await setupWatch(accessToken, admin, userId)
+        } catch (err) {
+          console.error(
+            '[auth-callback] setupWatch gagal:',
+            err instanceof Error ? err.message : String(err)
+          )
+        }
+
+        // 2. Sync awal — backfill email bank 30 hari terakhir (sync pertama).
+        try {
+          await syncUserGmail(admin, userId, accessToken)
+        } catch (err) {
+          console.error(
+            '[auth-callback] initial sync gagal:',
+            err instanceof Error ? err.message : String(err)
+          )
+        }
+      })
     }
   }
 

@@ -54,12 +54,16 @@ export async function setupWatch(
 
   const expiration = new Date(Date.now() + WATCH_EXPIRATION_MS).toISOString()
 
+  // CATATAN: jangan set gmail_sync_token di sini.
+  // Cursor sync (gmail_sync_token) dimiliki sepenuhnya oleh syncUserGmail.
+  // Kalau watch menulis cursor = historyId "sekarang", sync pertama akan
+  // melewati backfill (mulai dari masa depan) dan renewal tiap 6 jam akan
+  // me-reset cursor sehingga email yang belum di-sync terlewat.
   await supabase
     .from('profiles')
     .update({
       gmail_watch_expiration: expiration,
       gmail_watch_history_id: watchData.historyId,
-      gmail_sync_token: watchData.historyId,
     })
     .eq('id', userId)
 

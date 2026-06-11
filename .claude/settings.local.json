@@ -57,7 +57,8 @@
       "Bash(rtk read *)",
       "Bash(rtk grep *)",
       "Bash(rtk pnpm *)",
-      "Bash(pnpm view *)"
+      "Bash(pnpm view *)",
+      "Bash(pnpm exec *)"
     ]
   },
   "enableAllProjectMcpServers": true,

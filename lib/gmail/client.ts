@@ -115,8 +115,10 @@ export async function fetchNewEmails(
 }
 
 /**
- * Initial sync: ambil current historyId saja, tidak fetch email lama.
- * Tracking dimulai dari titik koneksi — email sebelum koneksi diabaikan.
+ * Initial sync (pertama login): JANGAN ambil email lama.
+ * Cukup catat historyId terkini sebagai titik mulai — tracking dimulai dari
+ * saat login. Email yang sudah berlalu sebelum login diabaikan; hanya email
+ * yang masuk setelah ini yang ditangkap (incremental via History API).
  */
 async function fetchInitialEmails(
   gmail: ReturnType<typeof google.gmail>

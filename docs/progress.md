@@ -499,6 +499,9 @@ Lihat `decisions.md` untuk detail konteks, alternatif, dan review trigger setiap
 
 | Tanggal | Bug | Fix |
 |---|---|---|
+| Jun 12, 2026 | Realtime tidak update dashboard setelah migrasi ke client component | `useRealtimeTransactions` dulu invalidate `['transactions']` + `router.refresh()` — keduanya tidak menyentuh dashboard (key `['dashboard']`, client-fetched). Sekarang invalidate `['dashboard']`, `['transactions']`, `['transaction']`, `['wallets']` dan listen `event:'*'` di transactions |
+| Jun 12, 2026 | Pertama login tidak auto-aktif (harus klik Sync manual) | Callback OAuth jalankan `setupWatch` + `syncUserGmail` via `after()` (Next 16) — non-blocking. `syncUserGmail` set cursor (`gmail_sync_token`) = historyId saat login, jadi tracking mulai DARI saat login (tidak backfill email lama). Email yang masuk setelah login ditangkap otomatis via push → Realtime |
+| Jun 12, 2026 | Gmail push watch tidak pernah terdaftar (semua profil `gmail_watch_history_id = NULL`) | Error `setupWatch` dulu ditelan `.catch(() => {})`. Sekarang di-log ke Vercel logs di callback & reconnect. Plus `setupWatch` berhenti menulis `gmail_sync_token` (cursor dimiliki sync saja) agar backfill pertama jalan & renewal 6-jam tidak reset cursor |
 | May 27, 2026 | `GET /transactions?user_id=eq.` 400 — query fire sebelum session ready | `enabled: !!user?.id` di `useTransactions`, userId diambil dari session dalam hook, hapus explicit `.eq('user_id')` filter (RLS handles it) |
 | May 27, 2026 | Realtime tidak update UI tanpa navigasi | Migration 007 (explicit SELECT policy), fix `useRealtimeTransactions` (guard userId, unique channel name, event INSERT), `RealtimeProvider` di-mount global di dashboard layout |
 | May 27, 2026 | CSP blokir Realtime WebSocket (`wss://`) | `next.config.mjs`: ubah `*.supabase.co` → `https://*.supabase.co wss://*.supabase.co` di `connect-src` |

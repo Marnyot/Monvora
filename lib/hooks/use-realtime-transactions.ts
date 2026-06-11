@@ -1,33 +1,45 @@
 'use client'
 
 import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 
+/**
+ * Subscribe ke perubahan transaksi & saldo via Supabase Realtime.
+ * Saat ada INSERT/UPDATE/DELETE transaksi (atau UPDATE saldo wallet),
+ * invalidasi SEMUA query yang menampilkan data tersebut agar UI ter-update
+ * tanpa perlu refresh halaman.
+ *
+ * Catatan: dashboard & halaman lain kini client component (TanStack Query),
+ * jadi router.refresh() tidak cukup — harus invalidate query cache.
+ */
 export function useRealtimeTransactions(userId: string) {
   const queryClient = useQueryClient()
-  const router = useRouter()
 
   useEffect(() => {
     if (!userId) return
 
     const supabase = createClient()
-    const handleRefresh = () => {
+
+    const handleChange = () => {
+      // Prefix match — invalidate semua varian (dengan userId/page/filter di key)
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
       queryClient.invalidateQueries({ queryKey: ['transactions'] })
-      router.refresh()
+      queryClient.invalidateQueries({ queryKey: ['transaction'] })
+      queryClient.invalidateQueries({ queryKey: ['wallets'] })
     }
+
     const channel = supabase
       .channel(`transactions-changes-${userId}`)
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: '*',
           schema: 'public',
           table: 'transactions',
           filter: `user_id=eq.${userId}`,
         },
-        handleRefresh
+        handleChange
       )
       .on(
         'postgres_changes',
@@ -37,12 +49,12 @@ export function useRealtimeTransactions(userId: string) {
           table: 'wallets',
           filter: `user_id=eq.${userId}`,
         },
-        handleRefresh
+        handleChange
       )
       .subscribe()
 
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [userId, queryClient, router])
+  }, [userId, queryClient])
 }
