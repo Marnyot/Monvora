@@ -14,8 +14,9 @@ export function useSession(): UseSessionResult {
   useEffect(() => {
     const supabase = createClient()
 
-    supabase.auth.getUser().then(({ data }) => {
-      setUser(data.user)
+    // getSession reads from cookie — no network call (middleware already verified via getUser)
+    supabase.auth.getSession().then(({ data }) => {
+      setUser(data.session?.user ?? null)
       setLoading(false)
     })
 
