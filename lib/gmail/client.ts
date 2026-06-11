@@ -168,10 +168,8 @@ async function fetchMessageDetails(
   gmail: ReturnType<typeof google.gmail>,
   messageIds: string[]
 ): Promise<GmailMessage[]> {
-  const results: GmailMessage[] = []
-
-  for (const id of messageIds) {
-    try {
+  const settled = await Promise.allSettled(
+    messageIds.map(async (id) => {
       const msgRes = await gmail.users.messages.get({
         userId: 'me',
         id,
@@ -188,7 +186,7 @@ async function fetchMessageDetails(
       const body = extractEmailBody(msg.payload)
       const snippet = msg.snippet ?? ''
 
-      results.push({
+      return {
         id,
         threadId: msg.threadId ?? '',
         subject,
@@ -196,14 +194,13 @@ async function fetchMessageDetails(
         body,
         date,
         snippet,
-      })
-    } catch {
-      // Skip email yang gagal di-fetch, jangan log detail
-      // Individual message failure tidak harus membatalkan seluruh sync
-    }
-  }
+      } satisfies GmailMessage
+    })
+  )
 
-  return results
+  return settled
+    .filter((r): r is PromiseFulfilledResult<GmailMessage> => r.status === 'fulfilled')
+    .map(r => r.value)
 }
 
 // ─── Email Body Parsing ────────────────────────────────────────────────────────

@@ -181,24 +181,22 @@ export async function syncUserGmail(
   // Balance delta per wallet — di-update sekali setelah loop
   const balanceDeltas = new Map<string, number>()
 
-  // 5. Proses setiap email bank
-  for (const email of bankEmails) {
-    try {
+  // 5. Proses setiap email bank secara paralel
+  const emailResults = await Promise.allSettled(
+    bankEmails.map(async (email) => {
       // 5a → removed: duplicate check now handled by DB unique constraint (see step 5f)
       // 5b. Parse email
       const parseResult = detectAndParse(email)
 
       if (!parseResult.transaction) {
-        result.transactionsSkipped++
-        continue
+        return { kind: 'skipped' as const }
       }
 
       const tx = parseResult.transaction
 
       // 5c. Validate amount (harus integer positif)
       if (!Number.isInteger(tx.amount) || tx.amount <= 0) {
-        result.errors++
-        continue
+        return { kind: 'error' as const }
       }
 
       // 5d. Match wallet by bank name — check provider AND name (case-insensitive), fallback ke default
@@ -244,22 +242,35 @@ export async function syncUserGmail(
 
       if (insertError) {
         if ((insertError as { code?: string }).code === '23505') {
-          result.transactionsSkipped++
-        } else {
-          result.errors++
+          return { kind: 'skipped' as const }
         }
-        continue
+        return { kind: 'error' as const }
       }
 
       // 5g. Track balance delta (expense=negatif, income=positif, transfer=0)
       const delta = tx.type === 'income' ? tx.amount : tx.type === 'expense' ? -tx.amount : 0
-      if (delta !== 0) {
-        balanceDeltas.set(matchedWallet.id, (balanceDeltas.get(matchedWallet.id) ?? 0) + delta)
-      }
 
-      result.transactionsCreated++
-    } catch {
+      return { kind: 'created' as const, walletId: matchedWallet.id, delta }
+    })
+  )
+
+  for (const settled of emailResults) {
+    if (settled.status === 'rejected') {
       result.errors++
+      continue
+    }
+
+    const r = settled.value
+
+    if (r.kind === 'skipped') {
+      result.transactionsSkipped++
+    } else if (r.kind === 'error') {
+      result.errors++
+    } else if (r.kind === 'created') {
+      result.transactionsCreated++
+      if (r.delta !== 0) {
+        balanceDeltas.set(r.walletId, (balanceDeltas.get(r.walletId) ?? 0) + r.delta)
+      }
     }
   }
 
