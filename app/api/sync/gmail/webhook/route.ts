@@ -9,14 +9,11 @@
  */
 
 import { NextResponse } from 'next/server'
-import { createClient as createAdminClient } from '@supabase/supabase-js'
-import type { Database } from '@/types/database'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { syncUserGmail } from '@/lib/gmail/sync'
 import { getValidGoogleToken } from '@/lib/utils/google-token'
 
 const VERIFICATION_TOKEN = process.env.GOOGLE_PUBSUB_VERIFICATION_TOKEN ?? ''
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
 interface PubSubMessage {
   message: {
@@ -85,9 +82,7 @@ export async function POST(request: Request) {
   }
 
   // ─── 4. FIND USER BY EMAIL ─────────────────────────────
-  const adminSupabase = createAdminClient<Database>(SUPABASE_URL, SERVICE_ROLE_KEY, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  })
+  const adminSupabase = createAdminClient()
 
   const { data: profile } = await adminSupabase
     .from('profiles')

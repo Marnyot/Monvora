@@ -6,31 +6,10 @@
  */
 
 import { inngest } from '@/lib/inngest/client'
-import { createClient } from '@supabase/supabase-js'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { syncUserGmail } from '@/lib/gmail/sync'
-import type { Database } from '@/types/database'
 
 const BATCH_SIZE = 50
-
-/**
- * Buat Supabase admin client menggunakan service role key.
- * Diperlukan untuk mengakses semua users (melewati RLS).
- */
-function createAdminClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error('Missing Supabase environment variables for admin client')
-  }
-
-  return createClient<Database>(supabaseUrl, serviceRoleKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  })
-}
 
 export const gmailSyncFunction = inngest.createFunction(
   {

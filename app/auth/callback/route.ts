@@ -1,11 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
-import { createClient as createAdminClient } from '@supabase/supabase-js'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { NextResponse, after } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { z } from 'zod'
 import { setupWatch } from '@/lib/gmail/watch'
 import { syncUserGmail } from '@/lib/gmail/sync'
-import type { Database } from '@/types/database'
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
@@ -61,11 +60,7 @@ export async function GET(request: NextRequest) {
     if (accessToken) {
       const userId = user.id
       after(async () => {
-        const admin = createAdminClient<Database>(
-          process.env.NEXT_PUBLIC_SUPABASE_URL!,
-          process.env.SUPABASE_SERVICE_ROLE_KEY!,
-          { auth: { autoRefreshToken: false, persistSession: false } }
-        )
+        const admin = createAdminClient()
 
         // 1. Registrasi Gmail push watch ke Pub/Sub.
         //    Error di-LOG (bukan ditelan diam-diam) agar bisa didiagnosa di Vercel logs.

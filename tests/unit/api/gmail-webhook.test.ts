@@ -4,8 +4,8 @@ const mockGetUserById = vi.fn()
 const mockSyncUserGmail = vi.fn()
 const mockFrom = vi.fn()
 
-vi.mock('@supabase/supabase-js', () => ({
-  createClient: () => ({
+vi.mock('@/lib/supabase/admin', () => ({
+  createAdminClient: () => ({
     from: mockFrom,
     auth: {
       admin: {

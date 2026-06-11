@@ -77,15 +77,34 @@ export async function setupWatch(
   // Kalau watch menulis cursor = historyId "sekarang", sync pertama akan
   // melewati backfill (mulai dari masa depan) dan renewal tiap 6 jam akan
   // me-reset cursor sehingga email yang belum di-sync terlewat.
-  await supabase
+  //
+  // VERIFIKASI tulis: pakai .select() supaya kalau update kena blok RLS
+  // (mis. SUPABASE_SERVICE_ROLE_KEY tidak diset di server → client jadi anon),
+  // kita tahu — bukan log "berhasil" padahal 0 baris tersimpan.
+  const { data: updated, error: updateError } = await supabase
     .from('profiles')
     .update({
       gmail_watch_expiration: expiration,
       gmail_watch_history_id: watchData.historyId,
     })
     .eq('id', userId)
+    .select('id')
 
-  console.info('[gmail-watch] Watch terdaftar', { expiration })
+  if (updateError) {
+    console.error('[gmail-watch] gagal simpan watch state:', updateError.message)
+    throw new Error(`Gagal simpan watch state: ${updateError.message}`)
+  }
+
+  if (!updated || updated.length === 0) {
+    console.error(
+      '[gmail-watch] watch state TIDAK tersimpan (0 baris ter-update). ' +
+        'Kemungkinan besar SUPABASE_SERVICE_ROLE_KEY salah/tidak diset di server — ' +
+        'admin client jatuh ke level anon dan RLS memblokir update.'
+    )
+    throw new Error('Watch state tidak tersimpan (0 baris) — cek SUPABASE_SERVICE_ROLE_KEY di server')
+  }
+
+  console.info('[gmail-watch] Watch terdaftar & tersimpan', { expiration })
 }
 
 /**

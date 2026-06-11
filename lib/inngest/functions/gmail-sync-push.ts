@@ -6,18 +6,8 @@
  */
 
 import { inngest } from '@/lib/inngest/client'
-import { createClient } from '@supabase/supabase-js'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { syncUserGmail } from '@/lib/gmail/sync'
-import type { Database } from '@/types/database'
-
-function createAdminClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-
-  return createClient<Database>(supabaseUrl, serviceRoleKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  })
-}
 
 export const gmailSyncPushFunction = inngest.createFunction(
   {
