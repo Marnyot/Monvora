@@ -178,7 +178,7 @@ export function WalletForm({ open, onOpenChange, wallet }: WalletFormProps) {
                 step={1000}
                 placeholder="0"
                 value={form.balance || ''}
-                onChange={e => handleChange('balance', parseInt(e.target.value, 10) || 0)}
+                onChange={e => handleChange('balance', Math.max(0, parseInt(e.target.value, 10) || 0))}
               />
               {errors.balance && <p className="text-xs text-destructive">{errors.balance[0]}</p>}
             </div>
