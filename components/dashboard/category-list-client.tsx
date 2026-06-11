@@ -142,7 +142,7 @@ export function CategoryListClient({ categories }: CategoryListClientProps) {
       {/* System categories */}
       <div className="mt-6">
         <div className="flex items-center gap-2 mb-3">
-          <h2 className="text-sm font-semibold text-foreground">Kategori Bawaan</h2>
+          <h2 className="text-sm font-semibold text-foreground">Kategori Default</h2>
           <Lock className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
         </div>
         <div className="space-y-4">
@@ -168,7 +168,7 @@ export function CategoryListClient({ categories }: CategoryListClientProps) {
                         )}
                       </div>
                       <span className="flex-1 text-sm font-medium text-foreground">{cat.name}</span>
-                      <Badge variant="secondary" className="text-xs shrink-0">Bawaan</Badge>
+                      <Badge variant="secondary" className="text-xs shrink-0">Default</Badge>
                     </div>
                   ))}
                 </div>
