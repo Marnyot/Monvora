@@ -31,7 +31,8 @@ export async function updateSession(request: NextRequest) {
   const isAuthed = user && !userError
   const pathname = request.nextUrl.pathname
 
-  if (!isAuthed && pathname.startsWith('/dashboard')) {
+  const protectedPaths = ['/dashboard', '/wallets', '/settings', '/transactions']
+  if (!isAuthed && protectedPaths.some(p => pathname.startsWith(p))) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 

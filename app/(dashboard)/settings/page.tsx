@@ -8,8 +8,9 @@ export const metadata = { title: 'Pengaturan — Monvora' }
 
 export default async function SettingsPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) redirect('/login')
+  const user = session.user
 
   const { data: profile } = await supabase
     .from('profiles')
