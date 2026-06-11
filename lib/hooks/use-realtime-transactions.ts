@@ -13,6 +13,10 @@ export function useRealtimeTransactions(userId: string) {
     if (!userId) return
 
     const supabase = createClient()
+    const handleRefresh = () => {
+      queryClient.invalidateQueries({ queryKey: ['transactions'] })
+      router.refresh()
+    }
     const channel = supabase
       .channel(`transactions-changes-${userId}`)
       .on(
@@ -23,10 +27,17 @@ export function useRealtimeTransactions(userId: string) {
           table: 'transactions',
           filter: `user_id=eq.${userId}`,
         },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['transactions'] })
-          router.refresh()
-        }
+        handleRefresh
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'wallets',
+          filter: `user_id=eq.${userId}`,
+        },
+        handleRefresh
       )
       .subscribe()
 

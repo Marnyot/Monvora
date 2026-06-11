@@ -29,14 +29,14 @@ export const gmailWatchRenewalFunction = inngest.createFunction(
   async ({ step, logger }) => {
     const adminSupabase = createAdminClient()
 
-    // Cari user yang watch-nya akan expired dalam 24 jam
+    // Cari user yang watch-nya belum ada (NULL) atau akan expired dalam 24 jam
     const limit = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
 
     const { data: profiles, error: profilesError } = await adminSupabase
       .from('profiles')
       .select('id')
       .eq('gmail_sync_enabled', true)
-      .lt('gmail_watch_expiration', limit)
+      .or(`gmail_watch_expiration.is.null,gmail_watch_expiration.lt.${limit}`)
 
     if (profilesError) {
       logger.error('Failed to fetch profiles for watch renewal', { error: profilesError.message })

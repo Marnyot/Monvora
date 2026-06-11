@@ -8,7 +8,6 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { SkeletonList } from '@/components/shared/skeleton-card'
 import { List } from 'lucide-react'
 import { Suspense } from 'react'
-import { RealtimeRefresh } from '@/components/dashboard/realtime-refresh'
 
 export const metadata = { title: 'Dashboard — Monvora' }
 
@@ -114,8 +113,6 @@ async function DashboardContent() {
           </div>
         </div>
       </div>
-
-      <RealtimeRefresh />
 
       <div className="px-4 mb-2 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-foreground">Transaksi Terbaru</h2>

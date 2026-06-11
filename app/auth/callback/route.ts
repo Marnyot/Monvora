@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { z } from 'zod'
+import { setupWatch } from '@/lib/gmail/watch'
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
@@ -49,6 +50,12 @@ export async function GET(request: NextRequest) {
         google_token_expires_at: expiresAt,
       })
       .eq('id', user.id)
+
+    // Daftarkan Gmail Watch ke Pub/Sub agar push notification aktif.
+    // Non-blocking — kalau gagal, cron renewal akan retry setiap 6 jam.
+    if (accessToken) {
+      setupWatch(accessToken, supabase, user.id).catch(() => {})
+    }
   }
 
   return NextResponse.redirect(`${origin}${next}`)

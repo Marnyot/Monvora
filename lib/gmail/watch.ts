@@ -29,7 +29,10 @@ export async function setupWatch(
   supabase: SupabaseClient<Database>,
   userId: string
 ): Promise<void> {
-  if (!PUBSUB_TOPIC) return
+  if (!PUBSUB_TOPIC) {
+    console.warn('[gmail-watch] GOOGLE_PUBSUB_TOPIC tidak diset — watch tidak didaftarkan')
+    return
+  }
 
   const gmail = createGmailClient(accessToken)
 
@@ -44,6 +47,11 @@ export async function setupWatch(
 
   const watchData = res.data as WatchResponse
 
+  if (!watchData.historyId) {
+    console.error('[gmail-watch] Google tidak mengembalikan historyId — watch mungkin gagal')
+    return
+  }
+
   const expiration = new Date(Date.now() + WATCH_EXPIRATION_MS).toISOString()
 
   await supabase
@@ -54,6 +62,8 @@ export async function setupWatch(
       gmail_sync_token: watchData.historyId,
     })
     .eq('id', userId)
+
+  console.info('[gmail-watch] Watch terdaftar', { expiration })
 }
 
 /**
