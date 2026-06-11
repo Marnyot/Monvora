@@ -30,6 +30,7 @@ const PAYMENT_METHOD_LABELS: Record<string, string> = {
   debit: 'Debit',
   credit: 'Kartu Kredit',
   ewallet: 'E-Wallet',
+  topup: 'Top Up',
   other: 'Lainnya',
 }
 

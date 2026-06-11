@@ -1,4 +1,4 @@
-export type PaymentMethod = 'qris' | 'transfer' | 'cash' | 'debit' | 'credit' | 'ewallet' | 'other'
+export type PaymentMethod = 'qris' | 'transfer' | 'cash' | 'debit' | 'credit' | 'ewallet' | 'topup' | 'other'
 export type TransactionType = 'expense' | 'income' | 'transfer'
 
 export interface GmailMessage {

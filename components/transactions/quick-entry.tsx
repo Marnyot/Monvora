@@ -46,14 +46,15 @@ const PAYMENT_METHOD_LABELS: Record<string, string> = {
   debit: 'Debit',
   credit: 'Kartu Kredit',
   ewallet: 'E-Wallet',
+  topup: 'Top Up',
   other: 'Lainnya',
 }
 
 const WALLET_TYPE_PAYMENT_METHODS: Record<string, string[]> = {
-  bank: ['qris', 'transfer', 'debit', 'credit'],
-  ewallet: ['qris', 'transfer', 'ewallet'],
+  bank: ['qris', 'transfer', 'debit', 'credit', 'topup'],
+  ewallet: ['qris', 'transfer', 'ewallet', 'topup'],
   cash: ['cash'],
-  other: ['qris', 'transfer', 'cash', 'debit', 'credit', 'ewallet', 'other'],
+  other: ['qris', 'transfer', 'cash', 'debit', 'credit', 'ewallet', 'topup', 'other'],
 }
 
 type TransactionType = 'expense' | 'income' | 'transfer'
@@ -128,9 +129,11 @@ export function QuickEntry({ open, onOpenChange, wallets, categories }: QuickEnt
   }, [type]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const selectedWallet = wallets.find(w => w.id === walletId)
-  const filteredPaymentMethods = selectedWallet
-    ? WALLET_TYPE_PAYMENT_METHODS[selectedWallet.type] ?? PAYMENT_METHODS
-    : PAYMENT_METHODS
+  const filteredPaymentMethods = (
+    selectedWallet
+      ? WALLET_TYPE_PAYMENT_METHODS[selectedWallet.type] ?? PAYMENT_METHODS
+      : PAYMENT_METHODS
+  ).filter(m => m !== 'topup' || type === 'expense') // Top Up hanya untuk pengeluaran
   const filteredCategories = categories.filter(c => c.type === type)
   const amount = parseInt(amountRaw.replace(/\D/g, ''), 10) || 0
 

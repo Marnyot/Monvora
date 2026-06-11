@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-export const PAYMENT_METHODS = ['qris', 'transfer', 'cash', 'debit', 'credit', 'ewallet', 'other'] as const
+export const PAYMENT_METHODS = ['qris', 'transfer', 'cash', 'debit', 'credit', 'ewallet', 'topup', 'other'] as const
 export const TRANSACTION_TYPES = ['expense', 'income', 'transfer'] as const
 export const TRANSACTION_SOURCES = ['manual', 'gmail', 'ocr'] as const
 

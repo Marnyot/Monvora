@@ -7,7 +7,7 @@ export const parsedTransactionSchema = z.object({
     .transform(val => val?.replace(/<[^>]*>/g, '').trim() ?? null),
   description: z.string().max(255).nullable()
     .transform(val => val?.replace(/<[^>]*>/g, '').trim() ?? null),
-  payment_method: z.enum(['qris', 'transfer', 'cash', 'debit', 'credit', 'ewallet', 'other']),
+  payment_method: z.enum(['qris', 'transfer', 'cash', 'debit', 'credit', 'ewallet', 'topup', 'other']),
   transacted_at: z.date(),
   reference_number: z.string().max(100).nullable(),
   raw_email_id: z.string().min(1),

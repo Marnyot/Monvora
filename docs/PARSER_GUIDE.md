@@ -322,6 +322,19 @@ function detectMandiriType(subject: string, body: string): ParsedTransaction['ty
 }
 ```
 
+### Display Name Rules — Mandiri (merchant_name yang tampil di UI)
+
+`merchant_name` di-format ulang sesuai jenis transaksi (mentahnya tetap di `description`):
+
+| Pemicu | merchant_name | payment_method |
+|---|---|---|
+| Subject/body "Transfer Berhasil" atau "Transfer dengan BI Fast Berhasil" | `Transfer kepada <nama depan penerima>` | transfer |
+| "Pembayaran Berhasil" **dan** body memuat "Berikut adalah detail transaksi Anda dengan QR" | `QRIS ke <penerima>` | qris |
+| "Top Up Berhasil" (provider di field `Penyedia Jasa <NAMA>`) | `Top up ke <penyedia jasa>` | **topup** (selalu `expense`) |
+
+- Nama di-title-case (`RISQUINA` → `Risquina`).
+- `topup` adalah payment_method baru (lihat migration `010`), hanya untuk pengeluaran.
+
 ---
 
 ## BANK-SPECIFIC: BCA (myBCA)

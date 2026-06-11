@@ -5,6 +5,11 @@ import { calculateConfidence } from './confidence'
 import { parseAmountToInteger } from '@/lib/utils/currency'
 import { parseTransactionDate } from '@/lib/utils/date'
 
+/** Title-case sederhana: "risquina angelica" → "Risquina Angelica". */
+function toTitleCase(s: string): string {
+  return s.replace(/\b\w/g, (c) => c.toUpperCase())
+}
+
 const KNOWN_SENDERS = ['bankmandiri.co.id']
 
 const KNOWN_SUBJECTS = [
@@ -12,6 +17,7 @@ const KNOWN_SUBJECTS = [
   'transfer dengan bi fast berhasil',
   'bi fast',
   'transfer berhasil',
+  'top up berhasil',
   'dana masuk',
   'notifikasi transaksi',
   'notifikasi',
@@ -45,6 +51,11 @@ export const mandiriParser: BankParser = {
       if (!amount) {
         const specificAmountMatch = body.match(/Nominal\s+Transaksi\s+Rp\s*([\d.,]+)/i)
         if (specificAmountMatch) amount = parseAmountToInteger(specificAmountMatch[1])
+      }
+      if (!amount) {
+        // Top Up: "Nominal Top Up Rp X" atau "Nominal Rp X"
+        const topUpAmountMatch = body.match(/Nominal(?:\s+Top\s*Up)?\s+Rp\s*([\d.,]+)/i)
+        if (topUpAmountMatch) amount = parseAmountToInteger(topUpAmountMatch[1])
       }
       if (!amount) amount = parseIDRAmount(body)
       if (!amount) return null
@@ -165,10 +176,60 @@ export const mandiriParser: BankParser = {
       const description =
         paymentMethod === 'transfer' && merchantName ? `Transfer ${merchantName}` : null
 
+      // Display name ("Nama" di UI) sesuai jenis transaksi:
+      // - Transfer (Transfer Berhasil / Transfer dengan BI Fast Berhasil)
+      //     → "Transfer kepada <nama depan penerima>"
+      // - Pembayaran QRIS (Pembayaran Berhasil + "Berikut adalah detail transaksi Anda dengan QR")
+      //     → "QRIS ke <penerima>"
+      // - Top Up (Top Up Berhasil) → "Top up ke <penyedia jasa>"
+      // merchantName mentah tetap dipakai untuk `description` (nama lengkap).
+      const subjectLower = email.subject.toLowerCase()
+      const isOutgoingTransfer =
+        /transfer (berhasil|dengan bi fast berhasil)/.test(normalized) ||
+        /transfer (berhasil|dengan bi fast berhasil)/.test(subjectLower)
+      const isQrisPayment =
+        (subjectLower.includes('pembayaran berhasil') ||
+          normalized.includes('pembayaran berhasil')) &&
+        /berikut adalah detail transaksi anda dengan qr/i.test(body)
+      const isTopUp =
+        subjectLower.includes('top up berhasil') || normalized.includes('top up berhasil')
+
+      // Top Up: penyedia jasa ada di field "Penyedia Jasa <NAMA>" (bukan "Penerima")
+      let topUpProvider: string | null = null
+      if (isTopUp) {
+        const providerMatch = body.match(
+          /Penyedia\s+Jasa\s+([A-Za-z0-9&.\- ]+?)(?:\s+(?:Tanggal|Jam|Nominal|Nomor|No\.?|Tujuan|Produk|Sumber|Total|Biaya|Keterangan)\b|$)/i
+        )
+        if (providerMatch) topUpProvider = normalizeText(providerMatch[1]).substring(0, 100) || null
+      }
+
+      let displayName = merchantName
+      if (isTopUp && topUpProvider) {
+        displayName = `Top up ke ${toTitleCase(topUpProvider)}`
+      } else if (merchantName) {
+        if (isOutgoingTransfer) {
+          const firstName = merchantName.trim().split(/\s+/)[0]
+          displayName = `Transfer kepada ${toTitleCase(firstName)}`
+        } else if (isQrisPayment) {
+          displayName = `QRIS ke ${toTitleCase(merchantName.trim())}`
+        }
+      }
+
+      // Selaraskan payment_method + type dengan jenis transaksi yang terdeteksi.
+      // Top Up selalu pengeluaran (uang keluar ke penyedia jasa).
+      if (isTopUp) {
+        paymentMethod = 'topup'
+        type = 'expense'
+      } else if (isQrisPayment) {
+        // QRIS terdeteksi via baris detail QR → pastikan 'qris' walau kata kunci absen.
+        paymentMethod = 'qris'
+        type = 'expense'
+      }
+
       const result: ParsedTransaction = {
         amount,
         type,
-        merchant_name: merchantName,
+        merchant_name: displayName,
         description,
         payment_method: paymentMethod,
         transacted_at: transactedAt,

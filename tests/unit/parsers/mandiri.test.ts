@@ -257,7 +257,7 @@ describe('Mandiri Parser', () => {
 
       expect(result).not.toBeNull()
       expect(result?.amount).toBe(33000)
-      expect(result?.merchant_name).toBe('cnb veteran')
+      expect(result?.merchant_name).toBe('QRIS ke Cnb Veteran')
       expect(result?.payment_method).toBe('qris')
       expect(result?.type).toBe('expense')
       expect(result?.reference_number).toBe('260607122518808257')
@@ -325,11 +325,85 @@ describe('Mandiri Parser', () => {
       expect(result?.amount).toBe(150000)
       expect(result?.type).toBe('expense')
       expect(result?.payment_method).toBe('transfer')
-      expect(result?.merchant_name).toBe('risquina angelica arvintyani')
+      expect(result?.merchant_name).toBe('Transfer kepada Risquina')
       expect(result?.description).toBe('Transfer risquina angelica arvintyani')
       expect(result?.reference_number).toBe('20260605BMRIIDJA010O0226409055')
       expect(result?.transacted_at).toEqual(new Date('2026-06-05T03:25:04.000Z'))
       expect(result?.bank).toBe('mandiri')
+    })
+  })
+
+  describe('display name formatting', () => {
+    it('names BI Fast transfer as "Transfer kepada <nama depan>"', () => {
+      const email = makeEmail({
+        subject: 'Transfer dengan BI Fast Berhasil',
+        from: 'Mandiri <noreply@bankmandiri.co.id>',
+        body:
+          'Transfer dengan BI Fast Berhasil Halo MARIO VALENTINO ARDHANA, Berikut adalah detail transaksi Anda: ' +
+          'Penerima RISQUINA ANGELICA ARVINTYANI Seabank - 901960783547 ' +
+          'Tanggal 5 Jun 2026 Jam 10:25:04 WIB Nominal Transfer Rp 150.000,00 ' +
+          'No. Referensi BI Fast 20260605BMRIIDJA010O0226409055',
+      })
+      const result = mandiriParser.parse(email)
+      expect(result?.merchant_name).toBe('Transfer kepada Risquina')
+    })
+
+    it('names plain "Transfer Berhasil" as "Transfer kepada <nama depan>"', () => {
+      const email = makeEmail({
+        subject: 'Transfer Berhasil',
+        from: 'Mandiri <noreply@bankmandiri.co.id>',
+        body:
+          'Transfer Berhasil Penerima BUDI SANTOSO Seabank - 1234567890 ' +
+          'Tanggal 7 Jun 2026 Jam 09:00:00 WIB Nominal Transfer Rp 250.000,00 ' +
+          'No. Referensi 260607000111',
+      })
+      const result = mandiriParser.parse(email)
+      expect(result?.merchant_name).toBe('Transfer kepada Budi')
+    })
+
+    it('names QRIS payment as "QRIS ke <penerima>"', () => {
+      const email = makeEmail({
+        subject: 'Pembayaran Berhasil',
+        from: 'Mandiri <noreply@bankmandiri.co.id>',
+        body:
+          'Pembayaran Berhasil Halo MARIO, Berikut adalah detail transaksi Anda dengan QR: ' +
+          'Penerima CNB VETERAN SOLO - ID Tanggal 7 Jun 2026 Jam 19:07:14 WIB ' +
+          'Nominal Transaksi Rp 33.000,00 No. Referensi 260607122518808257',
+      })
+      const result = mandiriParser.parse(email)
+      expect(result?.merchant_name).toBe('QRIS ke Cnb Veteran')
+      expect(result?.payment_method).toBe('qris')
+    })
+
+    it('names top up as "Top up ke <penyedia jasa>" with payment_method topup (expense)', () => {
+      const email = makeEmail({
+        subject: 'Top Up Berhasil',
+        from: 'Mandiri <noreply@bankmandiri.co.id>',
+        body:
+          'Top Up Berhasil Halo MARIO VALENTINO ARDHANA, Berikut adalah detail transaksi Anda: ' +
+          'Penyedia Jasa GOPAY Nomor Tujuan 081234567890 ' +
+          'Tanggal 7 Jun 2026 Jam 12:00:00 WIB ' +
+          'Nominal Top Up Rp 50.000,00 Biaya Admin Rp 1.000,00 No. Referensi 260607999888',
+      })
+      const result = mandiriParser.parse(email)
+      expect(result).not.toBeNull()
+      expect(result?.merchant_name).toBe('Top up ke Gopay')
+      expect(result?.payment_method).toBe('topup')
+      expect(result?.type).toBe('expense')
+      expect(result?.amount).toBe(50000)
+      expect(result?.reference_number).toBe('260607999888')
+    })
+
+    it('does NOT add "QRIS ke" when the QR detail line is absent', () => {
+      const email = makeEmail({
+        subject: 'Pembayaran Berhasil',
+        from: 'Mandiri <noreply@bankmandiri.co.id>',
+        body:
+          'Pembayaran Berhasil Penerima TOKOPEDIA SELLER Tanggal 7 Jun 2026 ' +
+          'Jam 10:00:00 WIB Nominal Transaksi Rp 50.000,00 No. Ref. QRIS 606476612799',
+      })
+      const result = mandiriParser.parse(email)
+      expect(result?.merchant_name).not.toMatch(/^QRIS ke/)
     })
   })
 
