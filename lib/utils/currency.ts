@@ -1,15 +1,17 @@
 export function formatIDR(amount: number): string {
-  if (amount < 0) throw new Error('Amount cannot be negative')
   if (!Number.isInteger(amount)) throw new Error('Amount must be an integer')
 
-  return new Intl.NumberFormat('id-ID', {
+  const abs = Math.abs(amount)
+  const formatted = new Intl.NumberFormat('id-ID', {
     style: 'currency',
     currency: 'IDR',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   })
-    .format(amount)
-    .replace(/ /g, ' ') // normalize non-breaking space from Intl
+    .format(abs)
+    .replace(/ /g, ' ') // normalize non-breaking space from Intl
+
+  return amount < 0 ? `-${formatted}` : formatted
 }
 
 export function parseIDR(value: string): number | null {
