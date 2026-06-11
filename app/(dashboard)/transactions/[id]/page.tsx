@@ -1,52 +1,47 @@
-import { createClient } from '@/lib/supabase/server'
+'use client'
+
+import { use } from 'react'
 import { notFound } from 'next/navigation'
 import { TransactionDetailClient } from '@/components/transactions/transaction-detail-client'
+import { useTransactionDetail } from '@/lib/hooks/use-transaction-detail'
+import { Skeleton } from '@/components/ui/skeleton'
 
-export const metadata = { title: 'Detail Transaksi — Monvora' }
+function TransactionDetailSkeleton() {
+  return (
+    <div className="max-w-lg mx-auto px-4 py-6 space-y-4">
+      <Skeleton className="h-8 w-8 rounded-md" />
+      <div className="space-y-2">
+        <Skeleton className="h-6 w-32" />
+        <Skeleton className="h-9 w-48" />
+      </div>
+      <div className="rounded-xl border border-border p-4 space-y-3">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="flex justify-between">
+            <Skeleton className="h-3 w-24" />
+            <Skeleton className="h-3 w-32" />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 interface Props {
   params: Promise<{ id: string }>
 }
 
-export default async function TransactionDetailPage({ params }: Props) {
-  const supabase = await createClient()
-  const { id } = await params
+export default function TransactionDetailPage({ params }: Props) {
+  const { id } = use(params)
+  const { data, isLoading, sessionLoading } = useTransactionDetail(id)
 
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) notFound()
-
-  const [{ data: transaction }, { data: wallets }, { data: categories }] = await Promise.all([
-    supabase
-      .from('transactions')
-      .select(`
-        id, amount, type, description, merchant_name, payment_method,
-        source, is_verified, transacted_at, created_at,
-        wallet:wallets!wallet_id(id, name, color),
-        category:categories(id, name, icon, color)
-      `)
-      .eq('id', id)
-      .eq('user_id', user.id)
-      .is('deleted_at', null)
-      .single(),
-    supabase
-      .from('wallets')
-      .select('id, name, color')
-      .eq('user_id', user.id)
-      .is('deleted_at', null),
-    supabase
-      .from('categories')
-      .select('id, name, icon, color, type, is_system')
-      .is('deleted_at', null)
-      .or(`user_id.eq.${user.id},user_id.is.null`),
-  ])
-
-  if (!transaction) notFound()
+  if (isLoading || sessionLoading) return <TransactionDetailSkeleton />
+  if (!data?.transaction) return notFound()
 
   return (
     <TransactionDetailClient
-      transaction={transaction as any}
-      wallets={wallets ?? []}
-      categories={categories ?? []}
+      transaction={data.transaction as any}
+      wallets={data.wallets}
+      categories={data.categories as any}
     />
   )
 }

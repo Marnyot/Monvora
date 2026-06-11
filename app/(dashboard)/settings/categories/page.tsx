@@ -1,21 +1,21 @@
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
+'use client'
+
+import { useCategories } from '@/lib/hooks/use-categories'
 import { CategoryListClient } from '@/components/dashboard/category-list-client'
+import { SkeletonList } from '@/components/shared/skeleton-card'
+import { Skeleton } from '@/components/ui/skeleton'
 
-export const metadata = { title: 'Kategori — Monvora' }
+export default function CategoriesPage() {
+  const { data: categories, isLoading, sessionLoading } = useCategories()
 
-export default async function CategoriesPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
-
-  const { data: categories } = await supabase
-    .from('categories')
-    .select('id, name, icon, color, type, is_system, user_id')
-    .is('deleted_at', null)
-    .or(`user_id.eq.${user.id},user_id.is.null`)
-    .order('is_system', { ascending: false })
-    .order('name', { ascending: true })
+  if (isLoading || sessionLoading) {
+    return (
+      <div className="max-w-lg mx-auto px-4 py-6 space-y-6">
+        <Skeleton className="h-7 w-28" />
+        <SkeletonList count={6} />
+      </div>
+    )
+  }
 
   return (
     <div className="max-w-lg mx-auto px-4 py-6">

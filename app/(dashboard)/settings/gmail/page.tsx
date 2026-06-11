@@ -1,14 +1,10 @@
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
+'use client'
+
 import Link from 'next/link'
 import { Skeleton } from '@/components/ui/skeleton'
-import { EmptyState } from '@/components/shared/empty-state'
-import { GmailSettingsClient, type SyncLog } from './gmail-settings-client'
-import { Suspense } from 'react'
-import { Mail, ChevronLeft } from 'lucide-react'
-
-export const dynamic = 'force-dynamic'
-export const metadata = { title: 'Sinkronisasi Gmail — Monvora' }
+import { GmailSettingsClient } from './gmail-settings-client'
+import { useGmailSettings } from '@/lib/hooks/use-gmail-settings'
+import { ChevronLeft } from 'lucide-react'
 
 function GmailSettingsSkeleton() {
   return (
@@ -42,50 +38,11 @@ function GmailSettingsSkeleton() {
   )
 }
 
-async function GmailSettingsContent() {
-  const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
-
-  const [{ data: profile, error: profileError }, { data: syncLogs }] = await Promise.all([
-    supabase
-      .from('profiles')
-      .select('gmail_sync_enabled, gmail_last_synced_at')
-      .eq('id', user.id)
-      .single(),
-    supabase
-      .from('gmail_sync_logs')
-      .select('id, status, emails_scanned, transactions_found, transactions_created, error_message, started_at, completed_at')
-      .eq('user_id', user.id)
-      .order('started_at', { ascending: false })
-      .limit(5)
-      .returns<SyncLog[]>(),
-  ])
-
-  if (profileError) {
-    return (
-      <EmptyState
-        title="Gagal memuat pengaturan"
-        description="Tidak bisa membaca data profil. Coba muat ulang halaman."
-        icon={<Mail className="h-10 w-10" />}
-      />
-    )
-  }
-
-  return (
-    <GmailSettingsClient
-      isConnected={profile?.gmail_sync_enabled ?? false}
-      lastSyncedAt={profile?.gmail_last_synced_at ?? null}
-      syncLogs={syncLogs ?? []}
-    />
-  )
-}
-
 export default function GmailSettingsPage() {
+  const { data, isLoading, sessionLoading } = useGmailSettings()
+
   return (
     <div className="max-w-lg mx-auto px-4 py-6 space-y-6">
-      {/* Back link + Header */}
       <div>
         <Link
           href="/settings"
@@ -100,9 +57,15 @@ export default function GmailSettingsPage() {
         </p>
       </div>
 
-      <Suspense fallback={<GmailSettingsSkeleton />}>
-        <GmailSettingsContent />
-      </Suspense>
+      {isLoading || sessionLoading ? (
+        <GmailSettingsSkeleton />
+      ) : (
+        <GmailSettingsClient
+          isConnected={data?.isConnected ?? false}
+          lastSyncedAt={data?.lastSyncedAt ?? null}
+          syncLogs={data?.syncLogs ?? []}
+        />
+      )}
     </div>
   )
 }

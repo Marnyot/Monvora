@@ -1,4 +1,6 @@
-import { createClient } from '@/lib/supabase/server'
+'use client'
+
+import { useDashboard } from '@/lib/hooks/use-dashboard'
 import { CurrencyDisplay } from '@/components/shared/currency-display'
 import { AmountDisplay } from '@/components/shared/amount-display'
 import { TransactionCard } from '@/components/transactions/transaction-card'
@@ -6,10 +8,8 @@ import { EmptyState } from '@/components/shared/empty-state'
 import { ThemeToggle } from '@/components/shared/theme-toggle'
 import { Skeleton } from '@/components/ui/skeleton'
 import { SkeletonList } from '@/components/shared/skeleton-card'
+import { useSession } from '@/lib/hooks/use-session'
 import { List } from 'lucide-react'
-import { Suspense } from 'react'
-
-export const metadata = { title: 'Dashboard — Monvora' }
 
 function DashboardSkeleton() {
   return (
@@ -47,44 +47,17 @@ function DashboardSkeleton() {
   )
 }
 
-async function DashboardContent() {
-  const supabase = await createClient()
+export default function DashboardPage() {
+  const { user } = useSession()
+  const { data, isLoading, sessionLoading } = useDashboard()
 
-  const now = new Date()
-  const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+  if (isLoading || sessionLoading) return <DashboardSkeleton />
 
-  const [{ data: wallets }, { data: txThisMonth }, { data: recentTx }, { data: profile }] = await Promise.all([
-    supabase
-      .from('wallets')
-      .select('id, name, balance, color')
-      .is('deleted_at', null)
-      .eq('is_active', true),
-    supabase
-      .from('transactions')
-      .select('amount, type')
-      .is('deleted_at', null)
-      .gte('transacted_at', firstOfMonth),
-    supabase
-      .from('transactions')
-      .select(`
-        id, amount, type, description, merchant_name, payment_method, transacted_at,
-        wallet:wallets!wallet_id(id, name, color),
-        category:categories(id, name, icon, color)
-      `)
-      .is('deleted_at', null)
-      .order('transacted_at', { ascending: false })
-      .limit(10),
-    supabase
-      .from('profiles')
-      .select('full_name')
-      .single(),
-  ])
-
-  const firstName = profile?.full_name?.split(' ')[0] ?? 'Kamu'
-
-  const totalBalance = (wallets ?? []).reduce((sum, w) => sum + (w.balance ?? 0), 0)
-  const monthIncome = (txThisMonth ?? []).filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)
-  const monthExpense = (txThisMonth ?? []).filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
+  const firstName = (data?.profile?.full_name ?? (user?.user_metadata?.full_name as string | undefined) ?? 'Kamu').split(' ')[0]
+  const totalBalance = (data?.wallets ?? []).reduce((sum, w) => sum + (w.balance ?? 0), 0)
+  const monthIncome = (data?.txThisMonth ?? []).filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)
+  const monthExpense = (data?.txThisMonth ?? []).filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
+  const recentTx = data?.recentTx ?? []
 
   return (
     <div className="max-w-lg mx-auto">
@@ -118,7 +91,7 @@ async function DashboardContent() {
         <h2 className="text-sm font-semibold text-foreground">Transaksi Terbaru</h2>
       </div>
 
-      {!recentTx?.length ? (
+      {!recentTx.length ? (
         <div className="px-4">
           <EmptyState
             title="Belum ada transaksi"
@@ -134,13 +107,5 @@ async function DashboardContent() {
         </div>
       )}
     </div>
-  )
-}
-
-export default function DashboardPage() {
-  return (
-    <Suspense fallback={<DashboardSkeleton />}>
-      <DashboardContent />
-    </Suspense>
   )
 }
