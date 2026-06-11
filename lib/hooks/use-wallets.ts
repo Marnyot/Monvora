@@ -5,14 +5,14 @@ import { useSession } from './use-session'
 export interface WalletItem {
   id: string
   name: string
-  type: string | null
+  type: string
   provider: string | null
-  balance: number
+  balance: number | null
   color: string | null
   icon: string | null
   is_active: boolean | null
-  created_at: string
-  updated_at: string
+  created_at: string | null
+  updated_at: string | null
 }
 
 export function useWallets() {
