@@ -12,7 +12,16 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database'
 import { createGmailClient } from '@/lib/gmail/client'
 
-const PUBSUB_TOPIC = process.env.GOOGLE_PUBSUB_TOPIC ?? ''
+// Bersihkan nilai env: hapus whitespace/newline & tanda kutip yang ikut ter-paste
+// (kesalahan umum di UI Vercel, mis. nilai jadi `"projects/.../topics/..."`).
+const PUBSUB_TOPIC = (process.env.GOOGLE_PUBSUB_TOPIC ?? '')
+  .trim()
+  .replace(/^["']|["']$/g, '')
+  .trim()
+
+// Format wajib: projects/{project-id}/topics/{topic-id}
+const PUBSUB_TOPIC_RE = /^projects\/[^/\s]+\/topics\/[^/\s]+$/
+
 const WATCH_EXPIRATION_MS = 6 * 24 * 60 * 60 * 1000 // 6 hari (max Gmail: 7 hari)
 
 interface WatchResponse {
@@ -31,6 +40,15 @@ export async function setupWatch(
 ): Promise<void> {
   if (!PUBSUB_TOPIC) {
     console.warn('[gmail-watch] GOOGLE_PUBSUB_TOPIC tidak diset — watch tidak didaftarkan')
+    return
+  }
+
+  // Validasi format sebelum panggil Google — beri pesan jelas kalau env salah.
+  if (!PUBSUB_TOPIC_RE.test(PUBSUB_TOPIC)) {
+    console.error(
+      `[gmail-watch] GOOGLE_PUBSUB_TOPIC format tidak valid: "${PUBSUB_TOPIC}". ` +
+        `Harus persis: projects/{project-id}/topics/{topic-id} (tanpa tanda kutip/spasi).`
+    )
     return
   }
 
