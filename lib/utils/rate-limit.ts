@@ -7,6 +7,7 @@ const RATE_LIMITS: Record<string, { requests: number; windowMs: number }> = {
   '/api/ocr': { requests: 20, windowMs: 3_600_000 },
   '/api/analytics': { requests: 30, windowMs: 60_000 },
   '/api/insights': { requests: 30, windowMs: 60_000 },
+  '/api/budgets': { requests: 30, windowMs: 60_000 },
   '/api/auth': { requests: 10, windowMs: 60_000 },
 }
 

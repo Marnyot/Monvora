@@ -61,11 +61,11 @@ describe('gmailSyncFunction — Inngest Cron Job', () => {
     expect(opts.triggers[0].cron).toBe('*/15 * * * *')
   })
 
-  // ── Test 3: Concurrency limit harus 10 ──────────────────────────────────────
-  it('should have concurrency limit of 10', () => {
+  // ── Test 3: Concurrency limit harus 5 (turun dari 10 di commit 6781649 untuk free tier) ──
+  it('should have concurrency limit of 5', () => {
     const opts = getFunctionOpts(gmailSyncFunction)
     expect(opts.concurrency).toBeDefined()
-    expect(opts.concurrency?.limit).toBe(10)
+    expect(opts.concurrency?.limit).toBe(5)
   })
 
   // ── Test 4: Retries harus 3 ─────────────────────────────────────────────────
