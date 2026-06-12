@@ -16,14 +16,12 @@ const securityHeaders = [
     key: 'Content-Security-Policy',
     value: [
       "default-src 'self'",
-      // 'unsafe-eval' + 'wasm-unsafe-eval' untuk Tesseract WASM; blob: untuk worker blob URL; jsdelivr untuk worker.min.js + tesseract-core
-      "script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval' 'unsafe-inline' blob: va.vercel-scripts.com https://cdn.jsdelivr.net",
-      // Tesseract worker dibangun dari blob URL — wajib diizinkan
-      "worker-src 'self' blob:",
+      // 'wasm-unsafe-eval' untuk Tesseract WASM (asset self-hosted di /tesseract/)
+      "script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval' 'unsafe-inline' va.vercel-scripts.com",
+      "worker-src 'self'",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' blob: data: lh3.googleusercontent.com",
-      // jsdelivr untuk worker/core, tessdata.projectnaptha.com untuk eng.traineddata
-      "connect-src 'self' https://*.supabase.co wss://*.supabase.co accounts.google.com https://cdn.jsdelivr.net https://tessdata.projectnaptha.com",
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co accounts.google.com",
     ].join('; '),
   },
 ]

@@ -45,9 +45,16 @@ export function OcrUpload({ onApply, className }: OcrUploadProps) {
     const url = URL.createObjectURL(file)
 
     try {
-      // Lazy-load tesseract.js to avoid pulling 2MB+ into the initial bundle
+      // Lazy-load tesseract.js to avoid pulling 2MB+ into the initial bundle.
+      // All assets are self-hosted under /tesseract/ so we don't depend on the
+      // jsdelivr or tessdata.projectnaptha.com CDNs (CSP-clean, fewer failure
+      // modes, works inside the PWA service worker scope).
       const { createWorker } = await import('tesseract.js')
       worker = await createWorker('eng', 1, {
+        workerPath: '/tesseract/worker.min.js',
+        corePath: '/tesseract/tesseract-core-simd-lstm.wasm.js',
+        langPath: '/tesseract',
+        workerBlobURL: false,
         logger: (m) => {
           if (m.status === 'recognizing text' && typeof m.progress === 'number') {
             setProgress(Math.round(m.progress * 100))
