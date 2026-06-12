@@ -1,5 +1,5 @@
 import type { BankParser, GmailMessage, ParsedTransaction } from '@/types/parser'
-import { parseIDRAmount, normalizeText, isFromSender, parseEmailDate } from './base'
+import { parseIDRAmount, normalizeText, parseEmailDate } from './base'
 import { registerParser } from './index'
 import { calculateConfidence } from './confidence'
 import { parseAmountToInteger } from '@/lib/utils/currency'
@@ -14,31 +14,33 @@ const KNOWN_SUBJECTS = [
   'notifikasi bca',
 ]
 
-function detectBCAType(body: string): ParsedTransaction['type'] {
-  const match = body.match(/Transfer Type\s*:\s*([^\n]+)/i)
-  if (!match) return 'transfer'
-  const t = match[1].toLowerCase()
-  if (t.includes('transfer')) return 'transfer'
-  return 'expense'
+/** Title-case: lowercase dulu lalu kapitalisasi tiap awal kata. "RISQUINA ANGELICA" → "Risquina Angelica". */
+function toTitleCase(s: string): string {
+  return s.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
-function detectBCAPaymentMethod(body: string, normalized: string): ParsedTransaction['payment_method'] {
-  const match = body.match(/Transfer Type\s*:\s*([^\n]+)/i)
-  if (match) {
-    const t = match[1].toLowerCase()
-    if (t.includes('qris')) return 'qris'
-    if (t.includes('transfer')) return 'transfer'
-    if (t.includes('debit') || t.includes('card')) return 'debit'
-    if (t.includes('credit')) return 'credit'
-    return 'other'
-  }
+/**
+ * Ambil nama tengah dari nama lengkap (aturan BCA: yang ditampilkan hanya nama tengah).
+ * "RISQUINA ANGELICA ARVINTYANI" → "ANGELICA".
+ * 2 kata → kata kedua, 1 kata → kata itu sendiri.
+ */
+function middleName(full: string | null): string | null {
+  if (!full) return null
+  const words = full.trim().split(/\s+/).filter(Boolean)
+  if (words.length === 0) return null
+  const idx = words.length >= 3 ? Math.floor(words.length / 2) : words.length === 2 ? 1 : 0
+  return words[idx]
+}
 
-  // Fallback to body keywords
-  if (normalized.includes('pembayaran qris') || normalized.includes('qris')) return 'qris'
-  if (normalized.includes('transfer masuk') || normalized.includes('kredit') || normalized.includes('transfer dari')) return 'transfer'
-  if (normalized.includes('transfer ke') || normalized.includes('transfer keluar') || normalized.includes('tujuan')) return 'transfer'
-  if (normalized.includes('debet') || normalized.includes('pembelian') || normalized.includes('belanja')) return 'debit'
-  return 'debit'
+/** Buang URL / www / domain dari teks Details agar tidak masuk ke catatan. */
+function stripLinks(text: string): string | null {
+  const cleaned = text
+    .replace(/https?:\/\/\S+/gi, '')
+    .replace(/www\.\S+/gi, '')
+    .replace(/\b\S+\.(?:com|co\.id|net|org|io|id)\b\S*/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+  return cleaned || null
 }
 
 export const bcaParser: BankParser = {
@@ -59,97 +61,147 @@ export const bcaParser: BankParser = {
 
       const normalized = normalizeText(body)
 
-      // Skip non-successful transactions
-      const statusMatch = body.match(/Status\s*:\s*(\w+)/i)
+      // Hanya proses transaksi yang sukses ("Status : Successful").
+      const statusMatch = body.match(/Status\s*:\s*([A-Za-z]+)/i)
       if (statusMatch && !statusMatch[1].toLowerCase().includes('success')) return null
 
-      // Amount: try bank-specific pattern, fall back to generic
+      // Field helpers ---------------------------------------------------------
+      const pick = (re: RegExp): string | null => {
+        const m = body.match(re)
+        return m?.[1] ? m[1].trim() : null
+      }
+      const pickAmount = (re: RegExp): number | null => {
+        const m = body.match(re)
+        return m?.[1] ? parseAmountToInteger(m[1].trim()) : null
+      }
+
+      const transferTypeRaw = pick(/Transfer Type\s*:\s*([^\n]+)/i)
+      const transactionTypeRaw = pick(/Transaction Type\s*:\s*([^\n]+)/i)
+
+      const totalPayment = pickAmount(/Total Payment\s*:\s*IDR\s*([\d,. ]+)/i)
+      const amountField = pickAmount(/(?:^|[^pP]\s)Amount\s*:\s*IDR\s*([\d,. ]+)/i)
+      const feeField = pickAmount(/Fee\s*:\s*IDR\s*([\d,. ]+)/i)
+      const topUpAmount = pickAmount(/Top\s*Up\s*Amount\s*:\s*IDR\s*([\d,. ]+)/i)
+
+      let type: ParsedTransaction['type'] = 'expense'
+      let paymentMethod: ParsedTransaction['payment_method'] = 'other'
       let amount: number | null = null
-      const specificAmountMatch = body.match(/Transfer Amount\s*:\s*IDR\s*([\d,. ]+)/i)
-      if (specificAmountMatch) {
-        amount = parseAmountToInteger(specificAmountMatch[1].trim())
-      }
-      if (!amount) amount = parseIDRAmount(body)
-      if (!amount) return null
+      let displayName: string | null = null
+      let description: string | null = null
 
-      // Type detection
-      let type: 'expense' | 'income' | 'transfer' = 'expense'
-      if (
-        normalized.includes('transfer masuk') ||
-        normalized.includes('kredit') ||
-        normalized.includes('transfer dari')
-      ) {
-        type = 'income'
-      } else if (body.match(/Transfer Type\s*:\s*([^\n]+)/i)) {
-        type = detectBCAType(body)
-      } else if (
-        normalized.includes('transfer ke') ||
-        normalized.includes('transfer keluar') ||
-        normalized.includes('tujuan')
-      ) {
-        type = 'expense'
-      }
+      if (transferTypeRaw) {
+        // ---- TRANSFER (Transfer Type : Transfer to <BANK>) ------------------
+        type = 'transfer'
+        paymentMethod = 'transfer'
 
-      const paymentMethod = detectBCAPaymentMethod(body, normalized)
+        const dest = transferTypeRaw.replace(/^\s*transfer to\s*/i, '').trim()
+        const isToBCA = /\bbca\b/i.test(dest)
+        const beneficiaryFull = pick(/Beneficiary Name\s*:\s*([^\n]+)/i)
 
-      // Merchant: try bank-specific (Beneficiary Name) first, fall back to generic
-      let merchantName: string | null = null
-      const specificMerchantMatch = body.match(/Beneficiary Name\s*:\s*([^\n]+)/i)
-      if (specificMerchantMatch) {
-        merchantName = normalizeText(specificMerchantMatch[1]).substring(0, 100) || null
-      }
-      if (!merchantName) {
-        const merchantPatterns = [
-          /(?:merchant:|merchant)\s+([^\n]+)/i,
-          /(?:pembelian|belanja)\s+(?:di|at|di\s+)?([^\n]+)/i,
-          /(?:tujuan|transfer ke|dari)\s+([^\n]+)/i,
-        ]
-        for (const pattern of merchantPatterns) {
-          const match = body.match(pattern)
-          if (match?.[1]) {
-            const candidate = normalizeText(match[1]).split(/\n/)[0].substring(0, 100)
-            if (
-              candidate &&
-              !candidate.includes('nominal') &&
-              !candidate.includes('rp') &&
-              !candidate.includes('waktu') &&
-              !candidate.includes('jenis')
-            ) {
-              merchantName = candidate
-              break
-            }
+        if (isToBCA) {
+          // Transfer sesama BCA → nominal = Total Payment (tanpa fee terpisah).
+          amount = totalPayment ?? amountField
+        } else {
+          // Transfer antar bank → Amount + Fee dijumlahkan.
+          if (amountField != null || feeField != null) {
+            amount = (amountField ?? 0) + (feeField ?? 0) || null
           }
         }
+
+        // Nama lengkap disimpan di description; yang ditampilkan hanya nama tengah.
+        const mid = middleName(beneficiaryFull)
+        if (mid) {
+          displayName = `Transfer kepada ${toTitleCase(mid)}`
+        } else {
+          displayName = `Transfer ke ${toTitleCase(dest)}`
+        }
+        description = beneficiaryFull ? toTitleCase(beneficiaryFull) : null
+      } else if (transactionTypeRaw && /qris/i.test(transactionTypeRaw)) {
+        // ---- QRIS Payment ---------------------------------------------------
+        type = 'expense'
+        paymentMethod = 'qris'
+        amount = totalPayment
+        const payTo = pick(/Payment to\s*:\s*([^\n]+)/i)
+        displayName = payTo ? `QRIS ke ${toTitleCase(payTo)}` : 'QRIS'
+      } else if (transactionTypeRaw && /top\s*up/i.test(transactionTypeRaw)) {
+        // ---- Top Up (e-wallet / saldo) -------------------------------------
+        type = 'expense'
+        paymentMethod = 'topup'
+        amount = topUpAmount ?? totalPayment
+        const provider =
+          transactionTypeRaw.replace(/top\s*up/i, '').replace(/[-:]/g, ' ').trim() ||
+          pick(/Payment to\s*:\s*([^\n]+)/i) ||
+          ''
+        displayName = provider ? `Top up ke ${provider}` : 'Top up'
+        const details = pick(/Details\s*:\s*([^\n]+)/i)
+        if (details) description = stripLinks(details)
+      } else if (
+        transactionTypeRaw &&
+        /(mobile data|pulsa|paket|prepaid|\bdata\b|voucher)/i.test(transactionTypeRaw)
+      ) {
+        // ---- Pulsa / paket data → diperlakukan sebagai top up --------------
+        type = 'expense'
+        paymentMethod = 'topup'
+        amount = totalPayment ?? topUpAmount
+        const product = transactionTypeRaw.includes('-')
+          ? transactionTypeRaw.split('-').slice(1).join('-').trim()
+          : transactionTypeRaw.trim()
+        displayName = `Top up ${product}`
+        const details = pick(/Details\s*:\s*([^\n]+)/i)
+        if (details) description = stripLinks(details)
+      } else if (transactionTypeRaw) {
+        // ---- Transaction Type lain (pembayaran/tagihan generik) ------------
+        type = 'expense'
+        amount = totalPayment ?? amountField
+        const t = transactionTypeRaw.toLowerCase()
+        if (t.includes('debit') || t.includes('card')) paymentMethod = 'debit'
+        else if (t.includes('credit')) paymentMethod = 'credit'
+        else paymentMethod = 'other'
+        const payTo = pick(/Payment to\s*:\s*([^\n]+)/i)
+        displayName = payTo ? toTitleCase(payTo) : transactionTypeRaw.trim()
+        const details = pick(/Details\s*:\s*([^\n]+)/i)
+        if (details) description = stripLinks(details)
+      } else {
+        // ---- Fallback defensif (format tak dikenal) ------------------------
+        const isIncome =
+          normalized.includes('transfer masuk') ||
+          normalized.includes('dana masuk') ||
+          normalized.includes('kredit')
+        type = isIncome ? 'income' : 'expense'
+        paymentMethod = isIncome ? 'transfer' : 'other'
+        amount = totalPayment ?? parseIDRAmount(body)
       }
 
-      // Reference: try bank-specific, fall back to generic
+      if (!amount) return null
+
+      // Reference No. — BCA pakai alfanumerik (bukan hex/UUID), bisa terpisah spasi.
       let referenceNumber: string | null = null
-      const specificRefMatch = body.match(/Reference No\.\s*:\s*([A-F0-9-]+)/i)
-      if (specificRefMatch) {
-        referenceNumber = specificRefMatch[1].trim()
+      const refMatch = body.match(/Reference No\.?\s*:\s*([A-Za-z0-9 ]+)/i)
+      if (refMatch?.[1]) {
+        const ref = refMatch[1].replace(/\s+/g, '')
+        if (ref) referenceNumber = ref
       }
       if (!referenceNumber) {
-        const refMatch = body.match(
-          /(?:nomor\s+referensi|reference\s+number|nomor\s+ref|ref)[:\s]+([A-Z0-9]+)/i,
-        )
-        if (refMatch?.[1]) referenceNumber = refMatch[1].trim()
+        const rrnMatch = body.match(/RRN\s*:\s*([A-Za-z0-9]+)/i)
+        if (rrnMatch?.[1]) referenceNumber = rrnMatch[1].trim()
       }
 
-      // Date: try bank-specific (Transaction Date), fall back to email header
+      // Date: "Transaction Date : 09 Jun 2026 12:31:22" → pisahkan tanggal & jam
+      // agar parseTransactionDate mempertahankan komponen waktu.
       let transactedAt: Date = parseEmailDate(email.date)
       const dateMatch = body.match(
-        /Transaction Date\s*:\s*(\d{1,2}\s+\w+\s+\d{4}\s+\d{2}:\d{2}:\d{2})/i,
+        /Transaction Date\s*:\s*(\d{1,2}\s+\w+\s+\d{4})(?:\s+(\d{2}:\d{2}:\d{2}))?/i,
       )
       if (dateMatch) {
-        const parsed = parseTransactionDate(dateMatch[1])
+        const parsed = parseTransactionDate(dateMatch[1], dateMatch[2])
         if (parsed) transactedAt = parsed
       }
 
       const result: ParsedTransaction = {
         amount,
         type,
-        merchant_name: merchantName,
-        description: null,
+        merchant_name: displayName,
+        description,
         payment_method: paymentMethod,
         transacted_at: transactedAt,
         reference_number: referenceNumber,

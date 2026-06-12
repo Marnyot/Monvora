@@ -49,7 +49,7 @@ export interface ParsedTransaction {
   type: 'expense' | 'income' | 'transfer'
   merchant_name: string | null  // Nama merchant / penerima / pengirim
   description: string | null    // Keterangan tambahan
-  payment_method: 'qris' | 'transfer' | 'debit' | 'credit' | 'other'
+  payment_method: 'qris' | 'transfer' | 'cash' | 'debit' | 'credit' | 'ewallet' | 'topup' | 'other'
   transacted_at: Date           // Waktu transaksi (bukan waktu email dikirim)
   reference_number: string | null
   raw_email_id: string          // = email.id (Gmail message ID)
@@ -77,6 +77,7 @@ Format amount di email bank Indonesia tidak konsisten antar bank:
 | BCA | `IDR X,XXX.XX` atau `IDR X.XXX,XX` | `IDR 500.00` / `IDR 1,500,000.00` | `500` / `1500000` |
 | BNI | `Rp X.XXX` | `Rp 150.000` | `150000` |
 | BRI | `Rp X.XXX,XX` | `Rp 50.000,00` | `50000` |
+| CIMB / OCBC | `Rp X.XXX,XX` | `Rp 250.000,00` | `250000` |
 
 **Helper function untuk parsing amount — gunakan ini, jangan buat sendiri:**
 
@@ -339,93 +340,74 @@ function detectMandiriType(subject: string, body: string): ParsedTransaction['ty
 
 ## BANK-SPECIFIC: BCA (myBCA)
 
+> ✅ Tervalidasi dengan email myBCA asli (Internet Transaction Journal) — QRIS Payment & Transfer antar bank. Lihat fixtures di `tests/unit/parsers/bca.test.ts`.
+
 ### Email yang Dikenal
 
 | Tipe Transaksi | Subject | Sender |
 |---|---|---|
-| Transfer ke BCA | "Internet Transaction Journal" | klikbca@bca.co.id |
-| Transfer ke bank lain | "Internet Transaction Journal" | klikbca@bca.co.id |
-| Transaksi kartu | "BCA Card Transaction" | klikbca@bca.co.id |
+| QRIS Payment | "Internet Transaction Journal" | noreply@bca.co.id / klikbca.com |
+| Transfer ke bank lain | "Internet Transaction Journal" | noreply@bca.co.id / klikbca.com |
+| Transfer sesama BCA | "Internet Transaction Journal" | noreply@bca.co.id / klikbca.com |
+| Top Up / Pulsa / Paket Data | "Internet Transaction Journal" | noreply@bca.co.id / klikbca.com |
 
-### Format Email Transfer (dari screenshot)
+Semua email outgoing diawali `Status : Successful` — parser **return null** kalau status bukan success.
 
+### Format Email — Bervariasi per `Transaction Type` / `Transfer Type`
+
+**QRIS Payment** (dari screenshot myBCA):
 ```
-Hi [NAMA LENGKAP],
-
-You just made a transaction through myBCA.
-Here are the details of your transaction :
-
-Status             : Successful
-Transaction Date   : [DD Mon YYYY HH:MM:SS]
-Transfer Type      : Transfer to BCA Account
-Source of Fund     : [account number masked]
-Source Currency    : IDR - Indonesian Rupiah
-Beneficiary Account: [account number]
-Transfer Currency  : IDR - Indonesian Rupiah
-Beneficiary Name   : [NAMA PENERIMA]    ← merchant_name
-Transfer Amount    : IDR [amount]
-Remarks            : [catatan atau "-"]
-Reference No.      : [UUID format]
+Status              : Successful
+Transaction Date    : 09 Jun 2026 12:31:22
+Transaction Type    : QRIS Payment
+Payment to          : SEKUTU KOPI          ← merchant
+Total Payment       : IDR 35,000.00        ← amount
+RRN                 : 345244767
+Reference No.       : 9527120260609...QRS0698496183
 ```
+
+**Transfer ke bank lain** (BI FAST, dari screenshot myBCA):
+```
+Status              : Successful
+Transaction Date    : 23 May 2026 14:47:40
+Transfer Type       : Transfer to SEABANK  ← bank tujuan
+Beneficiary Name    : RISQUINA ANGELICA ARVINTYANI  ← nama penerima
+Amount              : IDR 240,000.00       ← amount + fee dijumlahkan
+Fee                 : IDR 2,500.00
+Reference No.       : 20260523CENAIDJA51095741152
+```
+
+### Aturan Ekstraksi — BCA
+
+| Transaction/Transfer Type | type | payment_method | Nominal yang diambil | merchant_name (display) |
+|---|---|---|---|---|
+| `QRIS Payment` | expense | qris | **Total Payment** | `QRIS ke <Payment to>` |
+| `Transfer to <BANK lain>` | transfer | transfer | **Amount + Fee** (dijumlahkan) | `Transfer kepada <nama tengah penerima>` |
+| `Transfer to BCA` | transfer | transfer | **Total Payment** (tanpa fee terpisah) | `Transfer kepada <nama tengah penerima>` |
+| `<X> Top Up` | expense | topup | **Top Up Amount** | `Top up ke <X>` |
+| `Mobile Data` / Pulsa / Paket | expense | topup | **Total Payment** | `Top up <produk>` |
+
+**Aturan khusus:**
+- **Nama penerima transfer:** nama lengkap disimpan di `description`, tapi yang ditampilkan (`merchant_name`) **hanya nama tengah** (BCA), berbeda dari Mandiri yang pakai nama depan. Contoh: `RISQUINA ANGELICA ARVINTYANI` → "Transfer kepada Angelica".
+- **Field `Details`** (pada pulsa/top up) masuk ke `description` **tapi link/URL/`www.…` dibuang** — lihat `stripLinks()`.
+- **Reference No.** BCA bersifat **alfanumerik** (bukan hex/UUID), bisa terpisah spasi karena line-wrap → spasi di-strip.
+- **Tanggal+jam** dalam satu baris (`09 Jun 2026 12:31:22`) → pisahkan tanggal & jam sebelum `parseTransactionDate(date, time)` agar komponen waktu tidak hilang.
 
 ### Regex Patterns — BCA
 
 ```typescript
-// Beneficiary name (penerima transfer) → merchant_name
-const MERCHANT_REGEX = /Beneficiary Name\s*:\s*([^\n]+)/i
-
-// Transaction date (26 May 2026 02:19:20)
-const DATE_REGEX = /Transaction Date\s*:\s*(\d{1,2}\s+\w+\s+\d{4}\s+\d{2}:\d{2}:\d{2})/i
-
-// Amount (IDR 500.00 atau IDR 1,500,000.00)
-const AMOUNT_REGEX = /Transfer Amount\s*:\s*IDR\s*([\d,. ]+)/i
-
-// Reference number (UUID format)
-const REF_REGEX = /Reference No\.\s*:\s*([A-F0-9-]+)/i
-
-// Transfer type (untuk deteksi type transaksi)
 const TRANSFER_TYPE_REGEX = /Transfer Type\s*:\s*([^\n]+)/i
-
-// Remarks
-const REMARKS_REGEX = /Remarks\s*:\s*([^\n]+)/i
-
-// Status — hanya proses kalau Successful
-const STATUS_REGEX = /Status\s*:\s*(\w+)/i
-```
-
-### Type Detection — BCA
-
-```typescript
-function detectBCAType(body: string): ParsedTransaction['type'] {
-  const transferTypeMatch = body.match(/Transfer Type\s*:\s*([^\n]+)/i)
-  if (!transferTypeMatch) return 'transfer'
-
-  const transferType = transferTypeMatch[1].toLowerCase()
-
-  // BCA transfer selalu expense dari perspektif pengirim
-  // Tidak ada email "transfer masuk" dari BCA notifikasi standard
-  if (transferType.includes('transfer')) return 'transfer'
-
-  return 'expense'
-}
-```
-
-### Payment Method Detection — BCA
-
-```typescript
-function detectBCAPaymentMethod(body: string): ParsedTransaction['payment_method'] {
-  const transferTypeMatch = body.match(/Transfer Type\s*:\s*([^\n]+)/i)
-  if (!transferTypeMatch) return 'transfer'
-
-  const type = transferTypeMatch[1].toLowerCase()
-
-  if (type.includes('qris')) return 'qris'
-  if (type.includes('transfer')) return 'transfer'
-  if (type.includes('debit') || type.includes('card')) return 'debit'
-  if (type.includes('credit')) return 'credit'
-
-  return 'other'
-}
+const TRANSACTION_TYPE_REGEX = /Transaction Type\s*:\s*([^\n]+)/i
+const TOTAL_PAYMENT_REGEX = /Total Payment\s*:\s*IDR\s*([\d,. ]+)/i
+const AMOUNT_REGEX = /(?:^|[^pP]\s)Amount\s*:\s*IDR\s*([\d,. ]+)/i  // hindari "Top Up Amount"
+const FEE_REGEX = /Fee\s*:\s*IDR\s*([\d,. ]+)/i
+const TOPUP_AMOUNT_REGEX = /Top\s*Up\s*Amount\s*:\s*IDR\s*([\d,. ]+)/i
+const PAYMENT_TO_REGEX = /Payment to\s*:\s*([^\n]+)/i
+const BENEFICIARY_REGEX = /Beneficiary Name\s*:\s*([^\n]+)/i
+const DETAILS_REGEX = /Details\s*:\s*([^\n]+)/i
+const REF_REGEX = /Reference No\.?\s*:\s*([A-Za-z0-9 ]+)/i  // alfanumerik, spasi di-strip
+const DATE_REGEX = /Transaction Date\s*:\s*(\d{1,2}\s+\w+\s+\d{4})(?:\s+(\d{2}:\d{2}:\d{2}))?/i
+const STATUS_REGEX = /Status\s*:\s*([A-Za-z]+)/i  // hanya proses kalau Successful
 ```
 
 ---
@@ -517,19 +499,27 @@ export const namaBankParser: BankParser = {
 
 1. Buat file: `lib/gmail/parsers/[nama-bank].ts`
 2. Implementasi `BankParser` interface menggunakan template di atas
-3. Daftarkan ke registry di `lib/gmail/parsers/index.ts`:
+3. Daftarkan ke registry via side effect — di akhir file parser panggil `registerParser(...)`:
    ```typescript
-   import { namaBankParser } from './nama-bank'
-   
-   const PARSER_REGISTRY: BankParser[] = [
-     mandiriParser,
-     bcaParser,
-     namaBankParser,  // ← tambahkan di sini
-     genericParser,   // genericParser SELALU paling terakhir
-   ]
+   // lib/gmail/parsers/[nama-bank].ts (di paling bawah file)
+   import { registerParser } from './index'
+   // ...definisi parser di atas...
+   registerParser(namaBankParser)
    ```
-4. Tulis test dengan fixture email asli di `tests/unit/parsers/nama-bank.test.ts`
-5. Jalankan test suite sebelum commit
+4. Tambahkan import side-effect di `lib/gmail/sync.ts` (urutan menentukan prioritas matching — generic SELALU terakhir):
+   ```typescript
+   import '@/lib/gmail/parsers/mandiri'
+   import '@/lib/gmail/parsers/bca'
+   import '@/lib/gmail/parsers/bni'
+   import '@/lib/gmail/parsers/bri'
+   import '@/lib/gmail/parsers/cimb'
+   import '@/lib/gmail/parsers/nama-bank'  // ← tambahkan sebelum generic
+   import '@/lib/gmail/parsers/generic'    // generic SELALU paling terakhir
+   ```
+5. Tulis test dengan fixture email asli di `tests/unit/parsers/nama-bank.test.ts`
+6. Jalankan test suite sebelum commit
+
+> ⚠️ `PARSER_REGISTRY` di `index.ts` dimulai kosong — diisi runtime via `registerParser()`. Jangan push manual ke array literal di sana.
 
 ---
 

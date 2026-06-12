@@ -9,6 +9,7 @@
 
 | Version | Date | Updated By | Changes |
 |---|---|---|---|
+| v8 | Jun 12, 2026 | Claude | Audit Phase 2 vs code — turunkan status non-Mandiri parser ke 🟡 (fixtures sintetis, no display-name formatting, OCBC mis-attribution di CIMB parser). Phase 2 → 90% sampai fixture nyata. PARSER_GUIDE.md diperbaiki (payment_method types, registry side-effect pattern, CIMB row di amount table) |
 | v7 | May 25, 2026 | Claude | Phase 2 Gmail Automation selesai — parser engine, AI categorization, Inngest job, settings UI |
 | v6 | May 25, 2026 | Claude | Deploy ke Vercel selesai, Phase 1 100% done, app version bump ke v0.1.0 |
 | v5 | May 25, 2026 | Claude | Next.js 14→16 upgrade (CVEs), dashboard skeleton, 12 new tests, all Phase 1 items resolved — deploy only |
@@ -17,8 +18,8 @@
 | v2 | May 25, 2026 | Claude | Decisions Log dipindahkan ke decisions.md, section 7 jadi ADR index |
 | v1 | May 24, 2026 | Claude | Initial creation — project kickoff |
 
-**Current Version:** v7
-**Last Updated:** May 25, 2026
+**Current Version:** v8
+**Last Updated:** Jun 12, 2026
 
 ---
 
@@ -40,11 +41,11 @@
 ## 1. PROJECT STATUS
 
 ```
-Status          : 🟢 Development — Phase 3
-Current Phase   : Phase 3 — Intelligence Layer
+Status          : 🟡 Phase 2 hold — non-Mandiri parser butuh fixture nyata sebelum Phase 3
+Current Phase   : Phase 2 (closing) → Phase 3 — Intelligence Layer
 App Version     : v0.2.0
-Last Updated    : May 25, 2026
-Next Milestone  : Analytics page + spending trend charts
+Last Updated    : Jun 12, 2026
+Next Milestone  : Validasi BCA/BNI/BRI/CIMB parser dengan email asli, lalu mulai Analytics
 ```
 
 ### Overall Progress
@@ -52,7 +53,7 @@ Next Milestone  : Analytics page + spending trend charts
 ```
 Documentation   ████████████████████ 100% (10/10 docs selesai)
 Phase 1         ████████████████████ 100% ✅ (selesai — deployed ke Vercel)
-Phase 2         ████████████████████ 100% ✅ (selesai)
+Phase 2         ██████████████████░░  90% 🟡 (Mandiri production-ready; BCA/BNI/BRI/CIMB butuh validasi fixture nyata — lihat §4 "Sisa Pekerjaan")
 Phase 3         ░░░░░░░░░░░░░░░░░░░░   0%
 Phase 4         ░░░░░░░░░░░░░░░░░░░░   0%
 ```
@@ -74,7 +75,7 @@ Phase 4         ░░░░░░░░░░░░░░░░░░░░   0
 |---|---|---|---|---|
 | Pre-Dev | Documentation | May 24, 2026 | ✅ Done | v0.0.0 |
 | Phase 1 | Core Loop (manual tracking) | Week 4 | ✅ Done | v0.1.0 |
-| Phase 2 | Gmail Automation | Week 10 | ✅ Done | v0.2.0 |
+| Phase 2 | Gmail Automation | Week 10 | 🟡 90% — Mandiri done, parser lain butuh fixture nyata | v0.2.0 |
 | Phase 3 | Intelligence Layer | Week 16 | ⏳ Pending | v0.3.0 |
 | Phase 4 | Public Ready | Week 20 | ⏳ Pending | v1.0.0 |
 
@@ -292,11 +293,11 @@ Phase 4         ░░░░░░░░░░░░░░░░░░░░   0
 |---|---|---|
 | Base parser interface | ✅ | `lib/gmail/parsers/base.ts` — parseIDRAmount, isFromSender, dll |
 | Parser registry + auto-detection | ✅ | `lib/gmail/parsers/index.ts` — PARSER_REGISTRY, detectAndParse |
-| Mandiri parser | ✅ | `lib/gmail/parsers/mandiri.ts` — 15 tests |
-| BCA parser | ✅ | `lib/gmail/parsers/bca.ts` — 17 tests |
-| BNI parser | ✅ | `lib/gmail/parsers/bni.ts` — 20 tests |
-| BRI parser | ✅ | `lib/gmail/parsers/bri.ts` — 27 tests |
-| CIMB parser | ✅ | `lib/gmail/parsers/cimb.ts` — 19 tests |
+| Mandiri parser | ✅ | `lib/gmail/parsers/mandiri.ts` — 25 tests, display-name logic (Transfer/QRIS/Top up), real-fixture validated |
+| BCA parser | ✅ | `lib/gmail/parsers/bca.ts` — 27 tests, FIXTURES NYATA (myBCA Internet Transaction Journal: QRIS, Transfer antar bank/BCA, Top Up, Pulsa). Display-name formatting (QRIS ke X / Transfer kepada <nama tengah> / Top up ke X), Amount+Fee sum, Details link-stripping |
+| BNI parser | 🟡 | `lib/gmail/parsers/bni.ts` — 20 tests, FIXTURES SINTETIS, no display-name formatting, subject filter longgar |
+| BRI parser | 🟡 | `lib/gmail/parsers/bri.ts` — 27 tests, FIXTURES SINTETIS, no display-name formatting |
+| CIMB parser | 🟡 | `lib/gmail/parsers/cimb.ts` — 19 tests, FIXTURES SINTETIS. ⚠️ juga match sender `ocbcnisp.com` tapi tag `bank: 'cimb'` → OCBC mis-attribution |
 | Generic fallback parser | ✅ | `lib/gmail/parsers/generic.ts` — confidence max 0.5 |
 | Duplicate detection (raw_email_id) | ✅ | Cek di syncUserGmail sebelum insert |
 | Confidence scoring | ✅ | 0.9 lengkap, 0.7 tanpa merchant, 0.5 generic |
@@ -331,14 +332,31 @@ Phase 4         ░░░░░░░░░░░░░░░░░░░░   0
 ### Phase 2 Completion Criteria
 ```
 ✅ Gmail sync berjalan otomatis setiap 15 menit
-✅ Minimal 70% transaksi bank terbaca otomatis
-✅ Parse accuracy ≥ 95% untuk nominal transaksi
-✅ Kategorisasi accuracy ≥ 80% tanpa koreksi manual
-✅ Duplicate tidak pernah terjadi
+🟡 Minimal 70% transaksi bank terbaca otomatis — hanya tervalidasi untuk Mandiri (runtime)
+🟡 Parse accuracy ≥ 95% untuk nominal transaksi — hanya tervalidasi untuk Mandiri
+✅ Kategorisasi accuracy ≥ 80% tanpa koreksi manual (rule-based 63 rules + Gemini fallback)
+✅ Duplicate tidak pernah terjadi (raw_email_id check + unique index migration 009/010)
 ✅ Gagal sync di-log dan tidak crash app
 ✅ User bisa connect/disconnect Gmail dari settings
-✅ Semua parser tested dengan email fixtures nyata
+🔴 Semua parser tested dengan email fixtures NYATA — hanya Mandiri yang pakai fixture nyata. BCA/BNI/BRI/CIMB masih sintetis
 ```
+
+### Phase 2 — Sisa Pekerjaan Sebelum Phase 3 (audit Jun 12, 2026)
+
+Hasil audit code vs docs. Kode parser berfungsi (semua 117 test parser hijau), tapi non-Mandiri belum siap produksi.
+
+| # | Item | Severity | Catatan |
+|---|---|---|---|
+| ~~P2-1~~ | ✅ DONE (Jun 12, 2026) — BCA parser di-rewrite ke format myBCA asli + 27 test fixtures nyata (QRIS, Transfer antar bank/BCA, Top Up, Pulsa) | High | Sebelumnya body sintetis "Notifikasi Transaksi BCA / Jenis: Debet" yang tidak match format real. Display-name + Amount+Fee sum + Details link-strip ditambahkan |
+| P2-2 | BNI parser: capture fixture dari email BNI Mobile asli + test | High | Subject filter `['bni', 'notifikasi', 'transaksi']` rentan false-positive jika pernah lolos sender check |
+| P2-3 | BRI parser: capture fixture dari email BRImo asli + test | High | Sama: belum tervalidasi real |
+| P2-4 | CIMB parser: capture fixture dari email OCTO Mobile asli + test | High | Sama |
+| P2-5 | Pisahkan OCBC dari CIMB parser (atau ubah `name`/`bank` jadi netral) | Med | `KNOWN_SENDERS = ['cimbniaga.co.id', 'ocbcnisp.com']` tapi tag `bank: 'cimb'` → email OCBC akan ter-attribute salah |
+| P2-6 | Tambah display-name formatting di ~~BCA~~/BNI/BRI/CIMB mirip Mandiri (`Transfer kepada X`, `QRIS ke X`, dst) | Med | BCA ✅ done (Jun 12). BNI/BRI/CIMB masih belum |
+| P2-7 | Update `lib/gmail/parsers/bri.ts` payment_method `'ewallet'` dipakai — sudah valid di types tapi belum pernah didemo via test | Low | Sanity check |
+| P2-8 | Tambah section detail BNI/BRI/CIMB di PARSER_GUIDE.md (sekarang hanya Mandiri & BCA) | Low | Doc gap |
+
+Setelah Mandiri-only validated di production, baru bisa dianggap "Phase 2 100%" untuk lebih dari satu bank.
 
 ---
 
