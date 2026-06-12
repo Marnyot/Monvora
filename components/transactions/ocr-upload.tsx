@@ -41,54 +41,67 @@ export function OcrUpload({ onApply, className }: OcrUploadProps) {
     setProgress(0)
     setPhase('recognizing')
 
+    let worker: Awaited<ReturnType<typeof import('tesseract.js').createWorker>> | null = null
+    const url = URL.createObjectURL(file)
+
     try {
       // Lazy-load tesseract.js to avoid pulling 2MB+ into the initial bundle
       const { createWorker } = await import('tesseract.js')
-      const worker = await createWorker('eng', 1, {
+      worker = await createWorker('eng', 1, {
         logger: (m) => {
           if (m.status === 'recognizing text' && typeof m.progress === 'number') {
             setProgress(Math.round(m.progress * 100))
           }
         },
+        errorHandler: (err) => {
+          // Surface tesseract internal errors to console for debugging
+          console.error('[tesseract] worker error', err)
+        },
       })
 
-      const url = URL.createObjectURL(file)
-      try {
-        const { data } = await worker.recognize(url)
-        const text = data.text ?? ''
+      const { data } = await worker.recognize(url)
+      const text = data.text ?? ''
 
-        setPhase('parsing')
-        const res = await fetch('/api/ocr', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text }),
-        })
-        const json = await res.json()
-
-        if (!res.ok || json.error) {
-          const msg = json.error?.message ?? 'Tidak bisa membaca struk'
-          setErrorMessage(msg)
-          setPhase('error')
-          return
-        }
-
-        const parsed: OcrResult = {
-          amount: json.data.amount,
-          merchantName: json.data.merchant_name,
-          transactedAt: json.data.transacted_at,
-          paymentMethod: json.data.payment_method,
-          confidence: json.data.confidence,
-        }
-        setResult(parsed)
-        setPhase('review')
-      } finally {
-        URL.revokeObjectURL(url)
-        await worker.terminate()
+      if (!text.trim()) {
+        setErrorMessage('Teks tidak terbaca dari gambar. Coba foto yang lebih jelas.')
+        setPhase('error')
+        return
       }
+
+      setPhase('parsing')
+      const res = await fetch('/api/ocr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      })
+      const json = await res.json()
+
+      if (!res.ok || json.error) {
+        const msg = json.error?.message ?? 'Tidak bisa membaca struk'
+        setErrorMessage(msg)
+        setPhase('error')
+        return
+      }
+
+      const parsed: OcrResult = {
+        amount: json.data.amount,
+        merchantName: json.data.merchant_name,
+        transactedAt: json.data.transacted_at,
+        paymentMethod: json.data.payment_method,
+        confidence: json.data.confidence,
+      }
+      setResult(parsed)
+      setPhase('review')
     } catch (err) {
+      console.error('[ocr-upload] failed', err)
       const msg = err instanceof Error ? err.message : 'OCR gagal'
       setErrorMessage(msg)
       setPhase('error')
+    } finally {
+      URL.revokeObjectURL(url)
+      if (worker) {
+        try { await worker.terminate() } catch { /* ignore */ }
+      }
     }
   }
 

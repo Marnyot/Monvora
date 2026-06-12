@@ -6,7 +6,7 @@ export const metadata = {
 
 export default function BudgetsPage() {
   return (
-    <div className="space-y-4 pb-20 md:pb-6">
+    <div className="max-w-lg mx-auto px-4 py-6 space-y-4">
       <header>
         <h1 className="text-xl font-bold">Budget</h1>
         <p className="text-sm text-muted-foreground">

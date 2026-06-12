@@ -73,7 +73,7 @@ function TotalsTile({
 
 function AnalyticsSkeleton() {
   return (
-    <div className="space-y-4 pb-20 md:pb-6">
+    <div className="max-w-lg mx-auto px-4 py-6 space-y-4">
       <header>
         <h1 className="text-xl font-bold">Analytics</h1>
         <p className="text-sm text-muted-foreground">Ringkasan keuanganmu bulan ini.</p>
@@ -112,7 +112,7 @@ export default function AnalyticsPage() {
 
   if (isError || !data) {
     return (
-      <div className="space-y-4 pb-20 md:pb-6">
+      <div className="max-w-lg mx-auto px-4 py-6 space-y-4">
         <header>
           <h1 className="text-xl font-bold">Analytics</h1>
         </header>
@@ -133,7 +133,7 @@ export default function AnalyticsPage() {
 
   if (!hasAnyData) {
     return (
-      <div className="space-y-4 pb-20 md:pb-6">
+      <div className="max-w-lg mx-auto px-4 py-6 space-y-4">
         <header>
           <h1 className="text-xl font-bold">Analytics</h1>
           <p className="text-sm text-muted-foreground">Ringkasan keuanganmu bulan ini.</p>
@@ -152,7 +152,7 @@ export default function AnalyticsPage() {
   const totalExpenseCat = byCategory.reduce((sum, c) => sum + c.amount, 0)
 
   return (
-    <div className="space-y-4 pb-20 md:pb-6">
+    <div className="max-w-lg mx-auto px-4 py-6 space-y-4">
       <header>
         <h1 className="text-xl font-bold">Analytics</h1>
         <p className="text-sm text-muted-foreground">Ringkasan keuanganmu bulan ini.</p>
