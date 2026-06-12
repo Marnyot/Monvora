@@ -225,7 +225,7 @@ export const CATEGORIZATION_RULES: CategoryRule[] = [
   },
   // Internet & Phone (Telco)
   {
-    pattern: /telkomsel|xl|indosat|tri|smartfren|three|viettel|telkom|indihome|internet/i,
+    pattern: /telkomsel|xl|indosat|im3|tri|smartfren|three|viettel|telkom|indihome|internet/i,
     category: 'Tagihan & Utilitas',
     confidence: 0.95,
   },
@@ -275,6 +275,12 @@ export const CATEGORIZATION_RULES: CategoryRule[] = [
     category: 'Keuangan',
     confidence: 0.91,
   },
+  // E-wallet top up (GoPay, OVO, DANA, ShopeePay, LinkAja)
+  {
+    pattern: /\bgopay\b|\bovo\b|\bdana\b|shopeepay|linkaja|top up/i,
+    category: 'Keuangan',
+    confidence: 0.85,
+  },
 
   // ===== ADDITIONAL MAKANAN & MINUMAN RULES =====
   {
@@ -297,6 +303,12 @@ export const CATEGORIZATION_RULES: CategoryRule[] = [
     category: 'Makanan & Minuman',
     confidence: 0.91,
   },
+  // Coffee shop & drinking places — standalone keywords untuk catch merchant yg tidak terkenal
+  {
+    pattern: /\bkopi\b|teh tarik|es teh|es jeruk|air mineral/i,
+    category: 'Makanan & Minuman',
+    confidence: 0.85,
+  },
 
   // ===== ADDITIONAL BELANJA RULES =====
   {
@@ -318,6 +330,12 @@ export const CATEGORIZATION_RULES: CategoryRule[] = [
     pattern: /sepatu|fashion|pakaian|baju|celana|jaket/i,
     category: 'Belanja',
     confidence: 0.90,
+  },
+  // QRIS generic — catch-all ketika QRIS tapi merchant tidak dikenal rules lain
+  {
+    pattern: /\bqris\b/i,
+    category: 'Belanja',
+    confidence: 0.70,
   },
 
   // ===== ADDITIONAL KESEHATAN RULES =====
