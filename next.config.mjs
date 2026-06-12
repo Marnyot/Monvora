@@ -21,7 +21,8 @@ const securityHeaders = [
       "worker-src 'self'",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' blob: data: lh3.googleusercontent.com",
-      "connect-src 'self' https://*.supabase.co wss://*.supabase.co accounts.google.com",
+      // blob: untuk safety net kalau Tesseract internal pakai blob URL (e.g. di iOS Safari)
+      "connect-src 'self' blob: https://*.supabase.co wss://*.supabase.co accounts.google.com",
     ].join('; '),
   },
 ]

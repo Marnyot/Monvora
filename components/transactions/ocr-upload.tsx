@@ -42,7 +42,6 @@ export function OcrUpload({ onApply, className }: OcrUploadProps) {
     setPhase('recognizing')
 
     let worker: Awaited<ReturnType<typeof import('tesseract.js').createWorker>> | null = null
-    const url = URL.createObjectURL(file)
 
     try {
       // Lazy-load tesseract.js to avoid pulling 2MB+ into the initial bundle.
@@ -66,7 +65,9 @@ export function OcrUpload({ onApply, className }: OcrUploadProps) {
         },
       })
 
-      const { data } = await worker.recognize(url)
+      // Pass the File directly — Tesseract reads it via FileReader → ArrayBuffer.
+      // Avoids createObjectURL → fetch(blob:…) which CSP connect-src blocks.
+      const { data } = await worker.recognize(file)
       const text = data.text ?? ''
 
       if (!text.trim()) {
@@ -105,7 +106,6 @@ export function OcrUpload({ onApply, className }: OcrUploadProps) {
       setErrorMessage(msg)
       setPhase('error')
     } finally {
-      URL.revokeObjectURL(url)
       if (worker) {
         try { await worker.terminate() } catch { /* ignore */ }
       }
