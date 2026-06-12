@@ -26,6 +26,7 @@ import {
 import { PAYMENT_METHODS } from '@/lib/validations/transaction'
 import { formatIDR } from '@/lib/utils/currency'
 import { toDatetimeLocalInput } from '@/lib/utils/date'
+import { OcrUpload, type OcrResult } from '@/components/transactions/ocr-upload'
 
 const WALLET_TYPE_ICON: Record<string, React.ElementType> = {
   bank: Landmark,
@@ -97,6 +98,7 @@ export function QuickEntry({ open, onOpenChange, wallets, categories }: QuickEnt
   const [merchantName, setMerchantName] = useState('')
   const [paymentMethod, setPaymentMethod] = useState<string>('')
   const [transactedAt, setTransactedAt] = useState(() => toDatetimeLocalInput(new Date()))
+  const [usedOcr, setUsedOcr] = useState(false)
 
   // Reset all fields when sheet opens
   useEffect(() => {
@@ -110,9 +112,18 @@ export function QuickEntry({ open, onOpenChange, wallets, categories }: QuickEnt
       setMerchantName('')
       setPaymentMethod('')
       setTransactedAt(toDatetimeLocalInput(new Date()))
+      setUsedOcr(false)
       setServerError(null)
     }
   }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  function handleOcrResult(r: OcrResult) {
+    setUsedOcr(true)
+    setAmountRaw(r.amount.toLocaleString('id-ID'))
+    if (r.merchantName) setMerchantName(r.merchantName)
+    if (r.transactedAt) setTransactedAt(toDatetimeLocalInput(new Date(r.transactedAt)))
+    if (r.paymentMethod) setPaymentMethod(r.paymentMethod)
+  }
 
   // When type changes: reset fields and auto-configure transfer mode
   useEffect(() => {
@@ -166,6 +177,7 @@ export function QuickEntry({ open, onOpenChange, wallets, categories }: QuickEnt
           merchant_name: merchantName || undefined,
           payment_method: paymentMethod || undefined,
           transacted_at: transactedAtISO,
+          source: usedOcr ? 'ocr' : 'manual',
         }),
       })
 
@@ -237,6 +249,11 @@ export function QuickEntry({ open, onOpenChange, wallets, categories }: QuickEnt
 
           <ScrollArea className="flex-1 px-4">
             <div className="space-y-3 pb-4">
+              {/* OCR scan — only for expense type */}
+              {type === 'expense' && (
+                <OcrUpload onApply={handleOcrResult} />
+              )}
+
               {/* Merchant / Nama */}
               <div className="space-y-1.5">
                 <Label htmlFor="qe-merchant">Nama</Label>

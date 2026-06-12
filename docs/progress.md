@@ -9,6 +9,7 @@
 
 | Version | Date | Updated By | Changes |
 |---|---|---|---|
+| v13 | Jun 12, 2026 | Claude | Phase 3 sub-phase 3.4 OCR Screenshot selesai. `lib/ocr/parser.ts` (pure: amount via Rp regex picking max, payment method GoPay/ShopeePay/OVO/DANA/QRIS, date Indonesia/English/dd-mm-yyyy, merchant heuristic dengan blacklist — 22 tests). API `POST /api/ocr` (auth + rate-limit 20/min, Zod text ≤20k chars, 422 PARSE_FAILED jika tidak ada amount — 8 tests). `OcrUpload` component: file picker (gallery + camera via accept="image/*"), tesseract.js lazy-loaded (eng worker, progress bar), review card dengan confidence. Wire ke QuickEntry pada type expense — pre-fill amount/merchant/date/payment_method. Transaction schema diperluas: client boleh kirim `source: 'manual' | 'ocr'` (default 'manual'), 'gmail' tetap admin-only. Suite 497/503 pass (delta +30). |
 | v12 | Jun 12, 2026 | Claude | Phase 3 sub-phase 3.3 Budget System selesai. `lib/validations/budget.ts` (Zod create/update). `lib/budgets/utilization.ts` (pure: periodWindow weekly/monthly/yearly WIB + computeBudgetStatus dengan threshold 80%/100% — 10 tests). API CRUD `/api/budgets` (list dengan utilization, single tx fetch) + `/api/budgets/[id]` (GET/PATCH/DELETE soft + ownership tests, 8 tests). Hook `use-budgets` (1min stale). Components `BudgetCard` (progress bar + status pill ok/warn/over), `BudgetForm` (sheet dgn category dropdown + period select), `BudgetListClient`. Page `/budgets`. Nav: tab Budget (Target icon) di sidebar + bottom-nav. Fix stale test concurrency 10→5 (commit 6781649). Suite 467/473 pass (delta +18, 6 sisa currency NBSP). |
 | v11 | Jun 12, 2026 | Claude | Phase 3 sub-phase 3.2 AI Insights selesai + UI polish `/analytics`. Migration 011 `ai_insights` table (RLS read-only, service-role writes). `lib/ai/insights.ts` (prompt builder + JSON parser hardened, gemini-2.5-flash, 7 tests). Inngest cron `insights-generate` (0 0 * * * UTC = 07:00 WIB, skip user no-activity). `app/api/insights/route.ts` (read cached today + fallback 1 day, 6 tests). `lib/hooks/use-insights.ts` (1h staleTime). `components/analytics/ai-insights-card.tsx` wired ke top section /analytics. UI improvements: TotalsTile dengan icon TrendingUp/Down/Wallet, AnalyticsSkeleton chart-shaped, donut center label total, peak-day highlight di day-of-week chart, trend chart legend di atas, copy "minggu ini" → "bulan ini". Types regenerated via Supabase MCP. Test suite 449/455 pass (delta +13). |
 | v10 | Jun 12, 2026 | Claude | Phase 3 sub-phase 3.1 Analytics selesai: `lib/analytics/aggregate.ts` (pure aggregator + 11 unit tests), `app/api/analytics/route.ts` (auth + rate-limit + 5 route tests, ignores client user_id), `lib/hooks/use-analytics.ts` (TanStack 5min cache), `app/(dashboard)/analytics/page.tsx` + 4 chart components (SpendingTrendChart bar, CategoryBreakdownChart donut+legend, TopMerchants list, DayOfWeekChart bar). Recharts 3.8.1 ditambah sebagai dep. Nav bottom + sidebar dapat tab "Analytics". Total test suite 436/442 pass (delta +16) |
@@ -22,7 +23,7 @@
 | v2 | May 25, 2026 | Claude | Decisions Log dipindahkan ke decisions.md, section 7 jadi ADR index |
 | v1 | May 24, 2026 | Claude | Initial creation — project kickoff |
 
-**Current Version:** v12
+**Current Version:** v13
 **Last Updated:** Jun 12, 2026
 
 ---
@@ -45,11 +46,11 @@
 ## 1. PROJECT STATUS
 
 ```
-Status          : 🔄 Phase 3 in progress — PWA + Analytics + AI Insights + Budget done
-Current Phase   : Phase 3 — Intelligence Layer (3.0 ✅, 3.1 ✅, 3.2 ✅, 3.3 ✅)
+Status          : 🔄 Phase 3 in progress — PWA + Analytics + AI Insights + Budget + OCR done
+Current Phase   : Phase 3 — Intelligence Layer (3.0 ✅, 3.1 ✅, 3.2 ✅, 3.3 ✅, 3.4 ✅)
 App Version     : v0.2.0 (akan bump ke v0.3.0 saat Phase 3 selesai)
 Last Updated    : Jun 12, 2026
-Next Milestone  : Sub-phase 3.4 OCR Screenshot ATAU 3.5 Recurring Detection (tentukan)
+Next Milestone  : Sub-phase 3.5 Recurring Detection (last sub-phase Phase 3)
 ```
 
 ### Overall Progress
@@ -58,7 +59,7 @@ Next Milestone  : Sub-phase 3.4 OCR Screenshot ATAU 3.5 Recurring Detection (ten
 Documentation   ████████████████████ 100% (10/10 docs selesai)
 Phase 1         ████████████████████ 100% ✅ (selesai — deployed ke Vercel)
 Phase 2         ██████████████████░░  90% 🟡 (Mandiri+BCA production-ready; BNI/BRI/CIMB di-parker ke Phase 4 hardening — lihat §4 "Sisa Pekerjaan")
-Phase 3         █████████████░░░░░░░  67% 🔄 (PWA ✅, Analytics ✅, AI Insights ✅, Budget ✅; OCR/Recurring pending)
+Phase 3         ████████████████░░░░  83% 🔄 (PWA ✅, Analytics ✅, AI Insights ✅, Budget ✅, OCR ✅; Recurring pending)
 Phase 4         ░░░░░░░░░░░░░░░░░░░░   0%
 ```
 
@@ -80,7 +81,7 @@ Phase 4         ░░░░░░░░░░░░░░░░░░░░   0
 | Pre-Dev | Documentation | May 24, 2026 | ✅ Done | v0.0.0 |
 | Phase 1 | Core Loop (manual tracking) | Week 4 | ✅ Done | v0.1.0 |
 | Phase 2 | Gmail Automation | Week 10 | 🟡 90% — Mandiri+BCA done, BNI/BRI/CIMB parker ke Phase 4 | v0.2.0 |
-| Phase 3 | Intelligence Layer | Week 16 | 🔄 In Progress (PWA ✅, Analytics ✅, AI Insights ✅, Budget ✅) | v0.3.0 |
+| Phase 3 | Intelligence Layer | Week 16 | 🔄 In Progress (PWA ✅, Analytics ✅, AI Insights ✅, Budget ✅, OCR ✅) | v0.3.0 |
 | Phase 4 | Public Ready | Week 20 | ⏳ Pending | v1.0.0 |
 
 ---
@@ -400,18 +401,19 @@ Hasil audit code vs docs. Kode parser berfungsi (semua 117 test parser hijau), t
 | UI: AI insights card di /analytics | ✅ | `components/analytics/ai-insights-card.tsx` — gradient bg, Sparkles icon, "Belum ada wawasan" empty state |
 | **Test: insights generator + API** | ✅ | 7 tests `tests/unit/ai/insights.test.ts` + 6 tests `tests/unit/api/insights-route.test.ts` |
 
-### OCR Screenshot
+### OCR Screenshot (Sub-phase 3.4 — Done)
 
 | Task | Status | Notes |
 |---|---|---|
-| Tesseract.js client-side processing | ⏳ | Tidak upload gambar ke server |
-| API: POST /api/ocr (terima teks, bukan gambar) | ⏳ | |
-| OCR parsing engine | ⏳ | Extract amount, merchant, tanggal |
-| UI: Scan screenshot button di quick entry | ⏳ | |
-| UI: Image picker (gallery + camera) | ⏳ | |
-| UI: Pre-fill form dari hasil OCR | ⏳ | |
-| UI: User review sebelum save | ⏳ | |
-| **Test: OCR parsing berbagai format** | ⏳ | GoPay, ShopeePay, OVO |
+| Tesseract.js client-side processing | ✅ | tesseract.js 7.0.0, lazy-loaded di OcrUpload, worker eng dengan progress callback. Gambar tidak diunggah ke server |
+| API: POST /api/ocr (terima teks, bukan gambar) | ✅ | `app/api/ocr/route.ts` — auth + rate-limit (20/min), Zod text ≤20k chars |
+| OCR parsing engine | ✅ | `lib/ocr/parser.ts` — extract amount (largest Rp), merchant (heuristic + blacklist), tanggal (Indonesia/English/dd-mm-yyyy), payment method |
+| UI: Scan screenshot button di quick entry | ✅ | OcrUpload `<Button variant="outline">` di atas form, hanya muncul saat type expense |
+| UI: Image picker (gallery + camera) | ✅ | `<input type="file" accept="image/*">` — browser pakai gallery + camera native picker |
+| UI: Pre-fill form dari hasil OCR | ✅ | `handleOcrResult` set amountRaw, merchantName, transactedAt, paymentMethod |
+| UI: User review sebelum save | ✅ | Review card dengan confidence %, tombol Ulangi vs Gunakan |
+| Transaction schema: source 'manual' \| 'ocr' | ✅ | Client boleh kirim, default 'manual'. 'gmail' tetap admin-only |
+| **Test: OCR parsing berbagai format** | ✅ | 22 tests `lib/ocr/parser.ts` + 8 tests `app/api/ocr` — coverage: GoPay, ShopeePay, OVO, DANA, QRIS, multiple date formats |
 
 ### Budget System (Sub-phase 3.3 — Done)
 

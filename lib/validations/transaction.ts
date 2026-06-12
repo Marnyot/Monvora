@@ -14,6 +14,9 @@ export const createTransactionSchema = z.object({
   merchant_name: z.string().max(100).optional().transform(val => val?.trim()),
   payment_method: z.enum(PAYMENT_METHODS).optional(),
   transacted_at: z.string().datetime({ offset: true }),
+  // Client may declare source as 'manual' or 'ocr'. Gmail-sourced rows are
+  // inserted by Inngest with service-role; clients can never set 'gmail'.
+  source: z.enum(['manual', 'ocr']).default('manual'),
 })
 
 export const updateTransactionSchema = createTransactionSchema.partial().extend({

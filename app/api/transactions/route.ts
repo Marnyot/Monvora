@@ -139,7 +139,7 @@ export async function POST(request: Request) {
   // Insert transaction
   const { data: transaction, error: txError } = await supabase
     .from('transactions')
-    .insert({ ...parsed.data, user_id: user.id, source: 'manual' })
+    .insert({ ...parsed.data, user_id: user.id })
     .select('id, amount, type, description, merchant_name, payment_method, transacted_at, created_at')
     .single()
 
