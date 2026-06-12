@@ -10,6 +10,20 @@ export interface AnalyticsInput {
   merchant_name: string | null
   description: string | null
   category: { id: string; name: string; icon: string; color: string } | null
+  is_recurring?: boolean | null
+  recurring_group_id?: string | null
+}
+
+export interface RecurringItem {
+  groupId: string
+  merchantName: string
+  monthlyEstimate: number
+  lastChargedAt: string
+}
+
+export interface RecurringSummary {
+  totalMonthly: number
+  items: RecurringItem[]
 }
 
 export interface TrendPoint {
@@ -45,6 +59,7 @@ export interface AnalyticsResult {
   topMerchants: MerchantAgg[]
   byDayOfWeek: DayOfWeekAgg[]
   totals: { income: number; expense: number; net: number }
+  recurring: RecurringSummary
 }
 
 const UNCATEGORIZED_ID = '__uncategorized__'
@@ -155,5 +170,38 @@ export function aggregate(input: AnalyticsInput[], now: Date = new Date()): Anal
     topMerchants: [...merchantMap.values()].sort((a, b) => b.amount - a.amount).slice(0, 5),
     byDayOfWeek: [...dayMap.values()].sort((a, b) => a.day - b.day),
     totals,
+    recurring: aggregateRecurring(input),
   }
+}
+
+export function aggregateRecurring(input: AnalyticsInput[]): RecurringSummary {
+  // For each recurring_group_id we keep the latest charge as the canonical
+  // monthly estimate. Cron tags groups across the last 6 months.
+  const groups = new Map<string, { merchantName: string; amount: number; transactedAt: string }>()
+  for (const t of input) {
+    if (t.type !== 'expense') continue
+    if (!t.is_recurring) continue
+    if (!t.recurring_group_id) continue
+    const txTime = new Date(t.transacted_at).getTime()
+    const existing = groups.get(t.recurring_group_id)
+    if (!existing || new Date(existing.transactedAt).getTime() < txTime) {
+      groups.set(t.recurring_group_id, {
+        merchantName: t.merchant_name?.trim() || t.description?.trim() || UNCATEGORIZED_NAME,
+        amount: t.amount,
+        transactedAt: t.transacted_at,
+      })
+    }
+  }
+
+  const items: RecurringItem[] = [...groups.entries()]
+    .map(([groupId, g]) => ({
+      groupId,
+      merchantName: g.merchantName,
+      monthlyEstimate: g.amount,
+      lastChargedAt: g.transactedAt,
+    }))
+    .sort((a, b) => b.monthlyEstimate - a.monthlyEstimate)
+
+  const totalMonthly = items.reduce((sum, i) => sum + i.monthlyEstimate, 0)
+  return { totalMonthly, items }
 }

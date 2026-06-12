@@ -1,12 +1,13 @@
 'use client'
 
-import { BarChart3, ChartPie, Store, CalendarDays, AlertCircle, TrendingUp, TrendingDown, Wallet } from 'lucide-react'
+import { BarChart3, ChartPie, Store, CalendarDays, AlertCircle, TrendingUp, TrendingDown, Wallet, RotateCw } from 'lucide-react'
 import { useAnalytics } from '@/lib/hooks/use-analytics'
 import { SpendingTrendChart } from '@/components/analytics/spending-trend-chart'
 import { CategoryBreakdownChart } from '@/components/analytics/category-breakdown-chart'
 import { TopMerchants } from '@/components/analytics/top-merchants'
 import { DayOfWeekChart } from '@/components/analytics/day-of-week-chart'
 import { AiInsightsCard } from '@/components/analytics/ai-insights-card'
+import { RecurringSummary } from '@/components/analytics/recurring-summary'
 import { EmptyState } from '@/components/shared/empty-state'
 import { formatIDR } from '@/lib/utils/currency'
 
@@ -146,7 +147,7 @@ export default function AnalyticsPage() {
     )
   }
 
-  const { trend, byCategory, topMerchants, byDayOfWeek, totals } = data
+  const { trend, byCategory, topMerchants, byDayOfWeek, totals, recurring } = data
   const peakDay = byDayOfWeek.reduce((max, d) => (d.amount > max.amount ? d : max), byDayOfWeek[0])
   const totalExpenseCat = byCategory.reduce((sum, c) => sum + c.amount, 0)
 
@@ -190,6 +191,16 @@ export default function AnalyticsPage() {
           description="Tempat paling sering kamu transaksi."
         >
           <TopMerchants data={topMerchants} />
+        </SectionCard>
+      ) : null}
+
+      {recurring.items.length > 0 ? (
+        <SectionCard
+          icon={RotateCw}
+          title="Langganan berulang"
+          description="Pengeluaran tetap tiap bulan yang terdeteksi otomatis."
+        >
+          <RecurringSummary data={recurring} />
         </SectionCard>
       ) : null}
 

@@ -9,6 +9,7 @@
 
 | Version | Date | Updated By | Changes |
 |---|---|---|---|
+| v14 | Jun 13, 2026 | Claude | Phase 3 sub-phase 3.5 Recurring Detection selesai — Phase 3 100% selesai. `lib/recurring/detect.ts` (pure: group by normalized merchant, monthly interval 25-35d tolerance, min 3 occurrences — 10 tests). Inngest cron `recurring-detect` (0 19 * * * UTC = 02:00 WIB) update is_recurring + recurring_group_id pakai admin client (clear lalu re-tag). Field is_recurring di-surface di /api/transactions + use-transactions + use-dashboard. Badge "Berulang" di TransactionCard. Analytics aggregator extended dgn `aggregateRecurring` — 3 tests baru. New section "Langganan berulang" di /analytics page dengan total bulanan + list per merchant. App version bump v0.2.0 → v0.3.0. Suite 510/516 pass (delta +13). |
 | v13 | Jun 12, 2026 | Claude | Phase 3 sub-phase 3.4 OCR Screenshot selesai. `lib/ocr/parser.ts` (pure: amount via Rp regex picking max, payment method GoPay/ShopeePay/OVO/DANA/QRIS, date Indonesia/English/dd-mm-yyyy, merchant heuristic dengan blacklist — 22 tests). API `POST /api/ocr` (auth + rate-limit 20/min, Zod text ≤20k chars, 422 PARSE_FAILED jika tidak ada amount — 8 tests). `OcrUpload` component: file picker (gallery + camera via accept="image/*"), tesseract.js lazy-loaded (eng worker, progress bar), review card dengan confidence. Wire ke QuickEntry pada type expense — pre-fill amount/merchant/date/payment_method. Transaction schema diperluas: client boleh kirim `source: 'manual' | 'ocr'` (default 'manual'), 'gmail' tetap admin-only. Suite 497/503 pass (delta +30). |
 | v12 | Jun 12, 2026 | Claude | Phase 3 sub-phase 3.3 Budget System selesai. `lib/validations/budget.ts` (Zod create/update). `lib/budgets/utilization.ts` (pure: periodWindow weekly/monthly/yearly WIB + computeBudgetStatus dengan threshold 80%/100% — 10 tests). API CRUD `/api/budgets` (list dengan utilization, single tx fetch) + `/api/budgets/[id]` (GET/PATCH/DELETE soft + ownership tests, 8 tests). Hook `use-budgets` (1min stale). Components `BudgetCard` (progress bar + status pill ok/warn/over), `BudgetForm` (sheet dgn category dropdown + period select), `BudgetListClient`. Page `/budgets`. Nav: tab Budget (Target icon) di sidebar + bottom-nav. Fix stale test concurrency 10→5 (commit 6781649). Suite 467/473 pass (delta +18, 6 sisa currency NBSP). |
 | v11 | Jun 12, 2026 | Claude | Phase 3 sub-phase 3.2 AI Insights selesai + UI polish `/analytics`. Migration 011 `ai_insights` table (RLS read-only, service-role writes). `lib/ai/insights.ts` (prompt builder + JSON parser hardened, gemini-2.5-flash, 7 tests). Inngest cron `insights-generate` (0 0 * * * UTC = 07:00 WIB, skip user no-activity). `app/api/insights/route.ts` (read cached today + fallback 1 day, 6 tests). `lib/hooks/use-insights.ts` (1h staleTime). `components/analytics/ai-insights-card.tsx` wired ke top section /analytics. UI improvements: TotalsTile dengan icon TrendingUp/Down/Wallet, AnalyticsSkeleton chart-shaped, donut center label total, peak-day highlight di day-of-week chart, trend chart legend di atas, copy "minggu ini" → "bulan ini". Types regenerated via Supabase MCP. Test suite 449/455 pass (delta +13). |
@@ -23,8 +24,8 @@
 | v2 | May 25, 2026 | Claude | Decisions Log dipindahkan ke decisions.md, section 7 jadi ADR index |
 | v1 | May 24, 2026 | Claude | Initial creation — project kickoff |
 
-**Current Version:** v13
-**Last Updated:** Jun 12, 2026
+**Current Version:** v14
+**Last Updated:** Jun 13, 2026
 
 ---
 
@@ -46,11 +47,11 @@
 ## 1. PROJECT STATUS
 
 ```
-Status          : 🔄 Phase 3 in progress — PWA + Analytics + AI Insights + Budget + OCR done
-Current Phase   : Phase 3 — Intelligence Layer (3.0 ✅, 3.1 ✅, 3.2 ✅, 3.3 ✅, 3.4 ✅)
-App Version     : v0.2.0 (akan bump ke v0.3.0 saat Phase 3 selesai)
-Last Updated    : Jun 12, 2026
-Next Milestone  : Sub-phase 3.5 Recurring Detection (last sub-phase Phase 3)
+Status          : ✅ Phase 3 selesai — siap mulai Phase 4
+Current Phase   : Phase 3 — Intelligence Layer (3.0 ✅, 3.1 ✅, 3.2 ✅, 3.3 ✅, 3.4 ✅, 3.5 ✅)
+App Version     : v0.3.0
+Last Updated    : Jun 13, 2026
+Next Milestone  : Phase 4 — Public Ready (landing, onboarding polish, Sentry, security audit)
 ```
 
 ### Overall Progress
@@ -59,7 +60,7 @@ Next Milestone  : Sub-phase 3.5 Recurring Detection (last sub-phase Phase 3)
 Documentation   ████████████████████ 100% (10/10 docs selesai)
 Phase 1         ████████████████████ 100% ✅ (selesai — deployed ke Vercel)
 Phase 2         ██████████████████░░  90% 🟡 (Mandiri+BCA production-ready; BNI/BRI/CIMB di-parker ke Phase 4 hardening — lihat §4 "Sisa Pekerjaan")
-Phase 3         ████████████████░░░░  83% 🔄 (PWA ✅, Analytics ✅, AI Insights ✅, Budget ✅, OCR ✅; Recurring pending)
+Phase 3         ████████████████████ 100% ✅ (PWA ✅, Analytics ✅, AI Insights ✅, Budget ✅, OCR ✅, Recurring ✅)
 Phase 4         ░░░░░░░░░░░░░░░░░░░░   0%
 ```
 
@@ -81,7 +82,7 @@ Phase 4         ░░░░░░░░░░░░░░░░░░░░   0
 | Pre-Dev | Documentation | May 24, 2026 | ✅ Done | v0.0.0 |
 | Phase 1 | Core Loop (manual tracking) | Week 4 | ✅ Done | v0.1.0 |
 | Phase 2 | Gmail Automation | Week 10 | 🟡 90% — Mandiri+BCA done, BNI/BRI/CIMB parker ke Phase 4 | v0.2.0 |
-| Phase 3 | Intelligence Layer | Week 16 | 🔄 In Progress (PWA ✅, Analytics ✅, AI Insights ✅, Budget ✅, OCR ✅) | v0.3.0 |
+| Phase 3 | Intelligence Layer | Week 16 | ✅ Done | v0.3.0 |
 | Phase 4 | Public Ready | Week 20 | ⏳ Pending | v1.0.0 |
 
 ---
@@ -432,14 +433,18 @@ Hasil audit code vs docs. Kode parser berfungsi (semua 117 test parser hijau), t
 | **Test: utilization + API ownership** | ✅ | 10 utilization tests + 8 API guard tests |
 | UI: Budget summary di dashboard | ⏭️ | Deferred — bisa ditambahkan di sub-phase 3.5/4 polish kalau perlu |
 
-### Recurring Detection
+### Recurring Detection (Sub-phase 3.5 — Done)
 
 | Task | Status | Notes |
 |---|---|---|
-| Algorithm: deteksi transaksi berulang | ⏳ | Sama merchant + interval reguler |
-| Tag transaksi sebagai recurring | ⏳ | `is_recurring: true` |
-| UI: Recurring badge di transaction card | ⏳ | |
-| UI: Recurring summary di analytics | ⏳ | |
+| Algorithm: deteksi transaksi berulang | ✅ | `lib/recurring/detect.ts` — group by normalized merchant, monthly interval 25-35 hari tolerance, min 3 occurrences |
+| Inngest cron `recurring-detect` | ✅ | `0 19 * * *` UTC = 02:00 WIB, scan 6 bulan terakhir, clear-then-tag update via admin client |
+| Tag transaksi sebagai recurring | ✅ | is_recurring + recurring_group_id (UUID) di-update di tabel transactions |
+| UI: Recurring badge di transaction card | ✅ | Pill "Berulang" dengan RotateCw icon, bg-primary/10 |
+| Field surfacing | ✅ | is_recurring di-include di /api/transactions, use-transactions, use-dashboard |
+| Analytics aggregator: aggregateRecurring | ✅ | Pure, pick most recent charge per group_id = monthly estimate, sort by amount desc |
+| UI: Recurring summary di analytics | ✅ | Section "Langganan berulang" — total bulanan + list per merchant dengan last charged date |
+| **Test: detector + aggregator** | ✅ | 10 detector + 3 aggregateRecurring = 13 baru |
 
 ### PWA (Sub-phase 3.0 — Done)
 

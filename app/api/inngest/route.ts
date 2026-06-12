@@ -5,6 +5,7 @@ import { gmailSyncManualFunction } from '@/lib/inngest/functions/gmail-sync-manu
 import { gmailSyncPushFunction } from '@/lib/inngest/functions/gmail-sync-push'
 import { gmailWatchRenewalFunction } from '@/lib/inngest/functions/gmail-watch-renewal'
 import { insightsGenerateFunction } from '@/lib/inngest/functions/insights-generate'
+import { recurringDetectFunction } from '@/lib/inngest/functions/recurring-detect'
 
 export const { GET, POST, PUT } = serve({
   client: inngest,
@@ -14,5 +15,6 @@ export const { GET, POST, PUT } = serve({
     gmailSyncPushFunction,
     gmailWatchRenewalFunction,
     insightsGenerateFunction,
+    recurringDetectFunction,
   ],
 })

@@ -43,6 +43,7 @@ export async function GET(request: Request) {
     .from('transactions')
     .select(`
       id, amount, type, transacted_at, merchant_name, description,
+      is_recurring, recurring_group_id,
       category:categories(id, name, icon, color)
     `)
     .eq('user_id', user.id)
@@ -65,6 +66,8 @@ export async function GET(request: Request) {
     transacted_at: string
     merchant_name: string | null
     description: string | null
+    is_recurring: boolean | null
+    recurring_group_id: string | null
     category: { id: string; name: string; icon: string; color: string } | null
       | Array<{ id: string; name: string; icon: string; color: string }>
   }>
@@ -76,6 +79,8 @@ export async function GET(request: Request) {
     transacted_at: r.transacted_at,
     merchant_name: r.merchant_name,
     description: r.description,
+    is_recurring: r.is_recurring,
+    recurring_group_id: r.recurring_group_id,
     category: Array.isArray(r.category) ? (r.category[0] ?? null) : r.category,
   }))
 

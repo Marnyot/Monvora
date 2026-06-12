@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { aggregate, type AnalyticsInput } from '@/lib/analytics/aggregate'
+import { aggregate, aggregateRecurring, type AnalyticsInput } from '@/lib/analytics/aggregate'
 
 // Fixed "now" — 12 Juni 2026 12:00 WIB (= 05:00 UTC)
 const NOW = new Date('2026-06-12T05:00:00.000Z')
@@ -162,6 +162,49 @@ describe('aggregate — topMerchants (current month, expense only)', () => {
       NOW
     )
     expect(result.topMerchants).toHaveLength(0)
+  })
+})
+
+describe('aggregateRecurring', () => {
+  it('picks the most recent charge per group as monthly estimate', () => {
+    const items = aggregateRecurring([
+      tx({ amount: 110_000, transacted_at: wib(2026, 4, 1), merchant_name: 'Netflix', category: cat('c', 'Hiburan') }),
+      tx({ amount: 120_000, transacted_at: wib(2026, 5, 1), merchant_name: 'Netflix', category: cat('c', 'Hiburan') }),
+      // older charge — should be ignored in estimate
+      tx({ amount: 60_000, transacted_at: wib(2026, 3, 1), merchant_name: 'Spotify', category: cat('c', 'Hiburan') }),
+    ].map((t, i) => ({
+      ...t,
+      is_recurring: true,
+      recurring_group_id: t.merchant_name === 'Netflix' ? 'grp-netflix' : 'grp-spotify',
+      id: `t-${i}`,
+    })))
+
+    expect(items.items).toHaveLength(2)
+    const netflix = items.items.find((x) => x.merchantName === 'Netflix')!
+    expect(netflix.monthlyEstimate).toBe(120_000)
+    expect(items.totalMonthly).toBe(180_000)
+  })
+
+  it('ignores non-expense, non-tagged, and missing group_id rows', () => {
+    const result = aggregateRecurring([
+      // income — excluded
+      tx({ type: 'income', amount: 9_000_000, is_recurring: true, recurring_group_id: 'g1' }),
+      // not tagged
+      tx({ amount: 50_000, is_recurring: false, recurring_group_id: null }),
+      // tagged but no group id
+      tx({ amount: 50_000, is_recurring: true, recurring_group_id: null }),
+    ])
+    expect(result.items).toEqual([])
+    expect(result.totalMonthly).toBe(0)
+  })
+
+  it('sorts items by monthlyEstimate descending', () => {
+    const result = aggregateRecurring([
+      tx({ amount: 50_000, merchant_name: 'A', is_recurring: true, recurring_group_id: 'gA', transacted_at: wib(2026, 6, 1) }),
+      tx({ amount: 150_000, merchant_name: 'B', is_recurring: true, recurring_group_id: 'gB', transacted_at: wib(2026, 6, 2) }),
+      tx({ amount: 100_000, merchant_name: 'C', is_recurring: true, recurring_group_id: 'gC', transacted_at: wib(2026, 6, 3) }),
+    ])
+    expect(result.items.map((i) => i.merchantName)).toEqual(['B', 'C', 'A'])
   })
 })
 
