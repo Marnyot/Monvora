@@ -9,6 +9,7 @@
 
 | Version | Date | Updated By | Changes |
 |---|---|---|---|
+| v11 | Jun 12, 2026 | Claude | Phase 3 sub-phase 3.2 AI Insights selesai + UI polish `/analytics`. Migration 011 `ai_insights` table (RLS read-only, service-role writes). `lib/ai/insights.ts` (prompt builder + JSON parser hardened, gemini-2.5-flash, 7 tests). Inngest cron `insights-generate` (0 0 * * * UTC = 07:00 WIB, skip user no-activity). `app/api/insights/route.ts` (read cached today + fallback 1 day, 6 tests). `lib/hooks/use-insights.ts` (1h staleTime). `components/analytics/ai-insights-card.tsx` wired ke top section /analytics. UI improvements: TotalsTile dengan icon TrendingUp/Down/Wallet, AnalyticsSkeleton chart-shaped, donut center label total, peak-day highlight di day-of-week chart, trend chart legend di atas, copy "minggu ini" → "bulan ini". Types regenerated via Supabase MCP. Test suite 449/455 pass (delta +13). |
 | v10 | Jun 12, 2026 | Claude | Phase 3 sub-phase 3.1 Analytics selesai: `lib/analytics/aggregate.ts` (pure aggregator + 11 unit tests), `app/api/analytics/route.ts` (auth + rate-limit + 5 route tests, ignores client user_id), `lib/hooks/use-analytics.ts` (TanStack 5min cache), `app/(dashboard)/analytics/page.tsx` + 4 chart components (SpendingTrendChart bar, CategoryBreakdownChart donut+legend, TopMerchants list, DayOfWeekChart bar). Recharts 3.8.1 ditambah sebagai dep. Nav bottom + sidebar dapat tab "Analytics". Total test suite 436/442 pass (delta +16) |
 | v9 | Jun 12, 2026 | Claude | Phase 3 kickoff — PWA Foundation (sub-phase 3.0) selesai: `app/manifest.ts`, `app/~offline/page.tsx`, ikon set 192/512/maskable/apple-touch, Serwist 9.5.11 (webpack build mode), CSP work-friendly. P2-2..P2-6 (BNI/BRI/CIMB synthetic + OCBC mis-attribution) di-parker ke Phase 4 hardening; OCBC mis-attribution dicatat sebagai I05. Build script `next build --webpack` karena @serwist/next 9 belum support Turbopack |
 | v8 | Jun 12, 2026 | Claude | Audit Phase 2 vs code — turunkan status non-Mandiri parser ke 🟡 (fixtures sintetis, no display-name formatting, OCBC mis-attribution di CIMB parser). Phase 2 → 90% sampai fixture nyata. PARSER_GUIDE.md diperbaiki (payment_method types, registry side-effect pattern, CIMB row di amount table) |
@@ -20,7 +21,7 @@
 | v2 | May 25, 2026 | Claude | Decisions Log dipindahkan ke decisions.md, section 7 jadi ADR index |
 | v1 | May 24, 2026 | Claude | Initial creation — project kickoff |
 
-**Current Version:** v10
+**Current Version:** v11
 **Last Updated:** Jun 12, 2026
 
 ---
@@ -43,11 +44,11 @@
 ## 1. PROJECT STATUS
 
 ```
-Status          : 🔄 Phase 3 in progress — PWA + Analytics done
-Current Phase   : Phase 3 — Intelligence Layer (3.0 PWA ✅, 3.1 Analytics ✅)
+Status          : 🔄 Phase 3 in progress — PWA + Analytics + AI Insights done
+Current Phase   : Phase 3 — Intelligence Layer (3.0 ✅, 3.1 ✅, 3.2 ✅)
 App Version     : v0.2.0 (akan bump ke v0.3.0 saat Phase 3 selesai)
 Last Updated    : Jun 12, 2026
-Next Milestone  : Sub-phase 3.2 — AI Insights ATAU 3.3 Budget System (tentukan)
+Next Milestone  : Sub-phase 3.3 Budget System ATAU 3.4 OCR Screenshot (tentukan)
 ```
 
 ### Overall Progress
@@ -56,7 +57,7 @@ Next Milestone  : Sub-phase 3.2 — AI Insights ATAU 3.3 Budget System (tentukan
 Documentation   ████████████████████ 100% (10/10 docs selesai)
 Phase 1         ████████████████████ 100% ✅ (selesai — deployed ke Vercel)
 Phase 2         ██████████████████░░  90% 🟡 (Mandiri+BCA production-ready; BNI/BRI/CIMB di-parker ke Phase 4 hardening — lihat §4 "Sisa Pekerjaan")
-Phase 3         █████░░░░░░░░░░░░░░░  30% 🔄 (PWA ✅, Analytics ✅; Insights/Budget/OCR/Recurring pending)
+Phase 3         ██████████░░░░░░░░░░  50% 🔄 (PWA ✅, Analytics ✅, AI Insights ✅; Budget/OCR/Recurring pending)
 Phase 4         ░░░░░░░░░░░░░░░░░░░░   0%
 ```
 
@@ -78,7 +79,7 @@ Phase 4         ░░░░░░░░░░░░░░░░░░░░   0
 | Pre-Dev | Documentation | May 24, 2026 | ✅ Done | v0.0.0 |
 | Phase 1 | Core Loop (manual tracking) | Week 4 | ✅ Done | v0.1.0 |
 | Phase 2 | Gmail Automation | Week 10 | 🟡 90% — Mandiri+BCA done, BNI/BRI/CIMB parker ke Phase 4 | v0.2.0 |
-| Phase 3 | Intelligence Layer | Week 16 | 🔄 In Progress (PWA ✅, Analytics ✅) | v0.3.0 |
+| Phase 3 | Intelligence Layer | Week 16 | 🔄 In Progress (PWA ✅, Analytics ✅, AI Insights ✅) | v0.3.0 |
 | Phase 4 | Public Ready | Week 20 | ⏳ Pending | v1.0.0 |
 
 ---
@@ -385,15 +386,18 @@ Hasil audit code vs docs. Kode parser berfungsi (semua 117 test parser hijau), t
 | **Test: aggregator** | ✅ | 11 tests di `tests/unit/analytics/aggregate.test.ts` |
 | **Test: API route guards** | ✅ | 5 tests di `tests/unit/api/analytics-route.test.ts` |
 
-### AI Insights
+### AI Insights (Sub-phase 3.2 — Done)
 
 | Task | Status | Notes |
 |---|---|---|
-| Inngest job: daily-insights (07:00 WIB) | ⏳ | |
-| Gemini prompt untuk insights Bahasa Indonesia | ⏳ | |
-| Cache insights di database (24 jam) | ⏳ | |
-| UI: AI insights cards di dashboard | ⏳ | |
-| **Test: insights dalam Bahasa Indonesia** | ⏳ | |
+| Migration 011: `ai_insights` (user_id, period_key, insights jsonb, model, RLS read-only) | ✅ | Applied via Supabase MCP |
+| Inngest job: daily-insights (07:00 WIB) | ✅ | `lib/inngest/functions/insights-generate.ts` — cron `0 0 * * *`, concurrency 5, skip user no-activity, idempotent via period_key unique |
+| Gemini prompt untuk insights Bahasa Indonesia | ✅ | `lib/ai/insights.ts` — buildInsightsPrompt + parseInsights (hardened: cap 3, max 200 chars, strip markdown fences) |
+| Cache insights di database (24 jam) | ✅ | period_key = `YYYY-MM-DD` WIB; API returns most recent ≤ today (fallback ke kemarin kalau cron belum jalan) |
+| API: GET /api/insights | ✅ | Auth + rate-limit (30/min), 6 route tests |
+| Hook: use-insights | ✅ | `lib/hooks/use-insights.ts` — staleTime 1h |
+| UI: AI insights card di /analytics | ✅ | `components/analytics/ai-insights-card.tsx` — gradient bg, Sparkles icon, "Belum ada wawasan" empty state |
+| **Test: insights generator + API** | ✅ | 7 tests `tests/unit/ai/insights.test.ts` + 6 tests `tests/unit/api/insights-route.test.ts` |
 
 ### OCR Screenshot
 

@@ -1,10 +1,9 @@
 'use client'
 
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import type { DayOfWeekAgg } from '@/lib/analytics/aggregate'
 import { formatIDR } from '@/lib/utils/currency'
 
-// ISO mapping: 0 = Sunday ... 6 = Saturday. Render order Mon..Sun.
 const DAY_LABELS: Record<number, string> = {
   1: 'Sen', 2: 'Sel', 3: 'Rab', 4: 'Kam', 5: 'Jum', 6: 'Sab', 0: 'Min',
 }
@@ -18,13 +17,15 @@ function compactIDR(value: number): string {
 
 interface DayOfWeekChartProps {
   data: DayOfWeekAgg[]
+  peakDay?: DayOfWeekAgg['day']
 }
 
-export function DayOfWeekChart({ data }: DayOfWeekChartProps) {
+export function DayOfWeekChart({ data, peakDay }: DayOfWeekChartProps) {
   const map = new Map(data.map((d) => [d.day, d]))
   const chartData = ORDER.map((d) => ({
     label: DAY_LABELS[d],
     amount: map.get(d as DayOfWeekAgg['day'])?.amount ?? 0,
+    day: d,
   }))
 
   return (
@@ -44,7 +45,14 @@ export function DayOfWeekChart({ data }: DayOfWeekChartProps) {
             }}
             formatter={(v) => [formatIDR(Number(v) || 0), 'Pengeluaran']}
           />
-          <Bar dataKey="amount" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="amount" radius={[4, 4, 0, 0]}>
+            {chartData.map((entry) => (
+              <Cell
+                key={entry.day}
+                fill={peakDay === entry.day ? 'hsl(var(--primary))' : 'hsl(var(--primary) / 0.35)'}
+              />
+            ))}
+          </Bar>
         </BarChart>
       </ResponsiveContainer>
     </div>

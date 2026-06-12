@@ -6,17 +6,18 @@ import { formatIDR } from '@/lib/utils/currency'
 
 interface CategoryBreakdownChartProps {
   data: CategoryAgg[]
+  totalLabel?: string
 }
 
-export function CategoryBreakdownChart({ data }: CategoryBreakdownChartProps) {
+export function CategoryBreakdownChart({ data, totalLabel }: CategoryBreakdownChartProps) {
   const total = data.reduce((sum, d) => sum + d.amount, 0)
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-[200px_1fr] gap-4 items-center">
-      <div className="h-48">
+    <div className="grid grid-cols-1 sm:grid-cols-[200px_1fr] gap-6 sm:gap-4 items-center">
+      <div className="relative h-48">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
-            <Pie data={data} dataKey="amount" nameKey="name" innerRadius={50} outerRadius={80} paddingAngle={2}>
+            <Pie data={data} dataKey="amount" nameKey="name" innerRadius={56} outerRadius={84} paddingAngle={2}>
               {data.map((entry) => (
                 <Cell key={entry.categoryId} fill={entry.color} stroke="transparent" />
               ))}
@@ -32,10 +33,16 @@ export function CategoryBreakdownChart({ data }: CategoryBreakdownChartProps) {
             />
           </PieChart>
         </ResponsiveContainer>
+        {totalLabel && (
+          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+            <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Total</span>
+            <span className="text-sm font-semibold tabular-nums">{totalLabel}</span>
+          </div>
+        )}
       </div>
 
-      <ul className="space-y-2 text-sm">
-        {data.slice(0, 6).map((c) => {
+      <ul className="space-y-2 text-sm max-h-56 overflow-y-auto pr-1">
+        {data.map((c) => {
           const pct = total > 0 ? Math.round((c.amount / total) * 100) : 0
           return (
             <li key={c.categoryId} className="flex items-center justify-between gap-3">
@@ -44,7 +51,7 @@ export function CategoryBreakdownChart({ data }: CategoryBreakdownChartProps) {
                 <span className="truncate">{c.name}</span>
                 <span className="text-xs text-muted-foreground shrink-0">{pct}%</span>
               </span>
-              <span className="tabular-nums text-muted-foreground">{formatIDR(c.amount)}</span>
+              <span className="tabular-nums text-muted-foreground shrink-0">{formatIDR(c.amount)}</span>
             </li>
           )
         })}

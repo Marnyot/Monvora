@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_insights: {
+        Row: {
+          created_at: string
+          generated_at: string
+          id: string
+          insights: Json
+          model: string | null
+          period_key: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          generated_at?: string
+          id?: string
+          insights: Json
+          model?: string | null
+          period_key: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          generated_at?: string
+          id?: string
+          insights?: Json
+          model?: string | null
+          period_key?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_insights_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       budgets: {
         Row: {
           amount: number
@@ -166,11 +204,11 @@ export type Database = {
           gmail_last_synced_at: string | null
           gmail_sync_enabled: boolean | null
           gmail_sync_token: string | null
+          gmail_watch_expiration: string | null
+          gmail_watch_history_id: string | null
           google_access_token: string | null
           google_refresh_token: string | null
           google_token_expires_at: string | null
-          gmail_watch_expiration: string | null
-          gmail_watch_history_id: string | null
           id: string
           language: string | null
           onboarding_completed: boolean | null
@@ -186,11 +224,11 @@ export type Database = {
           gmail_last_synced_at?: string | null
           gmail_sync_enabled?: boolean | null
           gmail_sync_token?: string | null
+          gmail_watch_expiration?: string | null
+          gmail_watch_history_id?: string | null
           google_access_token?: string | null
           google_refresh_token?: string | null
           google_token_expires_at?: string | null
-          gmail_watch_expiration?: string | null
-          gmail_watch_history_id?: string | null
           id: string
           language?: string | null
           onboarding_completed?: boolean | null
@@ -206,11 +244,11 @@ export type Database = {
           gmail_last_synced_at?: string | null
           gmail_sync_enabled?: boolean | null
           gmail_sync_token?: string | null
+          gmail_watch_expiration?: string | null
+          gmail_watch_history_id?: string | null
           google_access_token?: string | null
           google_refresh_token?: string | null
           google_token_expires_at?: string | null
-          gmail_watch_expiration?: string | null
-          gmail_watch_history_id?: string | null
           id?: string
           language?: string | null
           onboarding_completed?: boolean | null
