@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Wallet, List, Settings, LogOut, Loader2 } from 'lucide-react'
+import { LayoutDashboard, Wallet, List, Settings, LogOut, Loader2, BarChart3 } from 'lucide-react'
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import { ConfirmDialog } from '@/components/shared/confirm-dialog'
@@ -10,6 +10,7 @@ import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Beranda', icon: LayoutDashboard },
   { href: '/transactions', label: 'Transaksi', icon: List },
+  { href: '/analytics', label: 'Analytics', icon: BarChart3 },
   { href: '/wallets', label: 'Dompet', icon: Wallet },
   { href: '/settings', label: 'Pengaturan', icon: Settings },
 ]
