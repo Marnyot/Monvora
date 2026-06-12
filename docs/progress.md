@@ -9,6 +9,7 @@
 
 | Version | Date | Updated By | Changes |
 |---|---|---|---|
+| v9 | Jun 12, 2026 | Claude | Phase 3 kickoff — PWA Foundation (sub-phase 3.0) selesai: `app/manifest.ts`, `app/~offline/page.tsx`, ikon set 192/512/maskable/apple-touch, Serwist 9.5.11 (webpack build mode), CSP work-friendly. P2-2..P2-6 (BNI/BRI/CIMB synthetic + OCBC mis-attribution) di-parker ke Phase 4 hardening; OCBC mis-attribution dicatat sebagai I05. Build script `next build --webpack` karena @serwist/next 9 belum support Turbopack |
 | v8 | Jun 12, 2026 | Claude | Audit Phase 2 vs code — turunkan status non-Mandiri parser ke 🟡 (fixtures sintetis, no display-name formatting, OCBC mis-attribution di CIMB parser). Phase 2 → 90% sampai fixture nyata. PARSER_GUIDE.md diperbaiki (payment_method types, registry side-effect pattern, CIMB row di amount table) |
 | v7 | May 25, 2026 | Claude | Phase 2 Gmail Automation selesai — parser engine, AI categorization, Inngest job, settings UI |
 | v6 | May 25, 2026 | Claude | Deploy ke Vercel selesai, Phase 1 100% done, app version bump ke v0.1.0 |
@@ -18,7 +19,7 @@
 | v2 | May 25, 2026 | Claude | Decisions Log dipindahkan ke decisions.md, section 7 jadi ADR index |
 | v1 | May 24, 2026 | Claude | Initial creation — project kickoff |
 
-**Current Version:** v8
+**Current Version:** v9
 **Last Updated:** Jun 12, 2026
 
 ---
@@ -41,11 +42,11 @@
 ## 1. PROJECT STATUS
 
 ```
-Status          : 🟡 Phase 2 hold — non-Mandiri parser butuh fixture nyata sebelum Phase 3
-Current Phase   : Phase 2 (closing) → Phase 3 — Intelligence Layer
-App Version     : v0.2.0
+Status          : 🔄 Phase 3 in progress — PWA Foundation done, next: Analytics
+Current Phase   : Phase 3 — Intelligence Layer (sub-phase 3.0 PWA ✅)
+App Version     : v0.2.0 (akan bump ke v0.3.0 saat Phase 3 selesai)
 Last Updated    : Jun 12, 2026
-Next Milestone  : Validasi BCA/BNI/BRI/CIMB parser dengan email asli, lalu mulai Analytics
+Next Milestone  : Sub-phase 3.1 — Analytics (API + spending trend + category breakdown + top merchants)
 ```
 
 ### Overall Progress
@@ -53,8 +54,8 @@ Next Milestone  : Validasi BCA/BNI/BRI/CIMB parser dengan email asli, lalu mulai
 ```
 Documentation   ████████████████████ 100% (10/10 docs selesai)
 Phase 1         ████████████████████ 100% ✅ (selesai — deployed ke Vercel)
-Phase 2         ██████████████████░░  90% 🟡 (Mandiri production-ready; BCA/BNI/BRI/CIMB butuh validasi fixture nyata — lihat §4 "Sisa Pekerjaan")
-Phase 3         ░░░░░░░░░░░░░░░░░░░░   0%
+Phase 2         ██████████████████░░  90% 🟡 (Mandiri+BCA production-ready; BNI/BRI/CIMB di-parker ke Phase 4 hardening — lihat §4 "Sisa Pekerjaan")
+Phase 3         ██░░░░░░░░░░░░░░░░░░  10% 🔄 (PWA Foundation done; Analytics/Budget/Insights/OCR/Recurring pending)
 Phase 4         ░░░░░░░░░░░░░░░░░░░░   0%
 ```
 
@@ -75,8 +76,8 @@ Phase 4         ░░░░░░░░░░░░░░░░░░░░   0
 |---|---|---|---|---|
 | Pre-Dev | Documentation | May 24, 2026 | ✅ Done | v0.0.0 |
 | Phase 1 | Core Loop (manual tracking) | Week 4 | ✅ Done | v0.1.0 |
-| Phase 2 | Gmail Automation | Week 10 | 🟡 90% — Mandiri done, parser lain butuh fixture nyata | v0.2.0 |
-| Phase 3 | Intelligence Layer | Week 16 | ⏳ Pending | v0.3.0 |
+| Phase 2 | Gmail Automation | Week 10 | 🟡 90% — Mandiri+BCA done, BNI/BRI/CIMB parker ke Phase 4 | v0.2.0 |
+| Phase 3 | Intelligence Layer | Week 16 | 🔄 In Progress (PWA ✅) | v0.3.0 |
 | Phase 4 | Public Ready | Week 20 | ⏳ Pending | v1.0.0 |
 
 ---
@@ -356,7 +357,7 @@ Hasil audit code vs docs. Kode parser berfungsi (semua 117 test parser hijau), t
 | P2-7 | Update `lib/gmail/parsers/bri.ts` payment_method `'ewallet'` dipakai — sudah valid di types tapi belum pernah didemo via test | Low | Sanity check |
 | P2-8 | Tambah section detail BNI/BRI/CIMB di PARSER_GUIDE.md (sekarang hanya Mandiri & BCA) | Low | Doc gap |
 
-Setelah Mandiri-only validated di production, baru bisa dianggap "Phase 2 100%" untuk lebih dari satu bank.
+**Status Jun 12, 2026:** Phase 2 di-parker pada 90%. Mandiri + BCA (real fixtures) sudah production-ready. P2-2..P2-6 (BNI/BRI/CIMB synthetic + OCBC pemisahan + display-name formatting + PARSER_GUIDE update) di-defer ke **Phase 4 hardening**. OCBC mis-attribution tercatat sebagai **I05** di Known Issues. Phase 3 lanjut sekarang.
 
 ---
 
@@ -424,14 +425,17 @@ Setelah Mandiri-only validated di production, baru bisa dianggap "Phase 2 100%" 
 | UI: Recurring badge di transaction card | ⏳ | |
 | UI: Recurring summary di analytics | ⏳ | |
 
-### PWA
+### PWA (Sub-phase 3.0 — Done)
 
 | Task | Status | Notes |
 |---|---|---|
-| manifest.json | ⏳ | App name, icons, theme color |
-| Service worker (Next.js built-in) | ⏳ | |
-| Installable di iOS + Android | ⏳ | |
-| Offline fallback page | ⏳ | |
+| manifest.json | ✅ | `app/manifest.ts` typed Manifest, theme `#0f172a`, start_url `/dashboard`, lang `id` |
+| Service worker (Serwist 9.5.11) | ✅ | `app/sw.ts` — NetworkOnly untuk `/api/*` + `/auth/*` (data sensitif), CacheFirst static, NetworkFirst pages, `/~offline` fallback |
+| Installable di iOS + Android | ✅ | apple-touch-icon, appleWebApp meta, viewport themeColor light+dark |
+| Offline fallback page | ✅ | `app/~offline/page.tsx` Bahasa Indonesia + retry button |
+| Icon set (192/512/maskable/apple-touch) | ✅ | Generated via `scripts/generate-pwa-icons.mjs` dari `app/favicon.ico` (1024px) |
+| **Test: manifest shape + offline page** | ✅ | 8 tests di `tests/unit/pwa/` + `tests/unit/components/offline-page.test.tsx` |
+| Build script: `next build --webpack` | ✅ | @serwist/next 9 belum support Turbopack (warning in-tree) |
 
 ---
 
@@ -503,6 +507,7 @@ Setelah Mandiri-only validated di production, baru bisa dianggap "Phase 2 100%" 
 | ADR-021 | Dependabot + pnpm audit | ✅ Active |
 | ADR-022 | Gemini API untuk AI categorization | ✅ Active |
 | ADR-023 | Bahasa Indonesia sebagai default language UI | ✅ Active |
+| ADR-024 | Serwist sebagai PWA service worker library | ✅ Active |
 
 Lihat `decisions.md` untuk detail konteks, alternatif, dan review trigger setiap keputusan.
 
@@ -549,6 +554,8 @@ Lihat `decisions.md` untuk detail konteks, alternatif, dan review trigger setiap
 | I02 | SMS notifikasi bank tidak bisa dibaca | User yang bank notifnya via SMS tidak dapat manfaat auto-sync | Post-MVP, butuh Twilio atau solusi lain |
 | I03 | Gemini free tier rate limit | Kategorisasi bisa gagal saat volume tinggi | Rule-based fallback sudah ada, upgrade tier nanti |
 | I04 | Bank di luar 5 bank utama belum di-support | Parser hanya untuk Mandiri, BCA, BNI, BRI, CIMB | Generic fallback ada, tambah parser bertahap |
+| I05 | CIMB parser juga match sender `ocbcnisp.com` → tag `bank: 'cimb'` salah untuk email OCBC | Email dari OCBC ter-attribute sebagai CIMB. Tidak ada user OCBC yang ter-impact saat ini (dogfooding) | Phase 4 hardening: pisahkan parser, atau ubah tag `bank` jadi netral |
+| I06 | Production build pakai webpack, bukan Turbopack (default Next.js 16) | Build sedikit lebih lambat. Dev mode masih Turbopack (SW disabled di dev) | Migrasi ke `@serwist/turbopack` saat sudah GA, atau ke configurator mode |
 
 ---
 

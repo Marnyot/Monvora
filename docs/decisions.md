@@ -9,12 +9,13 @@
 
 | Version | Date | Updated By | Changes |
 |---|---|---|---|
+| v4 | Jun 12, 2026 | Claude | Tambah ADR-024 (Serwist sebagai PWA service worker library) |
 | v3 | May 25, 2026 | Claude | Tambah ADR-023 (Bahasa Indonesia UI), update ADR-016, update ADR index |
 | v2 | May 25, 2026 | Claude | Tambah section 7: Future Upgrade Path |
 | v1 | May 25, 2026 | Claude | Initial creation — konsolidasi dari progress.md + tambah security decisions |
 
-**Current Version:** v3
-**Last Updated:** May 25, 2026
+**Current Version:** v4
+**Last Updated:** Jun 12, 2026
 
 ---
 
@@ -702,6 +703,41 @@ Gemini API (gemini-1.5-flash) sebagai AI provider. Rule-based fallback sebagai s
 - Data transaksi tidak boleh dikirim ke Gemini secara verbatim — hanya metadata
 
 **Review Trigger:** Jika Gemini free tier rate limit menghambat user experience, atau ada privacy concern dengan data yang dikirim ke Gemini.
+
+---
+
+### ADR-024 — Serwist sebagai PWA Service Worker Library
+
+| Field | Detail |
+|---|---|
+| **Tanggal** | Jun 12, 2026 |
+| **Status** | ✅ Active |
+| **Kategori** | Tooling / Architecture |
+
+**Konteks:**
+Phase 3 sub-phase 3.0 (PWA Foundation) butuh service worker untuk installable + offline fallback. Next.js 16 tidak punya SW generator built-in. Perlu pilih library yang App Router-native, TypeScript-first, dan tidak under-maintained.
+
+**Keputusan:**
+**Serwist v9.5.11** via `@serwist/next` webpack plugin sebagai SW + precache pipeline. Build dipaksa pakai webpack (`next build --webpack`) karena `@serwist/next` v9 belum support Turbopack.
+
+**Alternatif yang dipertimbangkan:**
+
+| Alternatif | Alasan Ditolak |
+|---|---|
+| `next-pwa` | Maintenance lambat, masih Pages Router-centric, tidak ada strong App Router integration |
+| Custom hand-rolled SW (`public/sw.js` + register sendiri) | Tidak ada precache versioning otomatis, harus tulis runtime caching dari nol, maintenance burden tinggi untuk solo dev |
+| `@serwist/turbopack` (experimental) | Masih experimental, tidak production-ready Jun 2026 |
+| `@serwist/next/config` (configurator mode) | Butuh `@serwist/cli` tambahan + skrip build paralel; webpack mode lebih sederhana |
+
+**Konsekuensi yang diterima:**
+- Production build pakai webpack, bukan Turbopack (default Next.js 16) → build sedikit lebih lambat. Dev tetap Turbopack (SW disabled di dev).
+- Dicatat sebagai **I06** di Known Issues untuk re-evaluasi saat `@serwist/turbopack` GA.
+- Strategi cache strict: semua `/api/*` dan `/auth/*` = `NetworkOnly`. Tidak ada caching response yang berisi data finansial. Lihat `app/sw.ts`.
+- Tambah 18 transitive deps (Workbox-derived).
+
+**Review Trigger:**
+- Saat `@serwist/turbopack` GA → migrasi build supaya unified dengan dev.
+- Saat ada masalah cache invalidation di production yang mengganggu user experience.
 
 ---
 

@@ -1,4 +1,5 @@
 import { withSentryConfig } from '@sentry/nextjs'
+import withSerwistInit from '@serwist/next'
 
 /** @type {import('next').NextConfig} */
 const securityHeaders = [
@@ -34,7 +35,15 @@ const nextConfig = {
   },
 }
 
-export default withSentryConfig(nextConfig, {
+const withSerwist = withSerwistInit({
+  swSrc: 'app/sw.ts',
+  swDest: 'public/sw.js',
+  disable: process.env.NODE_ENV === 'development',
+  cacheOnNavigation: false,
+  reloadOnOnline: true,
+})
+
+export default withSentryConfig(withSerwist(nextConfig), {
   // Hanya upload source maps saat SENTRY_DSN tersedia (production)
   silent: !process.env.SENTRY_DSN,
   disableServerWebpackPlugin: !process.env.SENTRY_DSN,
