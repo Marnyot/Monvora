@@ -43,7 +43,7 @@ export async function categorizeWithGemini(
 
   try {
     const client = getGeminiClient()
-    const model = client.getGenerativeModel({ model: 'gemini-2.0-flash' })
+    const model = client.getGenerativeModel({ model: 'gemini-3.1-flash-lite' })
 
     const prompt = buildPrompt(
       merchantName,
