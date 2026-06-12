@@ -14,6 +14,23 @@ const KNOWN_SUBJECTS = [
   'notifikasi bca',
 ]
 
+/**
+ * Label field BCA. Email BCA berupa HTML; setelah stripHtmlTags semua newline
+ * di-collapse jadi spasi, sehingga seluruh body jadi satu baris. Ekstraksi nilai
+ * harus berhenti di label berikutnya, bukan di newline. NEXT_LABEL = alternasi
+ * semua label yang diikuti ":" → batas akhir sebuah nilai.
+ */
+const FIELD_LABELS = [
+  'Status', 'Transaction Date', 'Transaction Type', 'Transfer Type',
+  'Payment to', 'Merchant Location', 'Acquirer', 'Merchant PAN',
+  'Terminal ID', 'Source of Fund', 'Source Currency', 'Customer PAN',
+  'Total Payment', 'RRN', 'Reference No\\.?', 'Beneficiary Account No\\.?',
+  'Beneficiary Name', 'Beneficiary Bank', 'Transfer Currency', 'Amount',
+  'Fee', 'Transfer Method', 'Remarks', 'Transaction Purpose', 'Top Up Amount',
+  'Details', 'Customer Name', 'Product', 'Phone Number', 'Note', 'Notes',
+]
+const NEXT_LABEL = `(?:${FIELD_LABELS.join('|')})\\s*:`
+
 /** Title-case: lowercase dulu lalu kapitalisasi tiap awal kata. "RISQUINA ANGELICA" → "Risquina Angelica". */
 function toTitleCase(s: string): string {
   return s.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())
@@ -61,23 +78,27 @@ export const bcaParser: BankParser = {
 
       const normalized = normalizeText(body)
 
-      // Hanya proses transaksi yang sukses ("Status : Successful").
-      const statusMatch = body.match(/Status\s*:\s*([A-Za-z]+)/i)
-      if (statusMatch && !statusMatch[1].toLowerCase().includes('success')) return null
-
-      // Field helpers ---------------------------------------------------------
-      const pick = (re: RegExp): string | null => {
+      // Ambil nilai sebuah field, berhenti di label berikutnya atau akhir teks.
+      // `s` flag agar lintas-baris; bekerja untuk body multi-baris MAUPUN body
+      // HTML yang sudah di-flatten jadi satu baris.
+      const field = (label: string): string | null => {
+        const re = new RegExp(`${label}\\s*:\\s*(.*?)\\s*(?=${NEXT_LABEL}|$)`, 'is')
         const m = body.match(re)
-        return m?.[1] ? m[1].trim() : null
+        return m?.[1]?.trim() || null
       }
       const pickAmount = (re: RegExp): number | null => {
         const m = body.match(re)
         return m?.[1] ? parseAmountToInteger(m[1].trim()) : null
       }
 
-      const transferTypeRaw = pick(/Transfer Type\s*:\s*([^\n]+)/i)
-      const transactionTypeRaw = pick(/Transaction Type\s*:\s*([^\n]+)/i)
+      // Hanya proses transaksi yang sukses ("Status : Successful").
+      const status = field('Status')
+      if (status && !status.toLowerCase().includes('success')) return null
 
+      const transferTypeRaw = field('Transfer Type')
+      const transactionTypeRaw = field('Transaction Type')
+
+      // Amount: berhenti di karakter non-numerik (sudah aman dari bleed label).
       const totalPayment = pickAmount(/Total Payment\s*:\s*IDR\s*([\d,. ]+)/i)
       const amountField = pickAmount(/(?:^|[^pP]\s)Amount\s*:\s*IDR\s*([\d,. ]+)/i)
       const feeField = pickAmount(/Fee\s*:\s*IDR\s*([\d,. ]+)/i)
@@ -96,7 +117,7 @@ export const bcaParser: BankParser = {
 
         const dest = transferTypeRaw.replace(/^\s*transfer to\s*/i, '').trim()
         const isToBCA = /\bbca\b/i.test(dest)
-        const beneficiaryFull = pick(/Beneficiary Name\s*:\s*([^\n]+)/i)
+        const beneficiaryFull = field('Beneficiary Name')
 
         if (isToBCA) {
           // Transfer sesama BCA → nominal = Total Payment (tanpa fee terpisah).
@@ -121,7 +142,7 @@ export const bcaParser: BankParser = {
         type = 'expense'
         paymentMethod = 'qris'
         amount = totalPayment
-        const payTo = pick(/Payment to\s*:\s*([^\n]+)/i)
+        const payTo = field('Payment to')
         displayName = payTo ? `QRIS ke ${toTitleCase(payTo)}` : 'QRIS'
       } else if (transactionTypeRaw && /top\s*up/i.test(transactionTypeRaw)) {
         // ---- Top Up (e-wallet / saldo) -------------------------------------
@@ -130,10 +151,10 @@ export const bcaParser: BankParser = {
         amount = topUpAmount ?? totalPayment
         const provider =
           transactionTypeRaw.replace(/top\s*up/i, '').replace(/[-:]/g, ' ').trim() ||
-          pick(/Payment to\s*:\s*([^\n]+)/i) ||
+          field('Payment to') ||
           ''
         displayName = provider ? `Top up ke ${provider}` : 'Top up'
-        const details = pick(/Details\s*:\s*([^\n]+)/i)
+        const details = field('Details')
         if (details) description = stripLinks(details)
       } else if (
         transactionTypeRaw &&
@@ -147,7 +168,7 @@ export const bcaParser: BankParser = {
           ? transactionTypeRaw.split('-').slice(1).join('-').trim()
           : transactionTypeRaw.trim()
         displayName = `Top up ${product}`
-        const details = pick(/Details\s*:\s*([^\n]+)/i)
+        const details = field('Details')
         if (details) description = stripLinks(details)
       } else if (transactionTypeRaw) {
         // ---- Transaction Type lain (pembayaran/tagihan generik) ------------
@@ -157,9 +178,9 @@ export const bcaParser: BankParser = {
         if (t.includes('debit') || t.includes('card')) paymentMethod = 'debit'
         else if (t.includes('credit')) paymentMethod = 'credit'
         else paymentMethod = 'other'
-        const payTo = pick(/Payment to\s*:\s*([^\n]+)/i)
+        const payTo = field('Payment to')
         displayName = payTo ? toTitleCase(payTo) : transactionTypeRaw.trim()
-        const details = pick(/Details\s*:\s*([^\n]+)/i)
+        const details = field('Details')
         if (details) description = stripLinks(details)
       } else {
         // ---- Fallback defensif (format tak dikenal) ------------------------
@@ -174,13 +195,11 @@ export const bcaParser: BankParser = {
 
       if (!amount) return null
 
-      // Reference No. — BCA pakai alfanumerik (bukan hex/UUID), bisa terpisah spasi.
+      // Reference No. — alfanumerik satu token (bukan hex/UUID). Capture tanpa
+      // spasi supaya tidak menyerap teks penutup ("Please save this email...").
       let referenceNumber: string | null = null
-      const refMatch = body.match(/Reference No\.?\s*:\s*([A-Za-z0-9 ]+)/i)
-      if (refMatch?.[1]) {
-        const ref = refMatch[1].replace(/\s+/g, '')
-        if (ref) referenceNumber = ref
-      }
+      const refMatch = body.match(/Reference No\.?\s*:\s*([A-Za-z0-9-]+)/i)
+      if (refMatch?.[1]) referenceNumber = refMatch[1]
       if (!referenceNumber) {
         const rrnMatch = body.match(/RRN\s*:\s*([A-Za-z0-9]+)/i)
         if (rrnMatch?.[1]) referenceNumber = rrnMatch[1].trim()

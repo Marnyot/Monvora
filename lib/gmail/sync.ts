@@ -32,6 +32,34 @@ export interface SyncResult {
 
 type WalletRow = { id: string; name: string | null; provider: string | null; balance: number }
 
+// ─── Cursor Anchor (forward-only) ────────────────────────────────────────────────
+
+/**
+ * Tetapkan cursor sync ke historyId SEKARANG tanpa mengimpor email lama.
+ *
+ * Dipakai saat login: tracking mulai DARI titik ini ke depan. Login tidak boleh
+ * menarik backlog (mis. saat cursor sempat basi karena background sync mati) —
+ * dump email lama itulah yang ingin dihindari. Capture real-time tetap ditangani
+ * background sync (cron + Pub/Sub push) yang berjalan tanpa user perlu login.
+ *
+ * fetchNewEmails(token, null) menempuh jalur initial sync: messages selalu kosong,
+ * hanya mengembalikan historyId terkini.
+ */
+export async function anchorGmailCursor(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+  accessToken: string
+): Promise<void> {
+  const { newHistoryId } = await fetchNewEmails(accessToken, null)
+  await supabase
+    .from('profiles')
+    .update({
+      gmail_sync_token: newHistoryId,
+      gmail_last_synced_at: new Date().toISOString(),
+    })
+    .eq('id', userId)
+}
+
 // ─── Main Orchestrator ─────────────────────────────────────────────────────────
 
 /**

@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 import { checkRateLimit } from '@/lib/utils/rate-limit'
 import { getValidGoogleToken } from '@/lib/utils/google-token'
 import { setupWatch } from '@/lib/gmail/watch'
-import { syncUserGmail } from '@/lib/gmail/sync'
+import { anchorGmailCursor } from '@/lib/gmail/sync'
 
 export async function POST() {
   const supabase = await createClient()
@@ -70,13 +70,15 @@ export async function POST() {
     )
   }
 
-  // Sync langsung — ambil email yang sudah ada di inbox
+  // Forward-only: anchor cursor ke "sekarang" — TIDAK backfill email lama.
+  // Reconnect = mulai tracking dari titik ini; email baru ditangkap real-time
+  // oleh background sync. User bisa tarik backlog via tombol "Sync sekarang".
   try {
-    await syncUserGmail(supabase, user.id, accessToken)
+    await anchorGmailCursor(supabase, user.id, accessToken)
   } catch (err) {
     // Non-blocking — user bisa sync manual nanti
     console.error(
-      '[gmail-reconnect] sync gagal:',
+      '[gmail-reconnect] anchor cursor gagal:',
       err instanceof Error ? err.message : String(err)
     )
   }

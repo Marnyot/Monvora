@@ -4,7 +4,7 @@ import { NextResponse, after } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { z } from 'zod'
 import { setupWatch } from '@/lib/gmail/watch'
-import { syncUserGmail } from '@/lib/gmail/sync'
+import { anchorGmailCursor } from '@/lib/gmail/sync'
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
@@ -53,10 +53,9 @@ export async function GET(request: NextRequest) {
       })
       .eq('id', user.id)
 
-    // Daftarkan Gmail Watch + jalankan sync awal SETELAH response terkirim.
+    // Daftarkan Gmail Watch + anchor cursor SETELAH response terkirim.
     // after() menjaga function tetap hidup di Vercel sampai selesai, jadi user
-    // langsung di-redirect tanpa menunggu sync. Hasil backfill muncul live di
-    // dashboard via Supabase Realtime.
+    // langsung di-redirect tanpa menunggu.
     if (accessToken) {
       const userId = user.id
       after(async () => {
@@ -73,12 +72,14 @@ export async function GET(request: NextRequest) {
           )
         }
 
-        // 2. Sync awal — backfill email bank 30 hari terakhir (sync pertama).
+        // 2. Forward-only: anchor cursor sync ke "sekarang" — TIDAK backfill email
+        //    lama. Login tidak boleh menarik backlog; email baru ditangkap real-time
+        //    oleh background sync (cron + Pub/Sub push) lalu muncul live via Realtime.
         try {
-          await syncUserGmail(admin, userId, accessToken)
+          await anchorGmailCursor(admin, userId, accessToken)
         } catch (err) {
           console.error(
-            '[auth-callback] initial sync gagal:',
+            '[auth-callback] anchor cursor gagal:',
             err instanceof Error ? err.message : String(err)
           )
         }

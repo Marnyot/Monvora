@@ -32,7 +32,7 @@ Source of Fund      : TAHAPAN XPRESI - 3940****80
 Customer PAN        : 9360001410092955532
 Total Payment       : IDR 35,000.00
 RRN                 : 345244767
-Reference No.       : 95271202606091231185 18QRS0698496183
+Reference No.       : 9527120260609123118518QRS0698496183
 Please save this email as your transaction reference.`
 
 // Fixture NYATA — Transfer ke bank lain / SEABANK (screenshot myBCA 23 May 2026)
@@ -227,6 +227,41 @@ describe('BCA Parser', () => {
     it('puts Details into the note but strips links', () => {
       expect(result!.description).toBe('Paket Freedom Internet 10GB info')
       expect(result!.description).not.toContain('www')
+    })
+  })
+
+  // Email BCA dikirim sebagai HTML; stripHtmlTags() meng-collapse newline jadi
+  // spasi sehingga body jadi SATU baris. Parser harus tetap memotong nilai di
+  // batas field, bukan menelan field berikutnya ("Source of Fund" dst).
+  describe('parse — flattened HTML body (real stripHtmlTags output)', () => {
+    const flatten = (s: string) => s.replace(/\s+/g, ' ').trim()
+
+    it('QRIS: merchant name does not bleed into following fields', () => {
+      const result = bcaParser.parse(makeEmail({ body: flatten(QRIS_BODY) }))
+      expect(result!.merchant_name).toBe('QRIS ke Sekutu Kopi')
+      expect(result!.merchant_name).not.toMatch(/merchant location|source of fund/i)
+      expect(result!.amount).toBe(35000)
+      expect(result!.reference_number).toBe('9527120260609123118518QRS0698496183')
+    })
+
+    it('Top Up: provider name stops at its own field, excludes Source of Fund', () => {
+      const result = bcaParser.parse(makeEmail({ body: flatten(TOPUP_BODY) }))
+      expect(result!.merchant_name).toBe('Top up ke GoPay')
+      expect(result!.merchant_name).not.toMatch(/source of fund/i)
+      expect(result!.amount).toBe(100000)
+    })
+
+    it('Transfer: beneficiary name does not absorb the bank field', () => {
+      const result = bcaParser.parse(makeEmail({ body: flatten(TRANSFER_SEABANK_BODY) }))
+      expect(result!.merchant_name).toBe('Transfer kepada Angelica')
+      expect(result!.description).toBe('Risquina Angelica Arvintyani')
+      expect(result!.amount).toBe(242500)
+    })
+
+    it('Mobile data: Details captured, link stripped, no field bleed', () => {
+      const result = bcaParser.parse(makeEmail({ body: flatten(MOBILE_DATA_BODY) }))
+      expect(result!.merchant_name).toBe('Top up IM3 Paket')
+      expect(result!.description).toBe('Paket Freedom Internet 10GB info')
     })
   })
 
