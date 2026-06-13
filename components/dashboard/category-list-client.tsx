@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { CategoryForm } from '@/components/dashboard/category-form'
 import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 import { EmptyState } from '@/components/shared/empty-state'
+import { CategoryIconBubble } from '@/components/shared/category-icon'
 
 interface Category {
   id: string
@@ -104,12 +105,7 @@ export function CategoryListClient({ categories }: CategoryListClientProps) {
               <div className="rounded-xl border border-border bg-card overflow-hidden divide-y divide-border">
                 {group.items.map(cat => (
                   <div key={cat.id} className="flex items-center gap-3 p-3">
-                    <div
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-base"
-                      style={{ backgroundColor: `${cat.color}20` }}
-                    >
-                      {cat.icon}
-                    </div>
+                    <CategoryIconBubble icon={cat.icon} color={cat.color} size={18} bubbleSize={36} />
                     <span className="flex-1 text-sm font-medium text-foreground">{cat.name}</span>
                     <div className="flex items-center gap-1 shrink-0">
                       <Button
@@ -157,16 +153,7 @@ export function CategoryListClient({ categories }: CategoryListClientProps) {
                 <div className="rounded-xl border border-border bg-card overflow-hidden divide-y divide-border">
                   {items.map(cat => (
                     <div key={cat.id} className="flex items-center gap-3 p-3">
-                      <div
-                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-base"
-                        style={{ backgroundColor: `${cat.color}20` }}
-                      >
-                        {cat.icon.length <= 2 ? cat.icon : (
-                          <span className="text-xs font-bold" style={{ color: cat.color }}>
-                            {cat.name.slice(0, 1)}
-                          </span>
-                        )}
-                      </div>
+                      <CategoryIconBubble icon={cat.icon} color={cat.color} size={18} bubbleSize={36} />
                       <span className="flex-1 text-sm font-medium text-foreground">{cat.name}</span>
                       <Badge variant="secondary" className="text-xs shrink-0">Default</Badge>
                     </div>
