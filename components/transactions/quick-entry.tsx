@@ -121,8 +121,10 @@ export function QuickEntry({ open, onOpenChange, wallets, categories }: QuickEnt
     setUsedOcr(true)
     setAmountRaw(r.amount.toLocaleString('id-ID'))
     if (r.merchantName) setMerchantName(r.merchantName)
+    if (r.description) setDescription(r.description)
     if (r.transactedAt) setTransactedAt(toDatetimeLocalInput(new Date(r.transactedAt)))
     if (r.paymentMethod) setPaymentMethod(r.paymentMethod)
+    if (r.categoryId) setCategoryId(r.categoryId)
   }
 
   // When type changes: reset fields and auto-configure transfer mode

@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { ScanLine, Loader2, X, Check } from 'lucide-react'
+import { ScanLine, Loader2, X, Check, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { formatIDR } from '@/lib/utils/currency'
@@ -10,8 +10,11 @@ import { formatDate } from '@/lib/utils/date'
 export interface OcrResult {
   amount: number
   merchantName: string | null
+  description: string | null
   transactedAt: string | null  // ISO
-  paymentMethod: 'qris' | 'ewallet' | 'transfer' | null
+  paymentMethod: string | null
+  categoryId: string | null
+  categoryName: string | null
   confidence: number
 }
 
@@ -20,67 +23,76 @@ interface OcrUploadProps {
   className?: string
 }
 
-type Phase = 'idle' | 'recognizing' | 'parsing' | 'review' | 'error'
+type Phase = 'idle' | 'processing' | 'review' | 'error'
 
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
   qris: 'QRIS',
-  ewallet: 'E-Wallet',
   transfer: 'Transfer',
+  cash: 'Tunai',
+  debit: 'Debit',
+  credit: 'Kartu Kredit',
+  ewallet: 'E-Wallet',
+  topup: 'Top Up',
+  other: 'Lainnya',
+}
+
+const MAX_DIM = 1280
+
+async function resizeAndEncode(file: File): Promise<string> {
+  const bitmap = await createImageBitmap(file)
+  try {
+    const scale = Math.min(MAX_DIM / bitmap.width, MAX_DIM / bitmap.height, 1)
+    const w = Math.max(1, Math.round(bitmap.width * scale))
+    const h = Math.max(1, Math.round(bitmap.height * scale))
+
+    // OffscreenCanvas widely supported; fall back to <canvas> if not.
+    const canvas =
+      typeof OffscreenCanvas !== 'undefined'
+        ? new OffscreenCanvas(w, h)
+        : Object.assign(document.createElement('canvas'), { width: w, height: h })
+    const ctx = (canvas as OffscreenCanvas | HTMLCanvasElement).getContext('2d') as
+      | OffscreenCanvasRenderingContext2D
+      | CanvasRenderingContext2D
+      | null
+    if (!ctx) throw new Error('Canvas context tidak tersedia')
+    ctx.drawImage(bitmap, 0, 0, w, h)
+
+    const blob =
+      'convertToBlob' in canvas
+        ? await canvas.convertToBlob({ type: 'image/jpeg', quality: 0.85 })
+        : await new Promise<Blob | null>((resolve) =>
+            (canvas as HTMLCanvasElement).toBlob(resolve, 'image/jpeg', 0.85)
+          )
+    if (!blob) throw new Error('Tidak bisa mengubah gambar ke JPEG')
+
+    return await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result as string)
+      reader.onerror = () => reject(reader.error ?? new Error('Gagal membaca gambar'))
+      reader.readAsDataURL(blob)
+    })
+  } finally {
+    bitmap.close?.()
+  }
 }
 
 export function OcrUpload({ onApply, className }: OcrUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [phase, setPhase] = useState<Phase>('idle')
-  const [progress, setProgress] = useState(0)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [result, setResult] = useState<OcrResult | null>(null)
 
   async function handleFile(file: File) {
     setErrorMessage(null)
     setResult(null)
-    setProgress(0)
-    setPhase('recognizing')
-
-    let worker: Awaited<ReturnType<typeof import('tesseract.js').createWorker>> | null = null
+    setPhase('processing')
 
     try {
-      // Lazy-load tesseract.js to avoid pulling 2MB+ into the initial bundle.
-      // All assets are self-hosted under /tesseract/ so we don't depend on the
-      // jsdelivr or tessdata.projectnaptha.com CDNs (CSP-clean, fewer failure
-      // modes, works inside the PWA service worker scope).
-      const { createWorker } = await import('tesseract.js')
-      worker = await createWorker('eng', 1, {
-        workerPath: '/tesseract/worker.min.js',
-        corePath: '/tesseract/tesseract-core-simd-lstm.wasm.js',
-        langPath: '/tesseract',
-        workerBlobURL: false,
-        logger: (m) => {
-          if (m.status === 'recognizing text' && typeof m.progress === 'number') {
-            setProgress(Math.round(m.progress * 100))
-          }
-        },
-        errorHandler: (err) => {
-          // Surface tesseract internal errors to console for debugging
-          console.error('[tesseract] worker error', err)
-        },
-      })
-
-      // Pass the File directly — Tesseract reads it via FileReader → ArrayBuffer.
-      // Avoids createObjectURL → fetch(blob:…) which CSP connect-src blocks.
-      const { data } = await worker.recognize(file)
-      const text = data.text ?? ''
-
-      if (!text.trim()) {
-        setErrorMessage('Teks tidak terbaca dari gambar. Coba foto yang lebih jelas.')
-        setPhase('error')
-        return
-      }
-
-      setPhase('parsing')
+      const dataUrl = await resizeAndEncode(file)
       const res = await fetch('/api/ocr', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ image: dataUrl }),
       })
       const json = await res.json()
 
@@ -94,8 +106,11 @@ export function OcrUpload({ onApply, className }: OcrUploadProps) {
       const parsed: OcrResult = {
         amount: json.data.amount,
         merchantName: json.data.merchant_name,
+        description: json.data.description,
         transactedAt: json.data.transacted_at,
         paymentMethod: json.data.payment_method,
+        categoryId: json.data.category_id,
+        categoryName: json.data.category_name,
         confidence: json.data.confidence,
       }
       setResult(parsed)
@@ -105,16 +120,11 @@ export function OcrUpload({ onApply, className }: OcrUploadProps) {
       const msg = err instanceof Error ? err.message : 'OCR gagal'
       setErrorMessage(msg)
       setPhase('error')
-    } finally {
-      if (worker) {
-        try { await worker.terminate() } catch { /* ignore */ }
-      }
     }
   }
 
   function reset() {
     setPhase('idle')
-    setProgress(0)
     setErrorMessage(null)
     setResult(null)
     if (inputRef.current) inputRef.current.value = ''
@@ -132,7 +142,7 @@ export function OcrUpload({ onApply, className }: OcrUploadProps) {
       <input
         ref={inputRef}
         type="file"
-        accept="image/*"
+        accept="image/jpeg,image/png,image/webp"
         className="sr-only"
         onChange={(e) => {
           const file = e.target.files?.[0]
@@ -148,23 +158,17 @@ export function OcrUpload({ onApply, className }: OcrUploadProps) {
           className="w-full"
           onClick={() => inputRef.current?.click()}
         >
-          <ScanLine className="h-4 w-4 mr-1.5" />
-          Scan struk dari foto
+          <Sparkles className="h-4 w-4 mr-1.5 text-primary" />
+          Scan struk dengan AI
         </Button>
       )}
 
-      {(phase === 'recognizing' || phase === 'parsing') && (
+      {phase === 'processing' && (
         <div className="rounded-lg border bg-card p-3 flex items-center gap-3">
           <Loader2 className="h-4 w-4 animate-spin text-primary" />
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium">
-              {phase === 'recognizing' ? 'Membaca teks dari gambar…' : 'Menganalisis hasil…'}
-            </p>
-            {phase === 'recognizing' && (
-              <div className="h-1 mt-1.5 rounded-full bg-muted overflow-hidden">
-                <div className="h-full bg-primary transition-[width]" style={{ width: `${progress}%` }} />
-              </div>
-            )}
+            <p className="text-xs font-medium">Menganalisis struk dengan AI…</p>
+            <p className="text-[10px] text-muted-foreground">Biasanya 3-8 detik</p>
           </div>
           <button
             type="button"
@@ -181,7 +185,8 @@ export function OcrUpload({ onApply, className }: OcrUploadProps) {
         <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-3 space-y-2">
           <p className="text-xs text-destructive">{errorMessage}</p>
           <Button type="button" size="sm" variant="outline" onClick={reset}>
-            Coba lagi
+            <ScanLine className="h-4 w-4 mr-1.5" />
+            Coba foto lain
           </Button>
         </div>
       )}
@@ -189,7 +194,10 @@ export function OcrUpload({ onApply, className }: OcrUploadProps) {
       {phase === 'review' && result && (
         <div className="rounded-lg border bg-card p-3 space-y-2">
           <div className="flex items-center justify-between">
-            <p className="text-xs font-semibold">Hasil scan</p>
+            <p className="text-xs font-semibold flex items-center gap-1">
+              <Sparkles className="h-3 w-3 text-primary" />
+              Hasil scan AI
+            </p>
             <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
               {Math.round(result.confidence * 100)}% yakin
             </span>
@@ -203,6 +211,23 @@ export function OcrUpload({ onApply, className }: OcrUploadProps) {
               <div className="flex justify-between gap-2">
                 <dt className="text-muted-foreground shrink-0">Merchant</dt>
                 <dd className="truncate max-w-[60%] text-right">{result.merchantName}</dd>
+              </div>
+            )}
+            {result.categoryName && (
+              <div className="flex justify-between gap-2">
+                <dt className="text-muted-foreground">Kategori</dt>
+                <dd className="text-right">
+                  {result.categoryName}
+                  {!result.categoryId && (
+                    <span className="text-[10px] text-amber-600 dark:text-amber-400 ml-1">(perlu pilih)</span>
+                  )}
+                </dd>
+              </div>
+            )}
+            {result.description && (
+              <div className="flex justify-between gap-2">
+                <dt className="text-muted-foreground shrink-0">Item</dt>
+                <dd className="truncate max-w-[60%] text-right">{result.description}</dd>
               </div>
             )}
             {result.transactedAt && (

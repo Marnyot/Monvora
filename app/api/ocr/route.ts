@@ -2,11 +2,22 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { checkRateLimit } from '@/lib/utils/rate-limit'
-import { parseReceiptText } from '@/lib/ocr/parser'
+import { extractReceiptFromImage } from '@/lib/ai/ocr-vision'
+
+// Accept up to ~6MB base64 payload (~4.5MB raw bytes after decode). Client
+// resizes images to ~1024px before encoding so real usage is well under this.
+const MAX_IMAGE_PAYLOAD = 6 * 1024 * 1024
 
 const ocrInputSchema = z.object({
-  text: z.string().trim().min(1, 'Teks wajib diisi').max(20_000, 'Teks terlalu panjang'),
+  image: z
+    .string()
+    .regex(/^data:image\/(jpeg|jpg|png|webp);base64,/, 'Format gambar tidak didukung')
+    .max(MAX_IMAGE_PAYLOAD, 'Gambar terlalu besar'),
 })
+
+function normalize(name: string): string {
+  return name.toLowerCase().replace(/\s+/g, ' ').trim()
+}
 
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -50,26 +61,59 @@ export async function POST(request: Request) {
     )
   }
 
-  const result = parseReceiptText(parsed.data.text)
-  if (!result) {
+  // Split data URL: "data:image/jpeg;base64,..."
+  const dataUrl = parsed.data.image
+  const commaIdx = dataUrl.indexOf(',')
+  const header = dataUrl.slice(5, commaIdx) // "image/jpeg;base64"
+  const mimeType = header.split(';')[0]
+  const imageBase64 = dataUrl.slice(commaIdx + 1)
+
+  // Fetch user's expense categories so Gemini can pick one by name.
+  const { data: categories } = await supabase
+    .from('categories')
+    .select('id, name')
+    .eq('type', 'expense')
+    .is('deleted_at', null)
+    .or(`user_id.eq.${user.id},user_id.is.null`)
+
+  const categoryList = (categories ?? []).map((c) => ({ id: c.id, name: c.name }))
+
+  const result = await extractReceiptFromImage({
+    imageBase64,
+    mimeType,
+    categories: categoryList,
+  })
+
+  if (!result || !result.amount) {
     return NextResponse.json(
       {
         data: null,
         error: {
           code: 'PARSE_FAILED',
-          message: 'Tidak menemukan nominal di teks. Pastikan screenshot menunjukkan nominal "Rp ...".',
+          message: 'Tidak bisa membaca struk. Coba foto yang lebih jelas atau input manual.',
         },
       },
       { status: 422 }
     )
   }
 
+  // Map category_name back to category_id (case-insensitive).
+  let categoryId: string | null = null
+  if (result.categoryName) {
+    const target = normalize(result.categoryName)
+    const match = categoryList.find((c) => normalize(c.name) === target)
+    categoryId = match?.id ?? null
+  }
+
   return NextResponse.json({
     data: {
       amount: result.amount,
-      merchant_name: result.merchantName ?? null,
-      transacted_at: result.transactedAt ? result.transactedAt.toISOString() : null,
-      payment_method: result.paymentMethod ?? null,
+      merchant_name: result.merchantName,
+      description: result.description,
+      transacted_at: result.transactedAt,
+      payment_method: result.paymentMethod,
+      category_id: categoryId,
+      category_name: result.categoryName,
       confidence: result.confidence,
     },
     error: null,

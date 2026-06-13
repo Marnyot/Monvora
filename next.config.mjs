@@ -16,13 +16,10 @@ const securityHeaders = [
     key: 'Content-Security-Policy',
     value: [
       "default-src 'self'",
-      // 'wasm-unsafe-eval' untuk Tesseract WASM (asset self-hosted di /tesseract/)
-      "script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval' 'unsafe-inline' va.vercel-scripts.com",
-      "worker-src 'self'",
+      "script-src 'self' 'unsafe-eval' 'unsafe-inline' va.vercel-scripts.com",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' blob: data: lh3.googleusercontent.com",
-      // blob: untuk safety net kalau Tesseract internal pakai blob URL (e.g. di iOS Safari)
-      "connect-src 'self' blob: https://*.supabase.co wss://*.supabase.co accounts.google.com",
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co accounts.google.com",
     ].join('; '),
   },
 ]
