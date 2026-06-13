@@ -5,6 +5,12 @@ import { checkRateLimit } from '@/lib/utils/rate-limit'
 
 const patchSchema = z.object({
   onboarding_completed: z.boolean().optional(),
+  full_name: z
+    .string()
+    .trim()
+    .min(1, 'Nama tidak boleh kosong')
+    .max(80, 'Maksimal 80 karakter')
+    .optional(),
 })
 
 export async function PATCH(request: Request) {
@@ -53,7 +59,7 @@ export async function PATCH(request: Request) {
     .from('profiles')
     .update(parsed.data)
     .eq('id', user.id)
-    .select('id, onboarding_completed')
+    .select('id, onboarding_completed, full_name')
     .single()
 
   if (error) {
