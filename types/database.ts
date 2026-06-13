@@ -451,7 +451,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      gmail_ai_reserve_call: {
+        Args: { p_max_count: number; p_usage_date: string; p_user_id: string }
+        Returns: number
+      }
     }
     Enums: {
       [_ in never]: never

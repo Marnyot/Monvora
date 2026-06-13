@@ -8,38 +8,17 @@ vi.mock('@/lib/ai/email-parser', () => ({
 
 import { aiFallbackParse } from '@/lib/gmail/parsers/ai-fallback'
 
-function makeSupabase(currentCount: number) {
-  const upsertCalls: unknown[] = []
+function makeSupabase(reservedCount: number | null) {
+  // reservedCount === null simulates the RPC returning NULL (cap exhausted).
+  // A positive integer simulates a successful atomic reservation.
+  const rpcCalls: Array<{ fn: string; args: unknown }> = []
   const supabase = {
-    from(table: string) {
-      if (table === 'gmail_ai_usage_daily') {
-        return {
-          select() {
-            return {
-              eq() {
-                return {
-                  eq() {
-                    return {
-                      maybeSingle: vi.fn().mockResolvedValue({
-                        data: currentCount > 0 ? { call_count: currentCount } : null,
-                        error: null,
-                      }),
-                    }
-                  },
-                }
-              },
-            }
-          },
-          upsert(row: unknown) {
-            upsertCalls.push(row)
-            return Promise.resolve({ error: null })
-          },
-        }
-      }
-      throw new Error(`unexpected table ${table}`)
+    rpc(fn: string, args: unknown) {
+      rpcCalls.push({ fn, args })
+      return Promise.resolve({ data: reservedCount, error: null })
     },
   }
-  return { supabase: supabase as never, upsertCalls }
+  return { supabase: supabase as never, rpcCalls }
 }
 
 const email: GmailMessage = {
@@ -58,15 +37,16 @@ beforeEach(() => {
 
 describe('aiFallbackParse', () => {
   it('returns null and skips Gemini when daily budget exhausted', async () => {
-    const { supabase, upsertCalls } = makeSupabase(30)
+    const { supabase, rpcCalls } = makeSupabase(null)
     const tx = await aiFallbackParse({ supabase, userId: 'u-1', email })
     expect(tx).toBeNull()
     expect(mockParseEmailWithAi).not.toHaveBeenCalled()
-    expect(upsertCalls).toHaveLength(0)
+    expect(rpcCalls).toHaveLength(1)
+    expect(rpcCalls[0].fn).toBe('gmail_ai_reserve_call')
   })
 
   it('calls Gemini and converts result when budget available', async () => {
-    const { supabase, upsertCalls } = makeSupabase(0)
+    const { supabase, rpcCalls } = makeSupabase(1)
     mockParseEmailWithAi.mockResolvedValue({
       ok: true,
       data: {
@@ -88,11 +68,11 @@ describe('aiFallbackParse', () => {
     expect(tx?.bank).toBe('mandiri')
     expect(tx?.confidence).toBeCloseTo(0.85)
     expect(tx?.raw_email_id).toBe('msg-1')
-    expect(upsertCalls).toHaveLength(1)
+    expect(rpcCalls).toHaveLength(1)
   })
 
   it('substitutes "unknown" for any bank_name that leaks "ai"', async () => {
-    const { supabase } = makeSupabase(0)
+    const { supabase } = makeSupabase(1)
     mockParseEmailWithAi.mockResolvedValue({
       ok: true,
       data: {
@@ -113,7 +93,7 @@ describe('aiFallbackParse', () => {
   })
 
   it('returns null when Gemini upstream fails', async () => {
-    const { supabase } = makeSupabase(0)
+    const { supabase } = makeSupabase(1)
     mockParseEmailWithAi.mockResolvedValue({ ok: false, kind: 'upstream', errorId: 'ERR_x' })
     const tx = await aiFallbackParse({ supabase, userId: 'u-1', email })
     expect(tx).toBeNull()

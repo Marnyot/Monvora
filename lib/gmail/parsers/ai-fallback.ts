@@ -26,31 +26,20 @@ async function reserveDailyBudget(
   userId: string,
   now: Date
 ): Promise<boolean> {
-  const usageDate = jakartaDateKey(now)
+  // Atomic increment-with-cap via Postgres RPC. The previous read-then-upsert
+  // raced under parallel email processing (Promise.allSettled in sync.ts) —
+  // two concurrent calls could both observe count=29 and both write 30,
+  // burning extra Gemini calls. The RPC's UPDATE...WHERE call_count < cap
+  // makes it impossible to exceed the budget.
+  const { data, error } = await supabase.rpc('gmail_ai_reserve_call', {
+    p_user_id: userId,
+    p_usage_date: jakartaDateKey(now),
+    p_max_count: DAILY_BUDGET,
+  })
 
-  const { data: existing } = await supabase
-    .from('gmail_ai_usage_daily')
-    .select('call_count')
-    .eq('user_id', userId)
-    .eq('usage_date', usageDate)
-    .maybeSingle()
-
-  const currentCount = existing?.call_count ?? 0
-  if (currentCount >= DAILY_BUDGET) return false
-
-  const { error } = await supabase
-    .from('gmail_ai_usage_daily')
-    .upsert(
-      {
-        user_id: userId,
-        usage_date: usageDate,
-        call_count: currentCount + 1,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'user_id,usage_date' }
-    )
-
-  return !error
+  if (error) return false
+  // RPC returns NULL when the cap was already hit.
+  return typeof data === 'number'
 }
 
 export interface AiFallbackOptions {
