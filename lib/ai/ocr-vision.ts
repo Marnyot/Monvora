@@ -2,7 +2,7 @@
 // Sent directly to Gemini for inference; we never persist the image.
 import { GoogleGenerativeAI } from '@google/generative-ai'
 
-const MODEL_NAME = 'gemini-3.1-flash-lite'
+const MODEL_NAME = 'gemini-2.5-flash'
 const TIMEOUT_MS = 15_000
 
 export const VISION_PAYMENT_METHODS = ['qris', 'transfer', 'cash', 'debit', 'credit', 'ewallet', 'topup', 'other'] as const

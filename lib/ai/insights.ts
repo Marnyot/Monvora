@@ -3,7 +3,7 @@
 // gating execution and persisting to the ai_insights table.
 import { GoogleGenerativeAI } from '@google/generative-ai'
 
-const MODEL_NAME = 'gemini-3.1-flash-lite'
+const MODEL_NAME = 'gemini-2.5-flash'
 const TIMEOUT_MS = 8_000
 const MAX_INSIGHTS = 3
 const MAX_INSIGHT_LENGTH = 200
