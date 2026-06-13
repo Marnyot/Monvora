@@ -45,7 +45,14 @@ Aturan:
 - description = ringkasan singkat item yang dibeli (mis. "Kopi susu + roti bakar"). Kosongkan kalau struk hanya menampilkan total tanpa item.
 - transacted_at = ISO 8601 dengan timezone WIB +07:00 (mis. "2026-06-13T14:30:00+07:00"). Kalau jam tidak ada, pakai 12:00.
 - payment_method = pilih dari daftar di atas berdasarkan konteks (mis. GoPay/OVO/DANA/ShopeePay → ewallet, QRIS → qris).
-- category_name = HARUS persis sama dengan salah satu nama kategori di atas. Kalau ragu, pakai kategori paling umum yang masuk akal.
+- category_name = HARUS persis sama dengan salah satu nama kategori di atas. Pilih berdasarkan ITEM yang dibeli, BUKAN tipe tokonya.
+  Contoh:
+  - Beli Indomie/snack/minuman di Indomaret/Alfamart → kategori makanan/minuman (BUKAN belanja umum)
+  - Beli sabun/sampo/deterjen di Indomaret → kategori kebutuhan rumah/belanja
+  - Beli baju/sepatu di mall → kategori belanja/fashion
+  - Beli bensin di SPBU → kategori transportasi
+  - Beli pulsa/paket data → kategori pulsa/tagihan
+  Kalau struk berisi banyak item campuran, pilih kategori yang sesuai dengan item DOMINAN (paling banyak nominalnya atau jumlahnya).
 - confidence = 0..1 menyatakan keyakinan kamu pada hasil ini.
 
 Jika ada field yang TIDAK BISA ditentukan dari gambar, gunakan null (jangan menebak).
