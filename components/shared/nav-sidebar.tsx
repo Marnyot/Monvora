@@ -1,8 +1,9 @@
 'use client'
 
-import Link from 'next/link'
+import Link, { useLinkStatus } from 'next/link'
 import { usePathname } from 'next/navigation'
 import { LayoutDashboard, Wallet, List, Settings, LogOut, Loader2, BarChart3, Target } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import { ConfirmDialog } from '@/components/shared/confirm-dialog'
@@ -15,6 +16,36 @@ const NAV_ITEMS = [
   { href: '/wallets', label: 'Dompet', icon: Wallet },
   { href: '/settings', label: 'Pengaturan', icon: Settings },
 ]
+
+function SidebarItemContent({
+  Icon,
+  label,
+  active,
+}: {
+  Icon: LucideIcon
+  label: string
+  active: boolean
+}) {
+  const { pending } = useLinkStatus()
+  return (
+    <span
+      className={cn(
+        'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+        active
+          ? 'bg-accent text-primary font-semibold'
+          : 'text-muted-foreground hover:bg-accent/60 hover:text-foreground',
+        pending && !active && 'bg-accent/40'
+      )}
+    >
+      {pending ? (
+        <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+      ) : (
+        <Icon className={cn('h-4 w-4 shrink-0', active && 'stroke-[2.5px]')} />
+      )}
+      {label}
+    </span>
+  )
+}
 
 function LogoutButtonSidebar() {
   const [open, setOpen] = useState(false)
@@ -74,17 +105,8 @@ export function NavSidebar() {
             const active = pathname === href || pathname.startsWith(href + '/')
             return (
               <li key={href}>
-                <Link
-                  href={href}
-                  className={cn(
-                    'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-                    active
-                      ? 'bg-accent text-primary font-semibold'
-                      : 'text-muted-foreground hover:bg-accent/60 hover:text-foreground'
-                  )}
-                >
-                  <Icon className={cn('h-4 w-4 shrink-0', active && 'stroke-[2.5px]')} />
-                  {label}
+                <Link href={href} prefetch className="block">
+                  <SidebarItemContent Icon={Icon} label={label} active={active} />
                 </Link>
               </li>
             )
