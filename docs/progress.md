@@ -9,6 +9,7 @@
 
 | Version | Date | Updated By | Changes |
 |---|---|---|---|
+| v18 | Jun 13, 2026 | Claude | **Phase 4 #3 Rate limit + headers hardening.** Rate limit: tambah entries eksplisit `/api/sync/gmail/disconnect` + `/api/sync/gmail/reconnect` (5 per 5 menit), tambah memory cap `RATE_LIMIT_MAX_ENTRIES=10000` + eviction sweep di threshold 256 (cegah DoS unbounded growth dari unique-user spam). Export test helpers `__resetRateLimitStore`, `__getRateLimitStoreSize`. Security headers: CSP +5 directive (`frame-ancestors 'none'` defense-in-depth atas X-Frame-Options, `object-src 'none'`, `base-uri 'self'`, `form-action 'self'`, `upgrade-insecure-requests`). +3 header baru: `Cross-Origin-Opener-Policy: same-origin-allow-popups` (allow Google OAuth popup), `Cross-Origin-Resource-Policy: same-site`, `X-Permitted-Cross-Domain-Policies: none`. Permissions-Policy expanded (`payment=()`, `usb=()`). Tests baru: `tests/unit/utils/rate-limit.test.ts` (7 tests: basic, window, isolation, explicit configs, eviction, cap), `tests/unit/security/headers.test.ts` (7 tests: CSP directives + COOP/CORP). Suite 528/528 pass. |
 | v17 | Jun 13, 2026 | Claude | **Phase 4 #2 Security audit + fixes.** Audit semua 25 API endpoint vs `security.md §14` (lihat agent report). 4 fixes applied: (a) **Webhook auth bypass** [HIGH] — `app/api/sync/gmail/webhook/route.ts` dulu skip auth jika env `GOOGLE_PUBSUB_VERIFICATION_TOKEN` kosong; sekarang strict — return 503 jika env unset, 401 jika header tidak match. (b) **Sync err.message leak** [HIGH] — `POST /api/sync/gmail` dulu return `err.message` verbatim ke client (bisa expose Gmail API state / token info); sekarang generic message + `errorId` + log internal (errorId+userId). (c) **Reconnect logging** [MED] — 2 console.error di reconnect log `err.message`; sekarang errorId+userId only per §10. (d) **Disconnect stopWatch silent** [LOW] — try/catch + errorId, non-blocking. Tests updated: gmail-webhook.test.ts (+2 baru: 503 env-missing, 401 no-auth), sync.test.ts (assertion err.message tidak bocor + errorId disertakan). Inventori: 11 route lulus clean. Sisa MED finding (PostgREST ilike template literal) tidak actionable — PostgREST sudah parameterized. Suite 514/514 pass. |
 | v16 | Jun 13, 2026 | Claude | **Phase 4 #1 Sentry hardening selesai.** `instrumentation.ts` (root) — register() dispatch by NEXT_RUNTIME ke `sentry.server.config.ts` / `sentry.edge.config.ts`; export `onRequestError = Sentry.captureRequestError` untuk App Router error capture. NEW `sentry.edge.config.ts` (middleware coverage, PII scrub sama dgn server). RENAME `sentry.client.config.ts` → `instrumentation-client.ts` (deprecation warning Sentry v10 + Turbopack compat) + export `onRouterTransitionStart`. NEW `app/global-error.tsx` (React render error → `Sentry.captureException`, copy ID, retry button). CSP `connect-src` += `https://*.sentry.io` (browser events tidak di-block). `withSentryConfig` += `telemetry: false` + `authToken: process.env.SENTRY_AUTH_TOKEN`. `.env.example` += `SENTRY_AUTH_TOKEN` (opsional, source map). Tests baru: `tests/unit/sentry/setup.test.ts` (3 tests: instrumentation exports + CSP). Suite 512/512 pass. **User action sisa:** buat Sentry project → set `SENTRY_DSN` + `NEXT_PUBLIC_SENTRY_DSN` (+ opsional `SENTRY_AUTH_TOKEN`) di Vercel env vars. |
 | v15 | Jun 13, 2026 | Claude | **Hybrid Gmail parser + perf overhaul.** OCR migrasi Tesseract.js → Gemini Vision (`lib/ai/ocr-vision.ts`, gemini-2.5-flash, structured JSON: amount/merchant/category/payment_method/date). Gmail parser sekarang hybrid: rule chain dulu, fallback ke Gemini (`lib/ai/email-parser.ts` + `lib/gmail/parsers/ai-fallback.ts`) kalau rule null atau confidence < 0.7 (`RULE_CONFIDENCE_FLOOR`). AI gated per-user 30 calls/hari, atomic via Postgres RPC `gmail_ai_reserve_call` (migration 012 + 013). AI invisible dari UI: `bank` field tidak pernah 'ai', tabel usage tanpa RLS read policy. Hooks `useAnalytics` + `useBudgets` konversi dari /api route ke client-direct Supabase (RLS + explicit user_id filter) — fix 1s navigation lag (ADR-025). Hapus orphan `/api/analytics` + GET `/api/budgets`. Loading skeletons untuk semua route dashboard. Nav prefetch={true} + useLinkStatus tap feedback. Sheet height dvh→svh + onOpenAutoFocus prevent → fix mobile tap drift. UI fixes: AI insights card + OCR review card overflow di mobile (min-w-0, break-words). Model fix: gemini-3.1-flash-lite (tidak ada) → gemini-2.5-flash di 3 file. Docs: amend ADR-022 + add ADR-025 (client-direct) + ADR-026 (hybrid AI parser) + PARSER_GUIDE AI section + security.md §16 carve-out. Suite 509/509 pass. |
@@ -27,7 +28,7 @@
 | v2 | May 25, 2026 | Claude | Decisions Log dipindahkan ke decisions.md, section 7 jadi ADR index |
 | v1 | May 24, 2026 | Claude | Initial creation — project kickoff |
 
-**Current Version:** v17
+**Current Version:** v18
 **Last Updated:** Jun 13, 2026
 
 ---
@@ -51,10 +52,10 @@
 
 ```
 Status          : 🔄 Phase 4 — Public Ready (in progress)
-Current Phase   : #1 Sentry ✅ + #2 Security audit ✅ → Next: #3 Rate limit + headers hardening
+Current Phase   : #1 Sentry ✅ + #2 Security audit ✅ + #3 Rate limit + headers ✅ → Next: #4 Privacy policy
 App Version     : v0.3.0
 Last Updated    : Jun 13, 2026
-Next Milestone  : Phase 4 #3 Rate limit + headers hardening
+Next Milestone  : Phase 4 #4 Privacy policy (mention Gemini fallback §16)
 ```
 
 ### Overall Progress
@@ -64,7 +65,7 @@ Documentation   ████████████████████ 100
 Phase 1         ████████████████████ 100% ✅ (selesai — deployed ke Vercel)
 Phase 2         ██████████████████░░  90% 🟡 (Mandiri+BCA production-ready; BNI/BRI/CIMB di-parker ke Phase 4 hardening — lihat §4 "Sisa Pekerjaan")
 Phase 3         ████████████████████ 100% ✅ (PWA ✅, Analytics ✅, AI Insights ✅, Budget ✅, OCR ✅, Recurring ✅)
-Phase 4         ██░░░░░░░░░░░░░░░░░░  13% 🔄 (#1 Sentry ✅ + #2 Security audit ✅ — 2/15 selesai)
+Phase 4         ████░░░░░░░░░░░░░░░░  20% 🔄 (#1–#3 ✅ — 3/15 selesai)
 ```
 
 ### Status Legend
@@ -476,7 +477,7 @@ Hasil audit code vs docs. Kode parser berfungsi (semua 117 test parser hijau), t
 |---|---|---|---|
 | 1 | Sentry aktif (config + PII scrub + global-error) | ✅ | `instrumentation.ts` + `sentry.edge.config.ts` + `instrumentation-client.ts` + `app/global-error.tsx` + CSP `sentry.io`. User action: set `SENTRY_DSN` + `NEXT_PUBLIC_SENTRY_DSN` di Vercel |
 | 2 | Security audit semua API route vs `security.md §14` | ✅ | 25 endpoint diaudit. 4 fix: webhook auth strict (503/401), sync err.message → generic+errorId, reconnect log errorId only, disconnect stopWatch non-blocking |
-| 3 | Rate limit + headers hardening (output dari #2) | ⏳ | |
+| 3 | Rate limit + headers hardening (output dari #2) | ✅ | Rate limit: +2 endpoint, memory cap 10k + eviction sweep. CSP: +5 directive (frame-ancestors/object-src/base-uri/form-action/upgrade-insecure-requests). +3 header (COOP same-origin-allow-popups, CORP same-site, X-Permitted-Cross-Domain-Policies none) |
 | 4 | Privacy policy (mention Gemini fallback §16) | ⏳ | |
 | 5 | Gmail permission explanation page | ⏳ | Trust-building untuk OAuth review |
 | 6 | Landing page (value prop + CTA) | ⏳ | |

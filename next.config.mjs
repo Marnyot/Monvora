@@ -8,9 +8,14 @@ const securityHeaders = [
   { key: 'X-Frame-Options', value: 'DENY' },
   { key: 'X-Content-Type-Options', value: 'nosniff' },
   { key: 'Referrer-Policy', value: 'origin-when-cross-origin' },
+  { key: 'X-Permitted-Cross-Domain-Policies', value: 'none' },
+  // same-origin-allow-popups: allow Google OAuth popup flow while preventing
+  // cross-origin window references from arbitrary sites.
+  { key: 'Cross-Origin-Opener-Policy', value: 'same-origin-allow-popups' },
+  { key: 'Cross-Origin-Resource-Policy', value: 'same-site' },
   {
     key: 'Permissions-Policy',
-    value: 'camera=(), microphone=(), geolocation=()',
+    value: 'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
   },
   {
     key: 'Content-Security-Policy',
@@ -20,6 +25,11 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' blob: data: lh3.googleusercontent.com",
       "connect-src 'self' https://*.supabase.co wss://*.supabase.co accounts.google.com https://*.sentry.io",
+      "frame-ancestors 'none'",
+      "object-src 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+      "upgrade-insecure-requests",
     ].join('; '),
   },
 ]
