@@ -36,7 +36,7 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  if (isAuthed && pathname === '/login') {
+  if (isAuthed && (pathname === '/login' || pathname === '/')) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
