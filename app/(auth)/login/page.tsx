@@ -41,9 +41,19 @@ export default async function LoginPage({
       </div>
 
       {/* Footer note */}
-      <p className="text-center text-xs text-muted-foreground px-4">
-        Dengan masuk, kamu menyetujui bahwa kami hanya mengakses email notifikasi transaksi.
-      </p>
+      <div className="space-y-2 px-4 text-center">
+        <p className="text-xs text-muted-foreground">
+          Dengan masuk, kamu menyetujui bahwa kami hanya mengakses email notifikasi transaksi.
+        </p>
+        <p className="text-xs text-muted-foreground">
+          <a
+            href="/privacy"
+            className="underline-offset-2 hover:underline"
+          >
+            Kebijakan Privasi
+          </a>
+        </p>
+      </div>
     </div>
   )
 }
