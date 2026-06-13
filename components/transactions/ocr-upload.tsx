@@ -192,31 +192,31 @@ export function OcrUpload({ onApply, className }: OcrUploadProps) {
       )}
 
       {phase === 'review' && result && (
-        <div className="rounded-lg border bg-card p-3 space-y-2">
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-semibold flex items-center gap-1">
-              <Sparkles className="h-3 w-3 text-primary" />
-              Hasil scan AI
+        <div className="rounded-lg border bg-card p-3 space-y-2 min-w-0 overflow-hidden">
+          <div className="flex items-center justify-between gap-2 min-w-0">
+            <p className="text-xs font-semibold flex items-center gap-1 min-w-0">
+              <Sparkles className="h-3 w-3 text-primary shrink-0" />
+              <span className="truncate">Hasil scan AI</span>
             </p>
-            <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+            <span className="text-[10px] uppercase tracking-wide text-muted-foreground shrink-0">
               {Math.round(result.confidence * 100)}% yakin
             </span>
           </div>
-          <dl className="text-xs space-y-1">
-            <div className="flex justify-between gap-2">
-              <dt className="text-muted-foreground">Nominal</dt>
-              <dd className="tabular-nums font-medium">{formatIDR(result.amount)}</dd>
+          <dl className="text-xs space-y-1 min-w-0">
+            <div className="flex justify-between gap-2 min-w-0">
+              <dt className="text-muted-foreground shrink-0">Nominal</dt>
+              <dd className="tabular-nums font-medium text-right break-words min-w-0">{formatIDR(result.amount)}</dd>
             </div>
             {result.merchantName && (
-              <div className="flex justify-between gap-2">
+              <div className="flex justify-between gap-2 min-w-0">
                 <dt className="text-muted-foreground shrink-0">Merchant</dt>
-                <dd className="truncate max-w-[60%] text-right">{result.merchantName}</dd>
+                <dd className="text-right break-words min-w-0">{result.merchantName}</dd>
               </div>
             )}
             {result.categoryName && (
-              <div className="flex justify-between gap-2">
-                <dt className="text-muted-foreground">Kategori</dt>
-                <dd className="text-right">
+              <div className="flex justify-between gap-2 min-w-0">
+                <dt className="text-muted-foreground shrink-0">Kategori</dt>
+                <dd className="text-right break-words min-w-0">
                   {result.categoryName}
                   {!result.categoryId && (
                     <span className="text-[10px] text-amber-600 dark:text-amber-400 ml-1">(perlu pilih)</span>
@@ -225,21 +225,21 @@ export function OcrUpload({ onApply, className }: OcrUploadProps) {
               </div>
             )}
             {result.description && (
-              <div className="flex justify-between gap-2">
+              <div className="flex justify-between gap-2 min-w-0">
                 <dt className="text-muted-foreground shrink-0">Item</dt>
-                <dd className="truncate max-w-[60%] text-right">{result.description}</dd>
+                <dd className="text-right break-words min-w-0">{result.description}</dd>
               </div>
             )}
             {result.transactedAt && (
-              <div className="flex justify-between gap-2">
-                <dt className="text-muted-foreground">Tanggal</dt>
-                <dd className="text-right">{formatDate(result.transactedAt)}</dd>
+              <div className="flex justify-between gap-2 min-w-0">
+                <dt className="text-muted-foreground shrink-0">Tanggal</dt>
+                <dd className="text-right break-words min-w-0">{formatDate(result.transactedAt)}</dd>
               </div>
             )}
             {result.paymentMethod && (
-              <div className="flex justify-between gap-2">
-                <dt className="text-muted-foreground">Metode</dt>
-                <dd className="text-right">{PAYMENT_METHOD_LABELS[result.paymentMethod] ?? result.paymentMethod}</dd>
+              <div className="flex justify-between gap-2 min-w-0">
+                <dt className="text-muted-foreground shrink-0">Metode</dt>
+                <dd className="text-right break-words min-w-0">{PAYMENT_METHOD_LABELS[result.paymentMethod] ?? result.paymentMethod}</dd>
               </div>
             )}
           </dl>
