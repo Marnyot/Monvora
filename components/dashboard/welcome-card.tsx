@@ -1,5 +1,6 @@
 import Link from 'next/link'
-import { Check, Wallet, Mail, Plus, Sparkles } from 'lucide-react'
+import { Check, Wallet, Mail, Plus } from 'lucide-react'
+import { MonvoraLogo } from '@/components/shared/monvora-logo'
 
 interface WelcomeCardProps {
   hasWallets: boolean
@@ -66,9 +67,7 @@ export function WelcomeCard({
       <div className="absolute top-0 right-0 w-32 h-32 bg-secondary/10 rounded-bl-full blur-xl pointer-events-none" aria-hidden />
       <div className="relative z-10 flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-sm">
-            <Sparkles className="h-4 w-4" aria-hidden="true" />
-          </div>
+          <MonvoraLogo size={28} className="rounded-lg shadow-sm shrink-0" />
           <div>
             <h2 className="text-sm font-semibold text-foreground">
               Selamat datang di Monvora

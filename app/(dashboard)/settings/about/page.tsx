@@ -1,5 +1,6 @@
 import Link from 'next/link'
-import { ChevronLeft, Shield, Mail, Heart, MessageSquare, Sparkles } from 'lucide-react'
+import { ChevronLeft, Shield, Mail, Heart, MessageSquare } from 'lucide-react'
+import { MonvoraLogo } from '@/components/shared/monvora-logo'
 
 export const metadata = {
   title: 'Tentang Monvora',
@@ -21,9 +22,7 @@ export default function AboutPage() {
 
       {/* Hero */}
       <section className="rounded-2xl border border-border bg-card p-6 text-center space-y-3">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-sm">
-          <Sparkles className="h-7 w-7" aria-hidden />
-        </div>
+        <MonvoraLogo size={64} className="mx-auto rounded-2xl shadow-sm" />
         <div className="space-y-1">
           <h1 className="text-xl font-bold text-foreground">Monvora</h1>
           <p className="text-sm text-muted-foreground">

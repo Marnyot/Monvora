@@ -1,6 +1,6 @@
-import { Sparkles } from 'lucide-react'
 import { GoogleLoginButton } from '@/components/shared/google-login-button'
 import { GuestLoginButton } from '@/components/shared/guest-login-button'
+import { MonvoraLogo } from '@/components/shared/monvora-logo'
 
 export const metadata = {
   title: 'Masuk — Monvora',
@@ -17,9 +17,11 @@ export default async function LoginPage({
     <div className="w-full max-w-sm space-y-8">
       {/* Logo & heading */}
       <div className="text-center space-y-2">
-        <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-emerald-600 text-white shadow-lg mb-3">
-          <Sparkles className="h-6 w-6" />
-        </div>
+        <MonvoraLogo
+          size={64}
+          priority
+          className="mx-auto mb-3 rounded-2xl shadow-lg"
+        />
         <h1 className="text-3xl font-bold tracking-tight text-foreground">Monvora</h1>
         <p className="text-sm text-muted-foreground">
           Kelola keuangan pribadi dengan lebih cerdas
