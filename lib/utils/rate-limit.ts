@@ -11,6 +11,7 @@ const RATE_LIMITS: Record<string, { requests: number; windowMs: number }> = {
   '/api/budgets': { requests: 30, windowMs: 60_000 },
   '/api/ocr': { requests: 20, windowMs: 60_000 },
   '/api/auth': { requests: 10, windowMs: 60_000 },
+  '/api/feedback': { requests: 5, windowMs: 300_000 },
 }
 
 export const RATE_LIMIT_MAX_ENTRIES = 10_000

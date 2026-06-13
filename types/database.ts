@@ -150,6 +150,36 @@ export type Database = {
           },
         ]
       }
+      feedback: {
+        Row: {
+          app_version: string | null
+          body: string
+          category: string
+          created_at: string
+          id: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          app_version?: string | null
+          body: string
+          category: string
+          created_at?: string
+          id?: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          app_version?: string | null
+          body?: string
+          category?: string
+          created_at?: string
+          id?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       gmail_ai_usage_daily: {
         Row: {
           call_count: number

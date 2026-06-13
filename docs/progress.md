@@ -9,6 +9,7 @@
 
 | Version | Date | Updated By | Changes |
 |---|---|---|---|
+| v24 | Jun 13, 2026 | Claude | **Phase 4 #9 Feedback mechanism.** Migration `014_feedback_table.sql` applied: table dengan FK ke `auth.users`, CHECK constraint `category in ('bug','feature','praise','other')` + body length 5-2000 char, RLS enabled, 2 policy (insert/select own). `lib/validations/feedback.ts`: Zod schema dengan trim + length validation. API `POST /api/feedback` (auth + rate limit 5/5min + Zod + insert dengan user_id dari session, DB error masking via errorId). Rate limit config: `/api/feedback` 5 per 300_000ms (anti-spam). UI `/settings/feedback`: 4-card category picker (bug/feature/praise/other), textarea dengan char counter (5-2000), success state dengan dismiss/kembali, toast feedback. Settings menu: section "Bantuan" dengan link → /settings/feedback. Types regenerated via Supabase MCP. Tests baru: `tests/unit/validations/feedback.test.ts` (8 tests) + `tests/unit/api/feedback-route.test.ts` (6 tests: 401/429/422/400/201 + DB error masking + user_id dari session). Suite 577/577 pass. |
 | v23 | Jun 13, 2026 | Claude | **Phase 4 #8 Onboarding polish (ADR-015 spirit).** `components/dashboard/welcome-card.tsx` — checklist 3 langkah untuk user baru: (1) tambah wallet, (2) hubungkan Gmail, (3) catat transaksi pertama. Derived state — bukan localStorage flag — auto-hide saat `hasTransactions=true`. Step done di-strike-through + Check icon, pending pakai icon kontekstual + link ke `/wallets` atau `/settings/gmail`. Step "catat transaksi" tidak link (FAB-driven). Extend `useDashboard` profile select dengan `gmail_sync_enabled`. Wire ke `/dashboard` di atas balance card. Patuh ADR-015: bukan tutorial wajib, hanya nudge yang menghilang sendiri begitu user mulai aktif. Tests baru: `tests/unit/components/welcome-card.test.tsx` (6 tests). Suite 563/563 pass. |
 | v22 | Jun 13, 2026 | Claude | **Phase 4 #7 Plausible analytics (privacy-first).** `components/analytics/plausible-script.tsx` — render `<script defer data-domain={env} src="https://plausible.io/js/script.js" />`. Env-gated: hanya inject saat `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` set (dev/local tidak ping). Wired ke `app/layout.tsx` `<head>`. CSP updated: `script-src` + `connect-src` += `https://plausible.io`. `.env.example`: `NEXT_PUBLIC_PLAUSIBLE_DOMAIN=` (placeholder). Privacy policy section 6 (Cookies & analitik) extended dengan disclosure Plausible: cookieless, IP tidak disimpan individual, no cross-site tracking. Tests baru: `tests/unit/analytics/plausible.test.tsx` (5 tests: render-gating saat env unset/set, no PII attrs, CSP script-src + connect-src). Suite 557/557 pass. **User action sisa:** set `NEXT_PUBLIC_PLAUSIBLE_DOMAIN=monvora.app` di Vercel + add site di Plausible Cloud (atau self-host). |
 | v21 | Jun 13, 2026 | Claude | **Phase 4 #6 Landing page.** `app/page.tsx` dulu redirect ke /dashboard sekarang render `<LandingContent />`. Page static prerendered (auth-redirect dipindah ke middleware: `pathname === '/' || pathname === '/login'`). `components/landing/landing-content.tsx`: hero (value prop + 2 CTA), 3-step "How it works" (Gmail / OCR / AI insights), feature card (multi-wallet, analytics, budget, AI insights), trust section (gmail.readonly + token server-side + no ads), final CTA, footer. Bahasa Indonesia. Cross-link ke /privacy + /gmail-permissions di multiple section. Tests baru: `tests/unit/pages/landing.test.tsx` (8 tests: hero, value prop, Gmail+OCR+AI mentions, CTA login, trust links, free mention). Suite 552/552 pass. |
@@ -33,7 +34,7 @@
 | v2 | May 25, 2026 | Claude | Decisions Log dipindahkan ke decisions.md, section 7 jadi ADR index |
 | v1 | May 24, 2026 | Claude | Initial creation — project kickoff |
 
-**Current Version:** v23
+**Current Version:** v24
 **Last Updated:** Jun 13, 2026
 
 ---
@@ -57,10 +58,10 @@
 
 ```
 Status          : 🔄 Phase 4 — Public Ready (in progress)
-Current Phase   : #1–#8 ✅ → Next: #9 Feedback mechanism
+Current Phase   : #1–#9 ✅ → Next: #10 OCBC split dari CIMB parser (I05)
 App Version     : v0.3.0
 Last Updated    : Jun 13, 2026
-Next Milestone  : Phase 4 #9 Feedback mechanism (form/email)
+Next Milestone  : Phase 4 #10 OCBC split (parker Phase 2)
 ```
 
 ### Overall Progress
@@ -70,7 +71,7 @@ Documentation   ████████████████████ 100
 Phase 1         ████████████████████ 100% ✅ (selesai — deployed ke Vercel)
 Phase 2         ██████████████████░░  90% 🟡 (Mandiri+BCA production-ready; BNI/BRI/CIMB di-parker ke Phase 4 hardening — lihat §4 "Sisa Pekerjaan")
 Phase 3         ████████████████████ 100% ✅ (PWA ✅, Analytics ✅, AI Insights ✅, Budget ✅, OCR ✅, Recurring ✅)
-Phase 4         ██████████░░░░░░░░░░  53% 🔄 (#1–#8 ✅ — 8/15 selesai)
+Phase 4         ████████████░░░░░░░░  60% 🔄 (#1–#9 ✅ — 9/15 selesai)
 ```
 
 ### Status Legend
@@ -488,7 +489,7 @@ Hasil audit code vs docs. Kode parser berfungsi (semua 117 test parser hijau), t
 | 6 | Landing page (value prop + CTA) | ✅ | `/` static prerender, hero + 3-step + features + trust + final CTA. Auth-redirect dipindah ke middleware (`pathname === '/'`) |
 | 7 | Plausible analytics (privacy-first) | ✅ | `<PlausibleScript />` di layout, env-gated `NEXT_PUBLIC_PLAUSIBLE_DOMAIN`. CSP plausible.io di script-src + connect-src. Privacy policy diupdate. User action: set env di Vercel + register site |
 | 8 | Onboarding polish (dari self-use feedback) | ✅ | `<WelcomeCard />` 3-step checklist derived dari state (wallets/gmail/transactions), auto-hide saat user mulai aktif. Patuh ADR-015 (bukan tutorial wajib) |
-| 9 | Feedback mechanism (form/email) | ⏳ | |
+| 9 | Feedback mechanism (form/email) | ✅ | Migration 014 applied (table feedback + RLS). API POST /api/feedback (rate limit 5/5min). UI /settings/feedback dengan 4-category picker. Settings section "Bantuan". Types regenerated |
 | 10 | OCBC split dari CIMB parser (I05) | ⏳ | Parker Phase 2 |
 | 11 | BNI parser — fixture nyata + display-name | ⏳ | Parker Phase 2 |
 | 12 | BRI parser — fixture nyata + display-name | ⏳ | Parker Phase 2 |

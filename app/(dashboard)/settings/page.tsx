@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Mail, ChevronRight, Tag } from 'lucide-react'
+import { Mail, ChevronRight, Tag, MessageSquare } from 'lucide-react'
 import { LogoutButton } from './logout-button'
 import { useSession } from '@/lib/hooks/use-session'
 import { useQuery } from '@tanstack/react-query'
@@ -114,6 +114,31 @@ export default function SettingsPage() {
                 <p className="text-sm font-medium text-foreground">Sinkronisasi Gmail</p>
                 <p className="text-xs text-muted-foreground">
                   {gmailConnected ? 'Terhubung — klik untuk kelola' : 'Belum terhubung — klik untuk setup'}
+                </p>
+              </div>
+            </div>
+            <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+          </Link>
+        </div>
+      </section>
+
+      {/* Bantuan */}
+      <section className="space-y-2">
+        <h2 className="text-sm font-semibold text-foreground px-1">Bantuan</h2>
+        <div className="rounded-xl border border-border bg-card overflow-hidden">
+          <Link
+            href="/settings/feedback"
+            prefetch
+            className="flex items-center justify-between p-4 hover:bg-accent/50 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <div className="rounded-full p-2 bg-muted">
+                <MessageSquare className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-foreground">Kirim feedback</p>
+                <p className="text-xs text-muted-foreground">
+                  Bug, ide fitur, atau masukan
                 </p>
               </div>
             </div>
