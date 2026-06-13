@@ -1,15 +1,18 @@
 'use client'
 
+import { useState } from 'react'
 import { BarChart3, ChartPie, Store, CalendarDays, AlertCircle, TrendingUp, TrendingDown, Wallet, RotateCw } from 'lucide-react'
 import { useAnalytics } from '@/lib/hooks/use-analytics'
 import { SpendingTrendChart } from '@/components/analytics/spending-trend-chart'
 import { CategoryBreakdownChart } from '@/components/analytics/category-breakdown-chart'
+import { CategoryDetailSheet } from '@/components/analytics/category-detail-sheet'
 import { TopMerchants } from '@/components/analytics/top-merchants'
 import { DayOfWeekChart } from '@/components/analytics/day-of-week-chart'
 import { AiInsightsCard } from '@/components/analytics/ai-insights-card'
 import { RecurringSummary } from '@/components/analytics/recurring-summary'
 import { EmptyState } from '@/components/shared/empty-state'
 import { formatIDR } from '@/lib/utils/currency'
+import type { CategoryAgg } from '@/lib/analytics/aggregate'
 
 function SectionCard({
   icon: Icon,
@@ -73,7 +76,7 @@ function TotalsTile({
 
 function AnalyticsSkeleton() {
   return (
-    <div className="max-w-lg mx-auto px-4 py-6 space-y-4">
+    <div className="max-w-lg lg:max-w-2xl mx-auto px-4 py-6 space-y-4">
       <header>
         <h1 className="text-xl font-bold">Analytics</h1>
         <p className="text-sm text-muted-foreground">Ringkasan keuanganmu bulan ini.</p>
@@ -105,6 +108,7 @@ function AnalyticsSkeleton() {
 
 export default function AnalyticsPage() {
   const { data, isLoading, isError, error, sessionLoading } = useAnalytics()
+  const [selectedCategory, setSelectedCategory] = useState<CategoryAgg | null>(null)
 
   if (sessionLoading || isLoading) {
     return <AnalyticsSkeleton />
@@ -112,7 +116,7 @@ export default function AnalyticsPage() {
 
   if (isError || !data) {
     return (
-      <div className="max-w-lg mx-auto px-4 py-6 space-y-4">
+      <div className="max-w-lg lg:max-w-2xl mx-auto px-4 py-6 space-y-4">
         <header>
           <h1 className="text-xl font-bold">Analytics</h1>
         </header>
@@ -133,7 +137,7 @@ export default function AnalyticsPage() {
 
   if (!hasAnyData) {
     return (
-      <div className="max-w-lg mx-auto px-4 py-6 space-y-4">
+      <div className="max-w-lg lg:max-w-2xl mx-auto px-4 py-6 space-y-4">
         <header>
           <h1 className="text-xl font-bold">Analytics</h1>
           <p className="text-sm text-muted-foreground">Ringkasan keuanganmu bulan ini.</p>
@@ -152,7 +156,7 @@ export default function AnalyticsPage() {
   const totalExpenseCat = byCategory.reduce((sum, c) => sum + c.amount, 0)
 
   return (
-    <div className="max-w-lg mx-auto px-4 py-6 space-y-4">
+    <div className="max-w-lg lg:max-w-2xl mx-auto px-4 py-6 space-y-4">
       <header>
         <h1 className="text-xl font-bold">Analytics</h1>
         <p className="text-sm text-muted-foreground">Ringkasan keuanganmu bulan ini.</p>
@@ -178,9 +182,14 @@ export default function AnalyticsPage() {
         <SectionCard
           icon={ChartPie}
           title="Kategori pengeluaran"
-          description="Ke mana uangmu pergi bulan ini."
+          description="Tap kategori untuk lihat transaksinya."
         >
-          <CategoryBreakdownChart data={byCategory} totalLabel={formatIDR(totalExpenseCat)} />
+          <CategoryBreakdownChart
+            data={byCategory}
+            totalLabel={formatIDR(totalExpenseCat)}
+            selectedId={selectedCategory?.categoryId ?? null}
+            onSelect={(c) => setSelectedCategory(c)}
+          />
         </SectionCard>
       ) : null}
 
@@ -211,6 +220,13 @@ export default function AnalyticsPage() {
       >
         <DayOfWeekChart data={byDayOfWeek} peakDay={peakDay?.amount > 0 ? peakDay.day : undefined} />
       </SectionCard>
+
+      <CategoryDetailSheet
+        category={selectedCategory}
+        transactions={data.transactions}
+        open={!!selectedCategory}
+        onOpenChange={(open) => !open && setSelectedCategory(null)}
+      />
     </div>
   )
 }

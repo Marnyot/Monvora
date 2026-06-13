@@ -21,7 +21,7 @@ export function useAnalytics() {
     enabled: !!user?.id,
     staleTime: FIVE_MIN,
     gcTime: FIVE_MIN * 2,
-    queryFn: async (): Promise<AnalyticsResult> => {
+    queryFn: async (): Promise<AnalyticsResult & { transactions: AnalyticsInput[] }> => {
       const supabase = createClient()
       const now = new Date()
 
@@ -69,7 +69,7 @@ export function useAnalytics() {
         category: Array.isArray(r.category) ? (r.category[0] ?? null) : r.category,
       }))
 
-      return aggregate(input, now)
+      return { ...aggregate(input, now), transactions: input }
     },
   })
 

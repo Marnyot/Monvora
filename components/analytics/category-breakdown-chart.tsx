@@ -3,14 +3,20 @@
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
 import type { CategoryAgg } from '@/lib/analytics/aggregate'
 import { formatIDR } from '@/lib/utils/currency'
+import { CategoryIconBubble } from '@/components/shared/category-icon'
+import { cn } from '@/lib/utils'
+import { ChevronRight } from 'lucide-react'
 
 interface CategoryBreakdownChartProps {
   data: CategoryAgg[]
   totalLabel?: string
+  selectedId?: string | null
+  onSelect?: (cat: CategoryAgg) => void
 }
 
-export function CategoryBreakdownChart({ data, totalLabel }: CategoryBreakdownChartProps) {
+export function CategoryBreakdownChart({ data, totalLabel, selectedId, onSelect }: CategoryBreakdownChartProps) {
   const total = data.reduce((sum, d) => sum + d.amount, 0)
+  const interactive = !!onSelect
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-[200px_1fr] gap-6 sm:gap-4 items-center">
@@ -41,17 +47,45 @@ export function CategoryBreakdownChart({ data, totalLabel }: CategoryBreakdownCh
         )}
       </div>
 
-      <ul className="space-y-2 text-sm max-h-56 overflow-y-auto pr-1">
+      <ul className="space-y-1 text-sm max-h-56 overflow-y-auto pr-1">
         {data.map((c) => {
           const pct = total > 0 ? Math.round((c.amount / total) * 100) : 0
-          return (
-            <li key={c.categoryId} className="flex items-center justify-between gap-3">
+          const isSelected = selectedId === c.categoryId
+
+          const content = (
+            <>
               <span className="flex items-center gap-2 min-w-0">
-                <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: c.color }} aria-hidden />
-                <span className="truncate">{c.name}</span>
+                <CategoryIconBubble icon={c.icon} color={c.color} size={14} bubbleSize={28} />
+                <span className="truncate font-medium">{c.name}</span>
                 <span className="text-xs text-muted-foreground shrink-0">{pct}%</span>
               </span>
-              <span className="tabular-nums text-muted-foreground shrink-0">{formatIDR(c.amount)}</span>
+              <span className="flex items-center gap-1 shrink-0">
+                <span className="tabular-nums text-muted-foreground">{formatIDR(c.amount)}</span>
+                {interactive && <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60" aria-hidden />}
+              </span>
+            </>
+          )
+
+          return (
+            <li key={c.categoryId}>
+              {interactive ? (
+                <button
+                  type="button"
+                  onClick={() => onSelect!(c)}
+                  className={cn(
+                    'w-full flex items-center justify-between gap-3 rounded-lg px-2 py-1.5 text-left transition-colors',
+                    'hover:bg-accent focus-visible:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                    isSelected && 'bg-accent'
+                  )}
+                  aria-label={`Lihat detail ${c.name}`}
+                >
+                  {content}
+                </button>
+              ) : (
+                <div className="flex items-center justify-between gap-3 px-2 py-1.5">
+                  {content}
+                </div>
+              )}
             </li>
           )
         })}
