@@ -1,3 +1,4 @@
+import { Sparkles } from 'lucide-react'
 import { GoogleLoginButton } from '@/components/shared/google-login-button'
 import { GuestLoginButton } from '@/components/shared/guest-login-button'
 
@@ -13,9 +14,19 @@ export default async function LoginPage({
   const { error } = await searchParams
 
   return (
-    <div className="w-full max-w-sm space-y-8">
+    <div className="w-full max-w-sm space-y-8 relative">
+      {/* Decorative blobs for login */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10" aria-hidden>
+        <div className="absolute -top-40 -right-40 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-blob" />
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-[hsl(var(--amber)/.1)] rounded-full blur-3xl animate-blob-delayed" />
+        <div className="absolute top-1/2 left-1/3 w-64 h-64 bg-[hsl(var(--lavender)/.08)] rounded-full blur-3xl animate-blob" />
+      </div>
+
       {/* Logo & heading */}
       <div className="text-center space-y-2">
+        <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-emerald-600 text-white shadow-lg mb-3">
+          <Sparkles className="h-6 w-6" />
+        </div>
         <h1 className="text-3xl font-bold tracking-tight text-foreground">Monvora</h1>
         <p className="text-sm text-muted-foreground">
           Kelola keuangan pribadi dengan lebih cerdas
@@ -23,7 +34,7 @@ export default async function LoginPage({
       </div>
 
       {/* Login card */}
-      <div className="rounded-xl border bg-card p-6 shadow-sm space-y-4">
+      <div className="rounded-2xl border border-border/50 bg-card p-6 shadow-[0_2px_20px_rgba(0,0,0,0.06)] space-y-4">
         <div className="space-y-1">
           <h2 className="text-base font-semibold text-card-foreground">Masuk ke akun</h2>
           <p className="text-xs text-muted-foreground">
@@ -42,7 +53,7 @@ export default async function LoginPage({
 
         <div className="relative py-1">
           <div className="absolute inset-0 flex items-center" aria-hidden>
-            <span className="w-full border-t border-border" />
+            <span className="w-full border-t border-border/50" />
           </div>
           <div className="relative flex justify-center">
             <span className="bg-card px-2 text-[10px] uppercase tracking-wide text-muted-foreground">

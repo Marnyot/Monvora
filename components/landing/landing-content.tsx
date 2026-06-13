@@ -8,6 +8,7 @@ import {
   BarChart3,
   ShieldCheck,
   ArrowRight,
+  Target,
 } from 'lucide-react'
 
 const STEPS = [
@@ -37,26 +38,36 @@ const FEATURES = [
 
 export function LandingContent() {
   return (
-    <main className="min-h-screen bg-background text-foreground">
+    <main className="min-h-screen bg-background text-foreground relative overflow-hidden">
+      {/* Decorative blobs for landing */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10" aria-hidden>
+        <div className="absolute -top-40 -right-40 w-[500px] h-[500px] bg-primary/8 rounded-full blur-3xl animate-blob" />
+        <div className="absolute -bottom-40 -left-40 w-[400px] h-[400px] bg-[hsl(var(--coral)/.06)] rounded-full blur-3xl animate-blob-delayed" />
+        <div className="absolute top-1/2 left-1/2 w-80 h-80 bg-[hsl(var(--amber)/.05)] rounded-full blur-3xl animate-blob" />
+      </div>
+
       {/* Top nav */}
-      <header className="mx-auto flex max-w-5xl items-center justify-between px-4 py-5">
-        <span className="text-base font-semibold tracking-tight">Monvora</span>
+      <header className="mx-auto flex max-w-5xl items-center justify-between px-4 py-5 relative">
+        <span className="text-base font-bold tracking-tight">
+          <span className="bg-gradient-to-r from-primary to-emerald-600 bg-clip-text text-transparent">Monvora</span>
+        </span>
         <Link
           href="/login"
-          className="text-sm font-medium text-foreground/80 hover:text-foreground"
+          className="text-sm font-medium text-foreground/80 hover:text-foreground transition-colors"
         >
           Masuk
         </Link>
       </header>
 
       {/* Hero */}
-      <section className="mx-auto max-w-3xl px-4 pt-10 pb-16 text-center sm:pt-16 sm:pb-24">
-        <div className="mx-auto mb-5 inline-flex items-center gap-2 rounded-full border border-border bg-muted/40 px-3 py-1 text-xs text-muted-foreground">
+      <section className="mx-auto max-w-3xl px-4 pt-10 pb-16 text-center sm:pt-16 sm:pb-24 relative">
+        <div className="mx-auto mb-6 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-xs font-medium text-primary">
+          <Sparkles className="h-3 w-3" />
           <span>Personal finance OS untuk Indonesia</span>
         </div>
         <h1 className="text-balance text-4xl font-bold tracking-tight sm:text-5xl">
-          Pahami ke mana uangmu pergi —{' '}
-          <span className="text-primary">tanpa jadi ahli keuangan.</span>
+          Pahami ke mana uangmu pergi{' '}
+          <span className="bg-gradient-to-r from-primary to-emerald-600 bg-clip-text text-transparent">tanpa jadi ahli keuangan.</span>
         </h1>
         <p className="mx-auto mt-5 max-w-xl text-balance text-foreground/80 sm:text-lg">
           Monvora membaca notifikasi bank dari Gmail dan struk e-wallet kamu,
@@ -66,7 +77,7 @@ export function LandingContent() {
         <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
           <Link
             href="/login"
-            className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
+            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-primary to-emerald-600 px-6 py-3.5 text-sm font-medium text-white shadow-lg shadow-primary/25 transition-all hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5"
           >
             Mulai gratis dengan Google
             <ArrowRight className="h-4 w-4" aria-hidden="true" />
@@ -85,7 +96,7 @@ export function LandingContent() {
       </section>
 
       {/* 3-step how it works */}
-      <section className="mx-auto max-w-5xl px-4 py-16">
+      <section className="mx-auto max-w-5xl px-4 py-16 relative">
         <h2 className="mx-auto max-w-2xl text-center text-2xl font-semibold tracking-tight sm:text-3xl">
           Tiga langkah, dan Monvora yang kerja
         </h2>
@@ -96,9 +107,9 @@ export function LandingContent() {
           {STEPS.map((step, i) => (
             <li
               key={step.title}
-              className="rounded-xl border border-border bg-card p-6"
+              className="rounded-2xl border border-border/50 bg-card p-6 shadow-[0_2px_12px_rgba(0,0,0,0.04)] hover:shadow-md transition-shadow"
             >
-              <div className="mb-4 flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-emerald-600 text-white shadow-sm">
                 <step.icon className="h-5 w-5" aria-hidden="true" />
               </div>
               <div className="mb-1 text-xs font-medium text-muted-foreground">
@@ -112,8 +123,8 @@ export function LandingContent() {
       </section>
 
       {/* Features */}
-      <section className="mx-auto max-w-5xl px-4 py-16">
-        <div className="rounded-2xl border border-border bg-card p-8 sm:p-10">
+      <section className="mx-auto max-w-5xl px-4 py-16 relative">
+        <div className="rounded-2xl border border-border/50 bg-card p-8 sm:p-10 shadow-[0_2px_20px_rgba(0,0,0,0.04)]">
           <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
             Yang sudah berjalan di v0.3
           </h2>
@@ -124,7 +135,7 @@ export function LandingContent() {
           <ul className="mt-8 grid gap-4 sm:grid-cols-2">
             {FEATURES.map((f) => (
               <li key={f.label} className="flex items-start gap-3 text-sm">
-                <div className="mt-0.5 flex h-7 w-7 items-center justify-center rounded-md bg-primary/10 text-primary shrink-0">
+                <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-emerald-600 text-white shrink-0 shadow-sm">
                   <f.icon className="h-4 w-4" aria-hidden="true" />
                 </div>
                 <span className="text-foreground/90">{f.label}</span>
@@ -135,10 +146,10 @@ export function LandingContent() {
       </section>
 
       {/* Trust section */}
-      <section className="mx-auto max-w-3xl px-4 py-16">
-        <div className="rounded-2xl border border-border bg-card p-8 sm:p-10">
-          <div className="mb-4 inline-flex items-center gap-2 text-xs text-muted-foreground">
-            <ShieldCheck className="h-4 w-4" aria-hidden="true" />
+      <section className="mx-auto max-w-3xl px-4 py-16 relative">
+        <div className="rounded-2xl border border-border/50 bg-card p-8 sm:p-10 shadow-[0_2px_20px_rgba(0,0,0,0.04)]">
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-primary/5 px-3 py-1 text-xs font-medium text-primary">
+            <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
             Privasi & keamanan
           </div>
           <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
@@ -148,12 +159,12 @@ export function LandingContent() {
             <li className="flex gap-3">
               <span className="text-primary">→</span>
               Scope OAuth Google sempit:{' '}
-              <code className="rounded bg-muted px-1.5 py-0.5 text-xs">gmail.readonly</code>{' '}
-              — Monvora tidak bisa mengubah, mengirim, atau menghapus email Anda.
+              <code className="rounded bg-muted px-1.5 py-0.5 text-xs">gmail.readonly</code>
+              -- Monvora tidak bisa mengubah, mengirim, atau menghapus email Anda.
             </li>
             <li className="flex gap-3">
               <span className="text-primary">→</span>
-              OAuth token disimpan di server (Supabase, region Singapura) —
+              OAuth token disimpan di server (Supabase, region Singapura) --
               browser Anda tidak pernah menyentuh token mentah.
             </li>
             <li className="flex gap-3">
@@ -180,7 +191,7 @@ export function LandingContent() {
       </section>
 
       {/* Final CTA */}
-      <section className="mx-auto max-w-3xl px-4 py-20 text-center">
+      <section className="mx-auto max-w-3xl px-4 py-20 text-center relative">
         <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
           Siap berhenti tracking manual?
         </h2>
@@ -190,7 +201,7 @@ export function LandingContent() {
         <div className="mt-7">
           <Link
             href="/login"
-            className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
+            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-primary to-emerald-600 px-6 py-3.5 text-sm font-medium text-white shadow-lg shadow-primary/25 transition-all hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5"
           >
             Mulai gratis sekarang
             <ArrowRight className="h-4 w-4" aria-hidden="true" />
@@ -199,14 +210,14 @@ export function LandingContent() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-border">
+      <footer className="border-t border-border/50">
         <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-4 px-4 py-6 text-xs text-muted-foreground sm:flex-row">
-          <span>© 2026 Monvora</span>
+          <span className="font-medium">© 2026 Monvora</span>
           <div className="flex gap-5">
-            <Link href="/privacy" className="hover:text-foreground">
+            <Link href="/privacy" className="hover:text-foreground transition-colors">
               Privasi
             </Link>
-            <Link href="/gmail-permissions" className="hover:text-foreground">
+            <Link href="/gmail-permissions" className="hover:text-foreground transition-colors">
               Akses Gmail
             </Link>
           </div>

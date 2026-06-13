@@ -15,12 +15,15 @@ import {
   Eye,
   EyeOff,
   Info,
+  Sparkles,
+  Settings2,
 } from 'lucide-react'
 import { LogoutButton } from './logout-button'
 import { EditNameSheet } from '@/components/dashboard/edit-name-sheet'
 import { useSession } from '@/lib/hooks/use-session'
 import { useProfile } from '@/lib/hooks/use-profile'
 import { useBalanceVisibility } from '@/lib/hooks/use-balance-visibility'
+import { DecorativeBlobs } from '@/components/shared/decorative-blobs'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 
@@ -37,17 +40,15 @@ export default function SettingsPage() {
   const [balanceVisible, setBalanceVisible] = useBalanceVisibility()
   const [editNameOpen, setEditNameOpen] = useState(false)
 
-  const displayName =
-    profile?.full_name ??
-    (user?.user_metadata?.full_name as string | undefined) ??
-    user?.email ??
-    ''
-
   if (loading || profileLoading) {
     return (
-      <div className="max-w-lg lg:max-w-2xl mx-auto px-4 py-6 space-y-6">
-        <Skeleton className="h-7 w-32" />
-        <div className="rounded-xl border border-border bg-card p-6 space-y-4">
+      <div className="max-w-lg lg:max-w-2xl mx-auto px-4 py-6 space-y-6 relative">
+        <DecorativeBlobs />
+        <div className="rounded-2xl bg-gradient-to-br from-primary via-primary/90 to-emerald-600/80 p-5 text-primary-foreground">
+          <div className="h-5 w-28 bg-white/20 rounded animate-pulse mb-2" />
+          <div className="h-3 w-44 bg-white/20 rounded animate-pulse" />
+        </div>
+        <div className="rounded-xl border border-border/50 bg-card p-6 space-y-4 shadow-[0_2px_12px_rgba(0,0,0,0.04)]">
           <Skeleton className="h-4 w-16" />
           <div className="flex items-center gap-3">
             <Skeleton className="h-10 w-10 rounded-full" />
@@ -62,12 +63,31 @@ export default function SettingsPage() {
     )
   }
 
+  const displayName =
+    profile?.full_name ??
+    (user?.user_metadata?.full_name as string | undefined) ??
+    user?.email ??
+    ''
+
   return (
-    <div className="max-w-lg lg:max-w-2xl mx-auto px-4 py-6 space-y-6">
-      <h1 className="text-xl font-semibold text-foreground">Pengaturan</h1>
+    <div className="max-w-lg lg:max-w-2xl mx-auto px-4 py-6 space-y-6 relative">
+      <DecorativeBlobs />
+
+      {/* Gradient header */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-primary/90 to-emerald-600/80 p-5 text-primary-foreground shadow-lg">
+        <div className="absolute -top-8 -right-8 w-32 h-32 bg-white/5 rounded-full blur-2xl animate-blob pointer-events-none" />
+        <div className="absolute -bottom-6 -left-6 w-24 h-24 bg-white/5 rounded-full blur-2xl animate-blob-delayed pointer-events-none" />
+        <div className="relative z-10">
+          <div className="flex items-center gap-2 mb-1">
+            <Settings2 className="h-4 w-4" />
+            <h1 className="text-lg font-bold">Pengaturan</h1>
+          </div>
+          <p className="text-sm opacity-80">Kelola akun dan preferensi kamu</p>
+        </div>
+      </div>
 
       {/* Akun */}
-      <section className="rounded-xl border border-border bg-card p-6 space-y-4">
+      <section className="rounded-xl border border-border/50 bg-card p-6 space-y-4 shadow-[0_2px_12px_rgba(0,0,0,0.04)]">
         <h2 className="text-sm font-semibold text-foreground">Akun</h2>
         <div className="flex items-center gap-3">
           <div className="rounded-full bg-muted flex items-center justify-center h-10 w-10 text-sm font-semibold text-foreground shrink-0">
@@ -93,7 +113,7 @@ export default function SettingsPage() {
       {/* Tampilan */}
       <section className="space-y-2">
         <h2 className="text-sm font-semibold text-foreground px-1">Tampilan</h2>
-        <div className="rounded-xl border border-border bg-card overflow-hidden divide-y divide-border">
+        <div className="rounded-xl border border-border/50 bg-card overflow-hidden divide-y divide-border/50 shadow-[0_2px_12px_rgba(0,0,0,0.04)]">
           <div className="p-4 space-y-3">
             <div>
               <p className="text-sm font-medium text-foreground">Tema</p>
@@ -166,7 +186,7 @@ export default function SettingsPage() {
       {/* Kelola */}
       <section className="space-y-2">
         <h2 className="text-sm font-semibold text-foreground px-1">Kelola</h2>
-        <div className="rounded-xl border border-border bg-card overflow-hidden">
+        <div className="rounded-xl border border-border/50 bg-card overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)]">
           <Link
             href="/settings/categories"
             prefetch
@@ -189,7 +209,7 @@ export default function SettingsPage() {
       {/* Integrasi */}
       <section className="space-y-2">
         <h2 className="text-sm font-semibold text-foreground px-1">Integrasi</h2>
-        <div className="rounded-xl border border-border bg-card overflow-hidden">
+        <div className="rounded-xl border border-border/50 bg-card overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)]">
           <Link
             href="/settings/gmail"
             prefetch
@@ -228,7 +248,7 @@ export default function SettingsPage() {
       {/* Bantuan */}
       <section className="space-y-2">
         <h2 className="text-sm font-semibold text-foreground px-1">Bantuan</h2>
-        <div className="rounded-xl border border-border bg-card overflow-hidden divide-y divide-border">
+        <div className="rounded-xl border border-border/50 bg-card overflow-hidden divide-y divide-border/50 shadow-[0_2px_12px_rgba(0,0,0,0.04)]">
           <Link
             href="/settings/feedback"
             prefetch

@@ -7,6 +7,7 @@ import { ArrowLeft, Pencil, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { AmountDisplay } from '@/components/shared/amount-display'
 import { ConfirmDialog } from '@/components/shared/confirm-dialog'
+import { DecorativeBlobs } from '@/components/shared/decorative-blobs'
 import { TransactionEditSheet } from '@/components/transactions/transaction-edit-sheet'
 import { formatDate } from '@/lib/utils/date'
 
@@ -89,9 +90,11 @@ export function TransactionDetailClient({ transaction }: Props) {
   }
 
   return (
-    <div className="max-w-lg mx-auto">
+    <div className="max-w-lg mx-auto relative">
+      <DecorativeBlobs />
+
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-4 border-b">
+      <div className="flex items-center gap-3 px-4 py-4">
         <Button variant="ghost" size="icon" onClick={() => router.back()} aria-label="Kembali">
           <ArrowLeft className="h-5 w-5" />
         </Button>
@@ -111,10 +114,12 @@ export function TransactionDetailClient({ transaction }: Props) {
       </div>
 
       {/* Amount hero */}
-      <div className="flex flex-col items-center py-8 px-4 border-b">
+      <div className="mx-4 rounded-2xl bg-gradient-to-br from-card to-card border border-border/50 shadow-[0_2px_12px_rgba(0,0,0,0.04)] flex flex-col items-center py-8 px-4 mb-4 relative overflow-hidden">
+        <div className="absolute -top-10 -right-10 w-40 h-40 bg-primary/5 rounded-full blur-2xl pointer-events-none" />
+        <div className="absolute -bottom-8 -left-8 w-28 h-28 bg-[hsl(var(--coral)/.05)] rounded-full blur-2xl pointer-events-none" />
         {transaction.category && (
           <div
-            className="h-14 w-14 rounded-full flex items-center justify-center mb-3 text-xl"
+            className="h-14 w-14 rounded-2xl flex items-center justify-center mb-3 text-xl shadow-sm"
             style={{
               backgroundColor: `${transaction.category.color}20`,
               color: transaction.category.color,
@@ -132,7 +137,7 @@ export function TransactionDetailClient({ transaction }: Props) {
       </div>
 
       {/* Details */}
-      <div className="divide-y divide-border">
+      <div className="mx-4 rounded-xl border border-border/50 bg-card shadow-[0_2px_12px_rgba(0,0,0,0.04)] divide-y divide-border/50 overflow-hidden">
         <DetailRow label="Tipe" value={TYPE_LABELS[transaction.type] ?? transaction.type} />
         {transaction.category && (
           <DetailRow label="Kategori" value={transaction.category.name} />

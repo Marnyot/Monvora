@@ -37,7 +37,21 @@ export function TransactionCard({ transaction }: TransactionCardProps) {
   const label = merchant_name || description || category?.name || 'Transaksi'
 
   return (
-    <Link href={`/transactions/${transaction.id}`} prefetch className="flex items-center gap-3 py-3 px-4 hover:bg-accent/40 transition-colors rounded-lg block">
+    <Link href={`/transactions/${transaction.id}`} prefetch className="flex items-center gap-3 py-3.5 px-4 hover:bg-accent/40 transition-colors block">
+      {/* Category icon */}
+      {category ? (
+        <div
+          className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-sm font-bold"
+          style={{ backgroundColor: `${category.color}18`, color: category.color }}
+        >
+          {category.icon.slice(0, 1)}
+        </div>
+      ) : (
+        <div className="w-9 h-9 rounded-xl bg-muted flex items-center justify-center shrink-0 text-muted-foreground">
+          <span className="text-sm font-bold">?</span>
+        </div>
+      )}
+
       {/* Info */}
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-foreground truncate flex items-center gap-1.5">
@@ -53,6 +67,7 @@ export function TransactionCard({ transaction }: TransactionCardProps) {
           )}
         </p>
         <p className="text-xs text-muted-foreground">
+          {category?.name && `${category.name} · `}
           {formatDate(transacted_at)}
           {wallet && ` · ${wallet.name}`}
         </p>

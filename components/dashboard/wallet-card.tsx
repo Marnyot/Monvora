@@ -53,7 +53,7 @@ export function WalletCard({ wallet, onEdit, onDelete, onAdjustBalance }: Wallet
   const Icon = TYPE_ICONS[wallet.type] ?? Wallet
 
   return (
-    <div className="flex items-center gap-4 rounded-xl border bg-card p-4">
+    <div className="flex items-center gap-4 rounded-xl border border-border/50 bg-card p-4 shadow-[0_2px_12px_rgba(0,0,0,0.04)] hover:shadow-md transition-shadow">
       {/* Color indicator */}
       <div
         className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"

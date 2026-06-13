@@ -214,7 +214,7 @@ export function QuickEntry({ open, onOpenChange, wallets, categories }: QuickEnt
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="h-[92svh] rounded-t-2xl p-0 flex flex-col"
+        className="h-[92svh] rounded-t-3xl p-0 flex flex-col shadow-[0_-8px_30px_rgba(0,0,0,0.08)]"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <SheetHeader className="px-4 pt-4 pb-0">
@@ -225,10 +225,10 @@ export function QuickEntry({ open, onOpenChange, wallets, categories }: QuickEnt
           {/* Type tabs */}
           <div className="px-4 pt-2 pb-3">
             <Tabs value={type} onValueChange={v => setType(v as TransactionType)}>
-              <TabsList className="w-full">
-                <TabsTrigger value="expense" className="flex-1">Pengeluaran</TabsTrigger>
-                <TabsTrigger value="income" className="flex-1">Pemasukan</TabsTrigger>
-                <TabsTrigger value="transfer" className="flex-1">Transfer</TabsTrigger>
+              <TabsList className="w-full bg-muted p-1 rounded-xl">
+                <TabsTrigger value="expense" className="flex-1 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">Pengeluaran</TabsTrigger>
+                <TabsTrigger value="income" className="flex-1 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">Pemasukan</TabsTrigger>
+                <TabsTrigger value="transfer" className="flex-1 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">Transfer</TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
@@ -390,10 +390,10 @@ export function QuickEntry({ open, onOpenChange, wallets, categories }: QuickEnt
           </ScrollArea>
 
           {/* Submit */}
-          <div className="px-4 py-4 border-t bg-background">
+          <div className="px-4 py-4 border-t border-border/50 bg-background">
             <Button
               type="submit"
-              className="w-full"
+              className="w-full bg-gradient-to-r from-primary to-emerald-600 hover:from-primary/90 hover:to-emerald-600/90 shadow-lg shadow-primary/25"
               disabled={isPending || !amount || !walletId || (type === 'transfer' && !toWalletId)}
             >
               {isPending ? 'Menyimpan...' : 'Simpan Transaksi'}

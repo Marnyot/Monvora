@@ -35,7 +35,7 @@ export function BudgetCard({ budget, onEdit, onDelete }: BudgetCardProps) {
       : 'bg-emerald-500'
 
   return (
-    <article className="rounded-xl border bg-card p-4 sm:p-5 space-y-3">
+    <article className="rounded-xl border border-border/50 bg-card p-4 sm:p-5 space-y-3 shadow-[0_2px_12px_rgba(0,0,0,0.04)]">
       <header className="flex items-start justify-between gap-2">
         <div className="min-w-0 space-y-0.5">
           <div className="flex items-center gap-2">

@@ -176,7 +176,7 @@ export function GmailSettingsClient({ isConnected, lastSyncedAt, syncLogs }: Gma
 
   if (!isConnected) {
     return (
-      <div className="rounded-xl border border-border bg-card p-6 space-y-4">
+      <div className="rounded-xl border border-border/50 bg-card p-6 space-y-4 shadow-[0_2px_12px_rgba(0,0,0,0.04)]">
         <div className="flex items-start gap-3">
           <div className="rounded-full bg-muted p-2">
             <Mail className="h-5 w-5 text-muted-foreground" />
@@ -199,7 +199,7 @@ export function GmailSettingsClient({ isConnected, lastSyncedAt, syncLogs }: Gma
   return (
     <div className="space-y-6">
       {/* Connected status card */}
-      <div className="rounded-xl border border-border bg-card p-6 space-y-4">
+      <div className="rounded-xl border border-border/50 bg-card p-6 space-y-4 shadow-[0_2px_12px_rgba(0,0,0,0.04)]">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-3">
             <div className="rounded-full bg-emerald-100 dark:bg-emerald-950/50 p-2">
@@ -245,7 +245,7 @@ export function GmailSettingsClient({ isConnected, lastSyncedAt, syncLogs }: Gma
       </div>
 
       {/* Sync logs */}
-      <div className="rounded-xl border border-border bg-card p-6 space-y-3">
+      <div className="rounded-xl border border-border/50 bg-card p-6 space-y-3 shadow-[0_2px_12px_rgba(0,0,0,0.04)]">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-foreground">Riwayat Sync</h2>
           {isPolling && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}

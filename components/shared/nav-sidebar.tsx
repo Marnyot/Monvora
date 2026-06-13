@@ -2,7 +2,7 @@
 
 import Link, { useLinkStatus } from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Wallet, List, Settings, LogOut, Loader2, BarChart3, Target } from 'lucide-react'
+import { LayoutDashboard, List, BarChart3, Wallet, Settings, LogOut, Loader2 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
@@ -12,7 +12,6 @@ const NAV_ITEMS = [
   { href: '/dashboard', label: 'Beranda', icon: LayoutDashboard },
   { href: '/transactions', label: 'Transaksi', icon: List },
   { href: '/analytics', label: 'Analytics', icon: BarChart3 },
-  { href: '/budgets', label: 'Budget', icon: Target },
   { href: '/wallets', label: 'Dompet', icon: Wallet },
   { href: '/settings', label: 'Pengaturan', icon: Settings },
 ]
@@ -30,13 +29,16 @@ function SidebarItemContent({
   return (
     <span
       className={cn(
-        'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+        'relative flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
         active
           ? 'bg-accent text-primary font-semibold'
           : 'text-muted-foreground hover:bg-accent/60 hover:text-foreground',
         pending && !active && 'bg-accent/40'
       )}
     >
+      {active && (
+        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-full bg-primary" />
+      )}
       {pending ? (
         <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
       ) : (
@@ -94,9 +96,11 @@ export function NavSidebar() {
   const pathname = usePathname()
 
   return (
-    <aside className="hidden md:flex flex-col w-56 shrink-0 border-r bg-background h-screen sticky top-0 overflow-hidden">
-      <div className="px-4 py-5 border-b">
-        <span className="text-lg font-bold tracking-tight text-foreground">Monvora</span>
+    <aside className="hidden md:flex flex-col w-56 shrink-0 border-r border-border/50 bg-background h-screen sticky top-0 overflow-hidden">
+      <div className="px-4 py-5 border-b border-border/50">
+        <span className="text-lg font-bold tracking-tight">
+          <span className="bg-gradient-to-r from-primary to-emerald-600 bg-clip-text text-transparent">Monvora</span>
+        </span>
       </div>
 
       <nav className="flex-1 px-2 py-4">

@@ -7,7 +7,8 @@ import { TransactionFilters } from '@/components/transactions/transaction-filter
 import { TransactionPagination } from '@/components/transactions/transaction-pagination'
 import { EmptyState } from '@/components/shared/empty-state'
 import { SkeletonList } from '@/components/shared/skeleton-card'
-import { List } from 'lucide-react'
+import { DecorativeBlobs } from '@/components/shared/decorative-blobs'
+import { List, Receipt } from 'lucide-react'
 
 export default function TransactionsPage() {
   const searchParams = useSearchParams()
@@ -25,50 +26,72 @@ export default function TransactionsPage() {
   if (sessionLoading) {
     return (
       <div className="max-w-lg lg:max-w-2xl mx-auto">
-        <Header title="Transaksi" />
+        <DecorativeBlobs />
+        <Header />
         <TransactionFilters />
         <div className="px-4 py-4"><SkeletonList count={5} /></div>
       </div>
     )
   }
 
-  return (
-    <div className="max-w-lg lg:max-w-2xl mx-auto">
-      <Header title="Transaksi" isRefreshing={isFetching && !isLoading} />
+  const hasActiveFilter = !!q || !!type
 
-      <TransactionFilters />
+  return (
+    <div className="max-w-lg lg:max-w-2xl mx-auto relative">
+      <DecorativeBlobs />
+
+      <Header isRefreshing={isFetching && !isLoading} total={data?.transactions?.length ?? 0} />
+
+      <div className="mx-4 mb-4 rounded-xl bg-card border border-border/50 shadow-[0_2px_12px_rgba(0,0,0,0.04)] overflow-hidden">
+        <TransactionFilters />
+      </div>
 
       {isEmpty ? (
-        <EmptyState
-          title={q || type ? 'Tidak ada hasil' : 'Belum ada transaksi'}
-          description={
-            q || type
-              ? 'Coba ubah filter atau kata kunci pencarian'
-              : 'Tap tombol + untuk mencatat transaksi pertama kamu'
-          }
-          icon={<List className="h-12 w-12" />}
-        />
-      ) : (
-        <>
-          <div className="divide-y divide-border">
-            {isLoading
-              ? <div className="px-4 py-4"><SkeletonList count={5} /></div>
-              : transactions.map(tx => (
-                  <TransactionCard key={tx.id} transaction={tx as any} />
-                ))
+        <div className="mx-4">
+          <EmptyState
+            title={hasActiveFilter ? 'Tidak ada hasil' : 'Belum ada transaksi'}
+            description={
+              hasActiveFilter
+                ? 'Coba ubah filter atau kata kunci pencarian'
+                : 'Tap tombol + untuk mencatat transaksi pertama kamu'
             }
-          </div>
-          <TransactionPagination currentPage={page} totalPages={totalPages} />
-        </>
+            icon={hasActiveFilter ? <List className="h-12 w-12" /> : <Receipt className="h-12 w-12" />}
+          />
+        </div>
+      ) : (
+        <div className="mx-4 rounded-xl bg-card border border-border/50 shadow-[0_2px_12px_rgba(0,0,0,0.04)] overflow-hidden">
+          {isLoading ? (
+            <div className="p-4"><SkeletonList count={5} /></div>
+          ) : (
+            <div className="divide-y divide-border/50">
+              {transactions.map(tx => (
+                <TransactionCard key={tx.id} transaction={tx as any} />
+              ))}
+            </div>
+          )}
+        </div>
       )}
+
+      <div className="px-4">
+        <TransactionPagination currentPage={page} totalPages={totalPages} />
+      </div>
+
+      <div className="h-24" />
     </div>
   )
 }
 
-function Header({ title, isRefreshing }: { title: string; isRefreshing?: boolean }) {
+function Header({ isRefreshing, total }: { isRefreshing?: boolean; total?: number }) {
   return (
-    <div className="flex items-center justify-between px-4 py-4 border-b">
-      <h1 className="text-lg font-semibold text-foreground">{title}</h1>
+    <div className="flex items-center justify-between px-4 pt-4 pb-3">
+      <div>
+        <h1 className="text-xl font-bold text-foreground">Transaksi</h1>
+        {total !== undefined && (
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {total} transaksi ditemukan
+          </p>
+        )}
+      </div>
       {isRefreshing && (
         <span className="text-xs text-muted-foreground animate-pulse">Memuat...</span>
       )}

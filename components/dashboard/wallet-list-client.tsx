@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Wallet } from 'lucide-react'
+import Link from 'next/link'
+import { Plus, Wallet, Target, ArrowRight, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -101,13 +102,45 @@ export function WalletListClient({ wallets }: WalletListClientProps) {
 
   return (
     <>
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-foreground">Wallet Saya</h2>
-        <Button size="sm" onClick={() => { setEditTarget(undefined); setFormOpen(true) }}>
-          <Plus className="h-4 w-4 mr-1" />
-          Tambah
-        </Button>
+      {/* Gradient header card */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-primary/90 to-emerald-600/80 p-5 mb-5 text-primary-foreground shadow-lg">
+        <div className="absolute -top-8 -right-8 w-32 h-32 bg-white/5 rounded-full blur-2xl animate-blob pointer-events-none" />
+        <div className="absolute -bottom-6 -left-6 w-24 h-24 bg-white/5 rounded-full blur-2xl animate-blob-delayed pointer-events-none" />
+        <div className="relative z-10 flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <Sparkles className="h-4 w-4" />
+              <h1 className="text-lg font-bold">Dompet Saya</h1>
+            </div>
+            <p className="text-sm opacity-80">{wallets.length} dompet terdaftar</p>
+          </div>
+          <Button
+            size="sm"
+            variant="secondary"
+            className="bg-white/20 text-white hover:bg-white/30 border-0"
+            onClick={() => { setEditTarget(undefined); setFormOpen(true) }}
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            Tambah
+          </Button>
+        </div>
       </div>
+
+      <Link
+        href="/budgets"
+        className="flex items-center justify-between rounded-xl bg-card p-4 mb-4 border border-border/50 shadow-[0_2px_12px_rgba(0,0,0,0.04)] hover:shadow-md transition-all group"
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-600 dark:text-amber-400">
+            <Target className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-foreground">Anggaran Bulanan</p>
+            <p className="text-xs text-muted-foreground">Atur batas pengeluaran per kategori</p>
+          </div>
+        </div>
+        <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors shrink-0" />
+      </Link>
 
       {wallets.length === 0 ? (
         <EmptyState
