@@ -47,6 +47,13 @@ export default async function LoginPage({
         </p>
         <p className="text-xs text-muted-foreground">
           <a
+            href="/gmail-permissions"
+            className="underline-offset-2 hover:underline"
+          >
+            Kenapa kami minta akses Gmail?
+          </a>
+          <span className="mx-1.5">·</span>
+          <a
             href="/privacy"
             className="underline-offset-2 hover:underline"
           >

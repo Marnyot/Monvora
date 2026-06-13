@@ -9,6 +9,7 @@
 
 | Version | Date | Updated By | Changes |
 |---|---|---|---|
+| v20 | Jun 13, 2026 | Claude | **Phase 4 #5 Gmail permission page.** Buat `app/gmail-permissions/page.tsx` (static prerender) — trust-building untuk Google OAuth review. 6 section Bahasa Indonesia: ringkasan, scope detail (eksplisit non-modify scope), 5 bank senders nyata (Mandiri/BCA/BNI/BRI/CIMB dengan email pengirim), 5 field yang diekstrak + contoh, 5 hal yang TIDAK kami lakukan, pengamanan teknis (token server-side, httpOnly, RLS, TLS), cara cabut akses (in-app + Google myaccount). Link dari: login footer ("Kenapa kami minta akses Gmail?") + `/settings/gmail` ("Lihat detail akses yang kami minta →"). Tests baru: `tests/unit/pages/gmail-permissions.test.tsx` (8 tests). Suite 544/544 pass. |
 | v19 | Jun 13, 2026 | Claude | **Phase 4 #4 Privacy policy.** Buat `app/privacy/page.tsx` (static prerender) Bahasa Indonesia. Section: (1) data dikumpulkan, (2) Gmail akses — `gmail.readonly` only + apa yang kami TIDAK lakukan (modify/write/send/delete), (3) AI Gemini fallback (Gmail body cap 4000 char + 30 calls/hari per user) + OCR vision (image tidak persist) per `security.md §16` carve-out, (4) penyimpanan Supabase Singapura + Vercel + TLS, (5) hak user (akses/koreksi/hapus/cabut Gmail), (6) cookies httpOnly, (7) anak-anak, (8) perubahan kebijakan, (9) kontak `privasi@monvora.app`. Login page footer link → `/privacy`. Tests baru: `tests/unit/pages/privacy.test.tsx` (8 tests: Bahasa Indonesia + Gmail readonly disclosure + Gemini 4000 + OCR + Supabase Singapura + user rights + date + kontak). Suite 536/536 pass. |
 | v18 | Jun 13, 2026 | Claude | **Phase 4 #3 Rate limit + headers hardening.** Rate limit: tambah entries eksplisit `/api/sync/gmail/disconnect` + `/api/sync/gmail/reconnect` (5 per 5 menit), tambah memory cap `RATE_LIMIT_MAX_ENTRIES=10000` + eviction sweep di threshold 256 (cegah DoS unbounded growth dari unique-user spam). Export test helpers `__resetRateLimitStore`, `__getRateLimitStoreSize`. Security headers: CSP +5 directive (`frame-ancestors 'none'` defense-in-depth atas X-Frame-Options, `object-src 'none'`, `base-uri 'self'`, `form-action 'self'`, `upgrade-insecure-requests`). +3 header baru: `Cross-Origin-Opener-Policy: same-origin-allow-popups` (allow Google OAuth popup), `Cross-Origin-Resource-Policy: same-site`, `X-Permitted-Cross-Domain-Policies: none`. Permissions-Policy expanded (`payment=()`, `usb=()`). Tests baru: `tests/unit/utils/rate-limit.test.ts` (7 tests: basic, window, isolation, explicit configs, eviction, cap), `tests/unit/security/headers.test.ts` (7 tests: CSP directives + COOP/CORP). Suite 528/528 pass. |
 | v17 | Jun 13, 2026 | Claude | **Phase 4 #2 Security audit + fixes.** Audit semua 25 API endpoint vs `security.md §14` (lihat agent report). 4 fixes applied: (a) **Webhook auth bypass** [HIGH] — `app/api/sync/gmail/webhook/route.ts` dulu skip auth jika env `GOOGLE_PUBSUB_VERIFICATION_TOKEN` kosong; sekarang strict — return 503 jika env unset, 401 jika header tidak match. (b) **Sync err.message leak** [HIGH] — `POST /api/sync/gmail` dulu return `err.message` verbatim ke client (bisa expose Gmail API state / token info); sekarang generic message + `errorId` + log internal (errorId+userId). (c) **Reconnect logging** [MED] — 2 console.error di reconnect log `err.message`; sekarang errorId+userId only per §10. (d) **Disconnect stopWatch silent** [LOW] — try/catch + errorId, non-blocking. Tests updated: gmail-webhook.test.ts (+2 baru: 503 env-missing, 401 no-auth), sync.test.ts (assertion err.message tidak bocor + errorId disertakan). Inventori: 11 route lulus clean. Sisa MED finding (PostgREST ilike template literal) tidak actionable — PostgREST sudah parameterized. Suite 514/514 pass. |
@@ -29,7 +30,7 @@
 | v2 | May 25, 2026 | Claude | Decisions Log dipindahkan ke decisions.md, section 7 jadi ADR index |
 | v1 | May 24, 2026 | Claude | Initial creation — project kickoff |
 
-**Current Version:** v19
+**Current Version:** v20
 **Last Updated:** Jun 13, 2026
 
 ---
@@ -53,10 +54,10 @@
 
 ```
 Status          : 🔄 Phase 4 — Public Ready (in progress)
-Current Phase   : #1–#4 ✅ → Next: #5 Gmail permission explanation page
+Current Phase   : #1–#5 ✅ → Next: #6 Landing page (value prop + CTA)
 App Version     : v0.3.0
 Last Updated    : Jun 13, 2026
-Next Milestone  : Phase 4 #5 Gmail permission explanation page (trust-building OAuth review)
+Next Milestone  : Phase 4 #6 Landing page
 ```
 
 ### Overall Progress
@@ -66,7 +67,7 @@ Documentation   ████████████████████ 100
 Phase 1         ████████████████████ 100% ✅ (selesai — deployed ke Vercel)
 Phase 2         ██████████████████░░  90% 🟡 (Mandiri+BCA production-ready; BNI/BRI/CIMB di-parker ke Phase 4 hardening — lihat §4 "Sisa Pekerjaan")
 Phase 3         ████████████████████ 100% ✅ (PWA ✅, Analytics ✅, AI Insights ✅, Budget ✅, OCR ✅, Recurring ✅)
-Phase 4         █████░░░░░░░░░░░░░░░  27% 🔄 (#1–#4 ✅ — 4/15 selesai)
+Phase 4         ███████░░░░░░░░░░░░░  33% 🔄 (#1–#5 ✅ — 5/15 selesai)
 ```
 
 ### Status Legend
@@ -480,7 +481,7 @@ Hasil audit code vs docs. Kode parser berfungsi (semua 117 test parser hijau), t
 | 2 | Security audit semua API route vs `security.md §14` | ✅ | 25 endpoint diaudit. 4 fix: webhook auth strict (503/401), sync err.message → generic+errorId, reconnect log errorId only, disconnect stopWatch non-blocking |
 | 3 | Rate limit + headers hardening (output dari #2) | ✅ | Rate limit: +2 endpoint, memory cap 10k + eviction sweep. CSP: +5 directive (frame-ancestors/object-src/base-uri/form-action/upgrade-insecure-requests). +3 header (COOP same-origin-allow-popups, CORP same-site, X-Permitted-Cross-Domain-Policies none) |
 | 4 | Privacy policy (mention Gemini fallback §16) | ✅ | `/privacy` static prerender, 9 section Bahasa Indonesia, Gemini carve-out §16 di-document (4000 char cap + 30/hari), login footer link |
-| 5 | Gmail permission explanation page | ⏳ | Trust-building untuk OAuth review |
+| 5 | Gmail permission explanation page | ✅ | `/gmail-permissions` static prerender. 6 section: ringkasan, scope eksplisit, 5 bank senders nyata, 5 field diekstrak, 5 hal TIDAK dilakukan, pengamanan teknis, cara cabut. Link dari login + settings/gmail |
 | 6 | Landing page (value prop + CTA) | ⏳ | |
 | 7 | Plausible analytics (privacy-first) | ⏳ | |
 | 8 | Onboarding polish (dari self-use feedback) | ⏳ | |

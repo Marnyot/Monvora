@@ -55,6 +55,12 @@ export default function GmailSettingsPage() {
         <p className="text-sm text-muted-foreground mt-1">
           Hubungkan Gmail untuk mendeteksi transaksi bank secara otomatis dari email notifikasi.
         </p>
+        <Link
+          href="/gmail-permissions"
+          className="mt-2 inline-block text-xs text-primary underline-offset-2 hover:underline"
+        >
+          Lihat detail akses yang kami minta →
+        </Link>
       </div>
 
       {isLoading || sessionLoading ? (
