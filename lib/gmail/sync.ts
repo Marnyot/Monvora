@@ -8,7 +8,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database'
 import { fetchNewEmails, isBankEmail, GmailTokenExpiredError, GmailRateLimitError } from '@/lib/gmail/client'
-import { detectAndParse } from '@/lib/gmail/parsers/index'
+import { detectAndParseWithAi } from '@/lib/gmail/parsers/index'
 import { categorizeTransaction } from '@/lib/ai/categorize'
 
 // Register all bank parsers via side effects
@@ -213,8 +213,10 @@ export async function syncUserGmail(
   const emailResults = await Promise.allSettled(
     bankEmails.map(async (email) => {
       // 5a → removed: duplicate check now handled by DB unique constraint (see step 5f)
-      // 5b. Parse email
-      const parseResult = detectAndParse(email)
+      // 5b. Parse email — rule chain first, AI fallback gated by daily budget.
+      //     UI never learns whether the AI helped; the resulting transaction
+      //     looks identical to a rule-based one.
+      const parseResult = await detectAndParseWithAi(email, { supabase, userId })
 
       if (!parseResult.transaction) {
         return { kind: 'skipped' as const }
