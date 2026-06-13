@@ -76,7 +76,6 @@ export default function SettingsPage() {
         <div className="rounded-xl border border-border bg-card overflow-hidden">
           <Link
             href="/settings/categories"
-            prefetch={false}
             className="flex items-center justify-between p-4 hover:bg-accent/50 transition-colors"
           >
             <div className="flex items-center gap-3">
@@ -99,7 +98,6 @@ export default function SettingsPage() {
         <div className="rounded-xl border border-border bg-card overflow-hidden">
           <Link
             href="/settings/gmail"
-            prefetch={false}
             className="flex items-center justify-between p-4 hover:bg-accent/50 transition-colors"
           >
             <div className="flex items-center gap-3">
