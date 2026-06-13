@@ -61,13 +61,10 @@ export async function POST() {
   // Setup Gmail push notification watch
   try {
     await setupWatch(accessToken, supabase, user.id)
-  } catch (err) {
+  } catch {
     // Non-blocking — cron will handle renewal if watch setup fails.
-    // Log error agar kegagalan registrasi watch bisa didiagnosa.
-    console.error(
-      '[gmail-reconnect] setupWatch gagal:',
-      err instanceof Error ? err.message : String(err)
-    )
+    const errorId = crypto.randomUUID()
+    console.error('[gmail-reconnect] setupWatch failed', { errorId, userId: user.id })
   }
 
   // Forward-only: anchor cursor ke "sekarang" — TIDAK backfill email lama.
@@ -75,12 +72,10 @@ export async function POST() {
   // oleh background sync. User bisa tarik backlog via tombol "Sync sekarang".
   try {
     await anchorGmailCursor(supabase, user.id, accessToken)
-  } catch (err) {
+  } catch {
     // Non-blocking — user bisa sync manual nanti
-    console.error(
-      '[gmail-reconnect] anchor cursor gagal:',
-      err instanceof Error ? err.message : String(err)
-    )
+    const errorId = crypto.randomUUID()
+    console.error('[gmail-reconnect] anchor cursor failed', { errorId, userId: user.id })
   }
 
   return NextResponse.json(

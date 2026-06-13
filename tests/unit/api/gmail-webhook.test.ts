@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
+const TOKEN = 'secret-123'
+
 const mockGetUserById = vi.fn()
 const mockSyncUserGmail = vi.fn()
 const mockFrom = vi.fn()
@@ -25,7 +27,7 @@ vi.mock('@/lib/utils/google-token', () => ({
 
 vi.mock('@/lib/gmail/watch', () => ({}))
 
-function makeRequest(body: unknown, authToken?: string): Request {
+function makeRequest(body: unknown, authToken: string | null = TOKEN): Request {
   const headers = new Headers({ 'content-type': 'application/json' })
   if (authToken) headers.set('authorization', `Bearer ${authToken}`)
   return new Request('http://localhost:3000/api/sync/gmail/webhook', {
@@ -44,10 +46,32 @@ describe('POST /api/sync/gmail/webhook', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.resetModules()
+    process.env.GOOGLE_PUBSUB_VERIFICATION_TOKEN = TOKEN
+  })
+
+  it('returns 503 when verification token env var is not set (auth bypass guard)', async () => {
+    delete process.env.GOOGLE_PUBSUB_VERIFICATION_TOKEN
+    const { POST } = await import('@/app/api/sync/gmail/webhook/route')
+
+    const res = await POST(makeRequest(
+      { message: { data: '', messageId: '1', publishTime: '' }, subscription: '' }
+    ))
+
+    expect(res.status).toBe(503)
+  })
+
+  it('returns 401 when authorization header is missing', async () => {
+    const { POST } = await import('@/app/api/sync/gmail/webhook/route')
+
+    const res = await POST(makeRequest(
+      { message: { data: '', messageId: '1', publishTime: '' }, subscription: '' },
+      null
+    ))
+
+    expect(res.status).toBe(401)
   })
 
   it('returns 401 when verification token does not match', async () => {
-    process.env.GOOGLE_PUBSUB_VERIFICATION_TOKEN = 'secret-123'
     const { POST } = await import('@/app/api/sync/gmail/webhook/route')
 
     const res = await POST(makeRequest(
@@ -59,7 +83,6 @@ describe('POST /api/sync/gmail/webhook', () => {
   })
 
   it('returns 400 when payload is missing message data', async () => {
-    process.env.GOOGLE_PUBSUB_VERIFICATION_TOKEN = ''
     const { POST } = await import('@/app/api/sync/gmail/webhook/route')
 
     const res = await POST(makeRequest({
@@ -71,7 +94,6 @@ describe('POST /api/sync/gmail/webhook', () => {
   })
 
   it('returns 400 when emailAddress or historyId is missing in decoded data', async () => {
-    process.env.GOOGLE_PUBSUB_VERIFICATION_TOKEN = ''
     const { POST } = await import('@/app/api/sync/gmail/webhook/route')
 
     const res = await POST(makeRequest({
@@ -83,7 +105,6 @@ describe('POST /api/sync/gmail/webhook', () => {
   })
 
   it('acknowledges notification when user is not found', async () => {
-    process.env.GOOGLE_PUBSUB_VERIFICATION_TOKEN = ''
     mockFrom.mockReturnValue({
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
@@ -107,7 +128,6 @@ describe('POST /api/sync/gmail/webhook', () => {
   })
 
   it('calls syncUserGmail when valid notification arrives for known user', async () => {
-    process.env.GOOGLE_PUBSUB_VERIFICATION_TOKEN = ''
     mockFrom.mockReturnValue({
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
@@ -138,7 +158,6 @@ describe('POST /api/sync/gmail/webhook', () => {
   })
 
   it('skips sync when historyId has not changed (duplicate notification)', async () => {
-    process.env.GOOGLE_PUBSUB_VERIFICATION_TOKEN = ''
     mockFrom.mockReturnValue({
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),

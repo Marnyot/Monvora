@@ -13,8 +13,6 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { syncUserGmail } from '@/lib/gmail/sync'
 import { getValidGoogleToken } from '@/lib/utils/google-token'
 
-const VERIFICATION_TOKEN = process.env.GOOGLE_PUBSUB_VERIFICATION_TOKEN ?? ''
-
 interface PubSubMessage {
   message: {
     data: string
@@ -31,17 +29,22 @@ interface PubSubNotification {
 
 export async function POST(request: Request) {
   // ─── 1. VERIFY AUTH TOKEN ──────────────────────────────
-  // Pub/Sub push bisa pakai OIDC JWT (bukan Bearer token biasa).
-  // Kalau tidak pakai authentication di subscription, skip check.
-  const authHeader = request.headers.get('authorization')
+  // Strict: refuse to process kalau env var tidak diset.
+  // Pub/Sub subscription harus dikonfigurasi dengan Bearer token yang match.
+  const VERIFICATION_TOKEN = process.env.GOOGLE_PUBSUB_VERIFICATION_TOKEN
+  if (!VERIFICATION_TOKEN) {
+    return NextResponse.json(
+      { data: null, error: { code: 'WEBHOOK_DISABLED', message: 'Webhook tidak tersedia' } },
+      { status: 503 }
+    )
+  }
 
-  if (VERIFICATION_TOKEN && authHeader) {
-    if (authHeader !== `Bearer ${VERIFICATION_TOKEN}`) {
-      return NextResponse.json(
-        { data: null, error: { code: 'UNAUTHORIZED', message: 'Invalid token' } },
-        { status: 401 }
-      )
-    }
+  const authHeader = request.headers.get('authorization')
+  if (authHeader !== `Bearer ${VERIFICATION_TOKEN}`) {
+    return NextResponse.json(
+      { data: null, error: { code: 'UNAUTHORIZED', message: 'Unauthorized' } },
+      { status: 401 }
+    )
   }
 
   // ─── 2. PARSE PAYLOAD ──────────────────────────────────

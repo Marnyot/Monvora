@@ -146,14 +146,14 @@ describe('POST /api/sync/gmail', () => {
     expect(json.data.transactionsCreated).toBe(3)
   })
 
-  it('returns 500 when sync throws', async () => {
+  it('returns 500 when sync throws and masks internal error message', async () => {
     mockGetUser.mockResolvedValue({ data: { user: VALID_USER }, error: null })
 
     const profileChain = makeChain({ data: VALID_PROFILE, error: null })
     mockFrom.mockReturnValueOnce(profileChain)
     mockFrom.mockReturnValueOnce(makeChain({ data: null, error: null }))
 
-    mockSyncUserGmail.mockRejectedValueOnce(new Error('Gmail API error'))
+    mockSyncUserGmail.mockRejectedValueOnce(new Error('Gmail API quota exceeded for token xyz-123'))
 
     const { POST } = await import('@/app/api/sync/gmail/route')
     const req = new Request('http://localhost/api/sync/gmail', { method: 'POST' })
@@ -162,6 +162,13 @@ describe('POST /api/sync/gmail', () => {
     expect(res.status).toBe(500)
     const json = await res.json()
     expect(json.error.code).toBe('SYNC_ERROR')
+    // Internal error message must NOT leak to client
+    expect(json.error.message).not.toContain('quota')
+    expect(json.error.message).not.toContain('token xyz-123')
+    expect(json.error.message).toBe('Sync gagal. Coba lagi nanti.')
+    // Error ID returned for tracing
+    expect(typeof json.error.errorId).toBe('string')
+    expect(json.error.errorId.length).toBeGreaterThan(0)
   })
 
   it('returns 429 when rate limited', async () => {

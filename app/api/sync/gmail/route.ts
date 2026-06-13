@@ -83,9 +83,11 @@ export async function POST(request: Request) {
       },
       error: null,
     }, { status: 200 })
-  } catch (err) {
+  } catch {
+    const errorId = crypto.randomUUID()
+    console.error('[sync/gmail] sync failed', { errorId, userId: user.id })
     return NextResponse.json(
-      { data: null, error: { code: 'SYNC_ERROR', message: err instanceof Error ? err.message : 'Sync gagal. Coba lagi nanti.' } },
+      { data: null, error: { code: 'SYNC_ERROR', message: 'Sync gagal. Coba lagi nanti.', errorId } },
       { status: 500 }
     )
   }

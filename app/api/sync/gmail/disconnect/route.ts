@@ -22,8 +22,13 @@ export async function POST() {
     )
   }
 
-  // Stop Gmail push notification
-  await stopWatch(supabase, user.id)
+  // Stop Gmail push notification — non-blocking
+  try {
+    await stopWatch(supabase, user.id)
+  } catch {
+    const errorId = crypto.randomUUID()
+    console.error('[gmail-disconnect] stopWatch failed', { errorId, userId: user.id })
+  }
 
   const { error: updateError } = await supabase
     .from('profiles')
