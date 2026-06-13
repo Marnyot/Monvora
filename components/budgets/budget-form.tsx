@@ -104,7 +104,11 @@ export function BudgetForm({ open, onOpenChange, budget }: BudgetFormProps) {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="h-auto max-h-[90dvh] overflow-y-auto rounded-t-2xl">
+      <SheetContent
+        side="bottom"
+        className="h-auto max-h-[90svh] overflow-y-auto rounded-t-2xl"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
         <SheetHeader className="text-left pb-4">
           <SheetTitle>{isEdit ? 'Ubah Budget' : 'Tambah Budget'}</SheetTitle>
           <SheetDescription>
@@ -120,7 +124,6 @@ export function BudgetForm({ open, onOpenChange, budget }: BudgetFormProps) {
               placeholder="cth: Makan bulan ini"
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              autoFocus
             />
             {errors.name && <p className="text-xs text-destructive">{errors.name[0]}</p>}
           </div>

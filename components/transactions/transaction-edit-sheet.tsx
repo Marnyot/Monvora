@@ -128,7 +128,11 @@ export function TransactionEditSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="h-[85dvh] rounded-t-2xl p-0 flex flex-col">
+      <SheetContent
+        side="bottom"
+        className="h-[85svh] rounded-t-2xl p-0 flex flex-col"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
         <SheetHeader className="px-4 pt-4 pb-3 border-b">
           <SheetTitle>Ubah Transaksi</SheetTitle>
         </SheetHeader>
