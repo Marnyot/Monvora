@@ -3,6 +3,7 @@ import localFont from 'next/font/local'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import './globals.css'
 import { Providers } from '@/components/providers'
+import { PlausibleScript } from '@/components/analytics/plausible-script'
 
 const geistSans = localFont({
   src: './fonts/GeistVF.woff',
@@ -51,6 +52,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="id" suppressHydrationWarning>
+      <head>
+        <PlausibleScript />
+      </head>
       <body className={`${geistSans.variable} font-sans antialiased`}>
         <Providers>{children}</Providers>
         <SpeedInsights />

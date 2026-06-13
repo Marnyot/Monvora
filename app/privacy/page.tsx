@@ -225,7 +225,7 @@ export default function PrivacyPage() {
 
         <section className="space-y-3">
           <h2 className="text-xl font-semibold text-foreground">
-            6. Cookies & session
+            6. Cookies & analitik
           </h2>
           <p className="text-foreground/90">
             Kami hanya memakai cookie sesi yang dibutuhkan untuk autentikasi
@@ -233,6 +233,21 @@ export default function PrivacyPage() {
             <code className="rounded bg-muted px-1.5 py-0.5 text-sm">httpOnly</code>{' '}
             dan tidak bisa diakses JavaScript. Kami tidak memakai cookie iklan
             atau pihak ketiga.
+          </p>
+          <p className="text-foreground/90">
+            Untuk memahami trafik halaman secara agregat, kami memakai{' '}
+            <a
+              href="https://plausible.io/privacy-focused-web-analytics"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary underline-offset-2 hover:underline"
+            >
+              Plausible Analytics
+            </a>{' '}
+            — analitik privacy-first yang <strong>tidak memakai cookie</strong>,{' '}
+            <strong>tidak menyimpan IP</strong> pengunjung secara individual,
+            dan tidak melacak Anda lintas situs. Yang kami lihat hanya
+            jumlah pageview agregat per halaman.
           </p>
         </section>
 
