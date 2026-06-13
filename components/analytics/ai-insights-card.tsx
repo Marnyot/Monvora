@@ -44,22 +44,22 @@ export function AiInsightsCard() {
 
   return (
     <section className="rounded-xl border bg-gradient-to-br from-primary/5 to-card p-4 sm:p-5">
-      <div className="flex items-center justify-between gap-2 mb-3">
-        <div className="flex items-center gap-2">
-          <span className="rounded-lg bg-primary/10 p-1.5">
+      <div className="flex items-center justify-between gap-2 mb-3 min-w-0">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="rounded-lg bg-primary/10 p-1.5 shrink-0">
             <Sparkles className="h-4 w-4 text-primary" />
           </span>
-          <h2 className="text-sm font-semibold">Wawasan AI</h2>
+          <h2 className="text-sm font-semibold truncate">Wawasan AI</h2>
         </div>
-        <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+        <span className="text-[10px] uppercase tracking-wide text-muted-foreground shrink-0">
           {formatDate(data.generatedAt)}
         </span>
       </div>
       <ul className="space-y-2">
         {data.insights.map((insight, idx) => (
-          <li key={idx} className="flex gap-2 text-sm leading-relaxed text-foreground">
-            <span aria-hidden className="text-primary mt-0.5">•</span>
-            <span>{insight}</span>
+          <li key={idx} className="flex gap-2 text-sm leading-relaxed text-foreground min-w-0">
+            <span aria-hidden className="text-primary mt-0.5 shrink-0">•</span>
+            <span className="min-w-0 break-words">{insight}</span>
           </li>
         ))}
       </ul>
