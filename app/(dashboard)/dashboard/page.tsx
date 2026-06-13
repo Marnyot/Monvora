@@ -9,6 +9,7 @@ import { ThemeToggle } from '@/components/shared/theme-toggle'
 import { Skeleton } from '@/components/ui/skeleton'
 import { SkeletonList } from '@/components/shared/skeleton-card'
 import { useSession } from '@/lib/hooks/use-session'
+import { WelcomeCard } from '@/components/dashboard/welcome-card'
 import { List } from 'lucide-react'
 
 function DashboardSkeleton() {
@@ -54,10 +55,12 @@ export default function DashboardPage() {
   if (isLoading || sessionLoading) return <DashboardSkeleton />
 
   const firstName = (data?.profile?.full_name ?? (user?.user_metadata?.full_name as string | undefined) ?? 'Kamu').split(' ')[0]
-  const totalBalance = (data?.wallets ?? []).reduce((sum, w) => sum + (w.balance ?? 0), 0)
+  const wallets = data?.wallets ?? []
+  const totalBalance = wallets.reduce((sum, w) => sum + (w.balance ?? 0), 0)
   const monthIncome = (data?.txThisMonth ?? []).filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)
   const monthExpense = (data?.txThisMonth ?? []).filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
   const recentTx = data?.recentTx ?? []
+  const hasTransactions = (data?.txThisMonth?.length ?? 0) > 0 || recentTx.length > 0
 
   return (
     <div className="max-w-lg mx-auto">
@@ -68,6 +71,12 @@ export default function DashboardPage() {
         </div>
         <ThemeToggle />
       </div>
+
+      <WelcomeCard
+        hasWallets={wallets.length > 0}
+        gmailEnabled={data?.profile?.gmail_sync_enabled ?? false}
+        hasTransactions={hasTransactions}
+      />
 
       <div className="mx-4 rounded-2xl bg-primary p-5 text-primary-foreground mb-4">
         <p className="text-xs font-medium opacity-75 mb-1">Total Saldo</p>
