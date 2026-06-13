@@ -1,6 +1,6 @@
 'use client'
 
-import { MoreVertical, AlertTriangle, AlertCircle } from 'lucide-react'
+import { MoreVertical, Target } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,12 +9,8 @@ import {
 } from '@/components/ui/dropdown-menu'
 import type { BudgetWithUtilization } from '@/lib/hooks/use-budgets'
 import { formatIDR } from '@/lib/utils/currency'
-
-const PERIOD_LABELS: Record<string, string> = {
-  weekly: 'Mingguan',
-  monthly: 'Bulanan',
-  yearly: 'Tahunan',
-}
+import { CategoryIconBubble } from '@/components/shared/category-icon'
+import { cn } from '@/lib/utils'
 
 interface BudgetCardProps {
   budget: BudgetWithUtilization
@@ -25,93 +21,99 @@ interface BudgetCardProps {
 export function BudgetCard({ budget, onEdit, onDelete }: BudgetCardProps) {
   const { utilization } = budget
   const clampedPercent = Math.min(utilization.percent, 100)
-  const status = utilization.status
 
-  const barColor =
-    status === 'over'
-      ? 'bg-red-500'
-      : status === 'warn'
-      ? 'bg-amber-500'
-      : 'bg-emerald-500'
+  // Tier color by % terpakai — matches the visual cue di referensi:
+  // <70% = aman (emerald), 70-89% = waspada (amber), 90%+ = bahaya (red)
+  const tier: 'ok' | 'warn' | 'danger' =
+    utilization.percent >= 90 ? 'danger' : utilization.percent >= 70 ? 'warn' : 'ok'
+
+  const accentText = {
+    ok: 'text-emerald-600 dark:text-emerald-400',
+    warn: 'text-amber-600 dark:text-amber-400',
+    danger: 'text-red-600 dark:text-red-400',
+  }[tier]
+
+  const barColor = {
+    ok: 'bg-emerald-500',
+    warn: 'bg-amber-500',
+    danger: 'bg-red-500',
+  }[tier]
+
+  const remainingLabel = utilization.remaining >= 0
+    ? formatIDR(utilization.remaining)
+    : `-${formatIDR(Math.abs(utilization.remaining))}`
 
   return (
-    <article className="rounded-xl border border-border/50 bg-card p-4 sm:p-5 space-y-3 shadow-[0_2px_12px_rgba(0,0,0,0.04)]">
-      <header className="flex items-start justify-between gap-2">
-        <div className="min-w-0 space-y-0.5">
-          <div className="flex items-center gap-2">
-            {budget.category && (
-              <span
-                className="h-2.5 w-2.5 rounded-full shrink-0"
-                style={{ background: budget.category.color }}
-                aria-hidden
-              />
-            )}
-            <h3 className="text-sm font-semibold truncate">{budget.name}</h3>
+    <article className="rounded-2xl bg-card p-4 shadow-[0_2px_12px_rgba(0,0,0,0.05)] border border-border/50">
+      <div className="flex items-start gap-3">
+        {budget.category ? (
+          <CategoryIconBubble
+            icon={budget.category.icon}
+            color={budget.category.color}
+            size={18}
+            bubbleSize={40}
+          />
+        ) : (
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted">
+            <Target className="h-4 w-4 text-muted-foreground" />
+          </span>
+        )}
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <h3 className="text-sm font-semibold text-foreground truncate">{budget.name}</h3>
+              <p className="text-xs text-muted-foreground tabular-nums">
+                {formatIDR(budget.amount)}
+              </p>
+            </div>
+            <div className="flex items-start gap-1 shrink-0">
+              <span className={cn('text-base font-bold tabular-nums whitespace-nowrap', accentText)}>
+                {remainingLabel}
+              </span>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className="p-1 rounded-md text-muted-foreground hover:bg-muted -mr-1"
+                    aria-label="Opsi"
+                  >
+                    <MoreVertical className="h-4 w-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={onEdit}>Ubah</DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={onDelete}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    Hapus
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
-          <p className="text-xs text-muted-foreground">
-            {budget.category ? budget.category.name : 'Semua pengeluaran'}
-            <span className="mx-1">•</span>
-            {PERIOD_LABELS[budget.period]}
-          </p>
         </div>
+      </div>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              className="shrink-0 p-1.5 rounded-md text-muted-foreground hover:bg-muted"
-              aria-label="Opsi"
-            >
-              <MoreVertical className="h-4 w-4" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={onEdit}>Ubah</DropdownMenuItem>
-            <DropdownMenuItem onClick={onDelete} className="text-destructive focus:text-destructive">
-              Hapus
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </header>
-
-      <div>
-        <div className="flex items-baseline justify-between gap-2 mb-1.5">
-          <span className="text-sm tabular-nums font-medium">
-            {formatIDR(utilization.spent)}
+      <div className="mt-3 space-y-1.5">
+        <div className="flex items-center justify-between text-xs">
+          <span className="text-muted-foreground">
+            Terpakai: <span className="tabular-nums">{formatIDR(utilization.spent)}</span>
           </span>
-          <span className="text-xs text-muted-foreground tabular-nums">
-            dari {formatIDR(budget.amount)}
+          <span className={cn('font-medium tabular-nums', accentText)}>
+            {utilization.percent}%
           </span>
         </div>
-        <div className="h-2 rounded-full bg-muted overflow-hidden">
+        <div className="h-1.5 rounded-full bg-muted overflow-hidden">
           <div
-            className={`h-full ${barColor} transition-[width]`}
+            className={cn('h-full transition-[width]', barColor)}
             style={{ width: `${clampedPercent}%` }}
             role="progressbar"
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={clampedPercent}
           />
-        </div>
-        <div className="flex items-center justify-between gap-2 mt-1.5 text-xs">
-          <span className="tabular-nums text-muted-foreground">{utilization.percent}% terpakai</span>
-          {status === 'ok' && (
-            <span className="tabular-nums text-emerald-600 dark:text-emerald-400">
-              Sisa {formatIDR(utilization.remaining)}
-            </span>
-          )}
-          {status === 'warn' && (
-            <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
-              <AlertTriangle className="h-3 w-3" />
-              <span>Hampir habis</span>
-            </span>
-          )}
-          {status === 'over' && (
-            <span className="flex items-center gap-1 text-red-600 dark:text-red-400 tabular-nums">
-              <AlertCircle className="h-3 w-3" />
-              <span>Lebih {formatIDR(Math.abs(utilization.remaining))}</span>
-            </span>
-          )}
         </div>
       </div>
     </article>

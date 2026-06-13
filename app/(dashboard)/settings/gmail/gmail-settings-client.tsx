@@ -1,14 +1,26 @@
 'use client'
 
-import { useState, useTransition, useRef, useEffect } from 'react'
+import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/shared/confirm-dialog'
-import { SyncStatusBadge } from '@/components/dashboard/sync-status-badge'
 import { formatDate } from '@/lib/utils/date'
-import { Mail, RefreshCw, Unlink, CheckCircle2, XCircle, AlertCircle, Loader2 } from 'lucide-react'
+import { useSession } from '@/lib/hooks/use-session'
+import {
+  Mail,
+  RefreshCw,
+  Unlink,
+  CheckCircle2,
+  XCircle,
+  AlertCircle,
+  Loader2,
+  ShieldCheck,
+  Receipt,
+  Check,
+} from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 export interface SyncLog {
   id: string
@@ -28,75 +40,35 @@ interface GmailSettingsClientProps {
 }
 
 function StatusIcon({ status }: { status: SyncLog['status'] }) {
-  if (status === 'completed') {
-    return <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
-  }
-  if (status === 'failed') {
-    return <XCircle className="h-4 w-4 text-destructive shrink-0" />
-  }
-  if (status === 'partial') {
-    return <AlertCircle className="h-4 w-4 text-yellow-500 shrink-0" />
-  }
+  if (status === 'completed') return <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+  if (status === 'failed') return <XCircle className="h-4 w-4 text-destructive shrink-0" />
+  if (status === 'partial') return <AlertCircle className="h-4 w-4 text-yellow-500 shrink-0" />
   return <Loader2 className="h-4 w-4 text-muted-foreground shrink-0 animate-spin" />
 }
 
 function statusLabel(status: SyncLog['status']): string {
-  const labels: Record<SyncLog['status'], string> = {
-    completed: 'Selesai',
-    failed: 'Gagal',
-    partial: 'Sebagian',
-    started: 'Berjalan',
-  }
-  return labels[status]
+  return { completed: 'Selesai', failed: 'Gagal', partial: 'Sebagian', started: 'Berjalan' }[status]
+}
+
+function formatLastSync(iso: string): string {
+  const d = new Date(iso)
+  const now = new Date()
+  const sameDay =
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate()
+  const time = d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false })
+  if (sameDay) return `Hari ini, ${time} WIB`
+  const date = d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })
+  return `${date}, ${time} WIB`
 }
 
 export function GmailSettingsClient({ isConnected, lastSyncedAt, syncLogs }: GmailSettingsClientProps) {
   const router = useRouter()
+  const { user } = useSession()
   const [disconnectOpen, setDisconnectOpen] = useState(false)
   const [isSyncing, startSyncTransition] = useTransition()
   const [isDisconnecting, startDisconnectTransition] = useTransition()
-  const [liveLogs, setLiveLogs] = useState<SyncLog[] | null>(null)
-  const [liveLastSyncedAt, setLiveLastSyncedAt] = useState<string | null>(null)
-  const [isPolling, setIsPolling] = useState(false)
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
-
-  useEffect(() => {
-    return () => { if (pollRef.current) clearInterval(pollRef.current) }
-  }, [])
-
-  function stopPolling() {
-    if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null }
-    setIsPolling(false)
-    // Tidak langsung clear liveLogs — biarkan data live tetap tampil
-    // sementara router.refresh() mengambil data server terbaru.
-    router.refresh()
-  }
-
-  function startPolling() {
-    // Reset live state dari polling sebelumnya
-    setLiveLogs(null)
-    setLiveLastSyncedAt(null)
-    setIsPolling(true)
-    const pollingStartedAt = new Date()
-    const deadline = Date.now() + 30_000
-    pollRef.current = setInterval(async () => {
-      if (Date.now() > deadline) { stopPolling(); return }
-      try {
-        const res = await fetch('/api/sync/status')
-        if (!res.ok) return
-        const { data } = await res.json()
-        if (!data?.recent_logs) return
-        setLiveLogs(data.recent_logs)
-        if (data.last_synced_at) setLiveLastSyncedAt(data.last_synced_at)
-        // Hanya stop jika ada log baru (setelah polling dimulai) yang sudah selesai.
-        // Tanpa ini, polling langsung stop karena log lama sudah 'completed'.
-        const hasNewCompletedLog = data.recent_logs.some(
-          (l: SyncLog) => l.status !== 'started' && new Date(l.started_at) > pollingStartedAt
-        )
-        if (hasNewCompletedLog) stopPolling()
-      } catch { /* network error — keep polling */ }
-    }, 2000)
-  }
 
   function triggerOAuth() {
     const supabase = createClient()
@@ -118,9 +90,8 @@ export function GmailSettingsClient({ isConnected, lastSyncedAt, syncLogs }: Gma
         throw new Error(data?.error?.message ?? 'Gagal menyambungkan')
       }
       const { data } = await res.json()
-      if (data?.needsOAuth) {
-        triggerOAuth()
-      } else {
+      if (data?.needsOAuth) triggerOAuth()
+      else {
         toast.success('Gmail tersambung kembali', { description: 'Sync otomatis aktif.' })
         window.location.reload()
       }
@@ -174,120 +145,156 @@ export function GmailSettingsClient({ isConnected, lastSyncedAt, syncLogs }: Gma
     })
   }
 
-  if (!isConnected) {
-    return (
-      <div className="rounded-xl border border-border/50 bg-card p-6 space-y-4 shadow-[0_2px_12px_rgba(0,0,0,0.04)]">
-        <div className="flex items-start gap-3">
-          <div className="rounded-full bg-muted p-2">
-            <Mail className="h-5 w-5 text-muted-foreground" />
+  const email = user?.email ?? ''
+  const syncing = isSyncing
+
+  return (
+    <div className="space-y-5">
+      {/* Hero card */}
+      <section className="rounded-2xl border border-border/60 bg-card p-7 shadow-[0_2px_16px_rgba(0,0,0,0.04)] text-center">
+        <div className="flex flex-col items-center">
+          <div className="relative">
+            <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center">
+              <Mail className="h-7 w-7 text-muted-foreground" />
+            </div>
+            {isConnected && (
+              <span className="absolute -bottom-0.5 -right-0.5 h-6 w-6 rounded-full bg-emerald-500 border-[3px] border-card flex items-center justify-center">
+                <Check className="h-3 w-3 text-white" strokeWidth={3} />
+              </span>
+            )}
           </div>
-          <div className="space-y-1">
-            <p className="text-sm font-medium text-foreground">Gmail terputus</p>
-            <p className="text-xs text-muted-foreground">
-              Koneksi Gmail tidak aktif. Login ulang atau sambungkan kembali untuk melanjutkan sync otomatis.
-            </p>
+
+          {email ? (
+            <p className="mt-4 text-base font-semibold text-foreground truncate max-w-full px-2">{email}</p>
+          ) : (
+            <p className="mt-4 text-base font-semibold text-muted-foreground">Belum ada akun</p>
+          )}
+
+          <div className="mt-2 inline-flex items-center gap-1.5">
+            <span
+              className={cn(
+                'h-1.5 w-1.5 rounded-full',
+                isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-muted-foreground/40',
+              )}
+              aria-hidden
+            />
+            <span
+              className={cn(
+                'text-[11px] font-semibold uppercase tracking-[0.18em]',
+                isConnected ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground',
+              )}
+            >
+              {isConnected ? 'Disinkronkan' : 'Belum terhubung'}
+            </span>
           </div>
+
+          {isConnected && (
+            <>
+              <div className="mt-5 w-full max-w-[14rem] h-px bg-border" aria-hidden />
+              <p className="mt-4 text-[11px] uppercase tracking-wider text-muted-foreground">
+                Terakhir disinkronkan
+              </p>
+              <p className="mt-1 font-mono text-sm text-foreground tabular-nums">
+                {lastSyncedAt ? formatLastSync(lastSyncedAt) : 'Belum pernah'}
+              </p>
+            </>
+          )}
         </div>
-        <Button size="sm" variant="outline" onClick={handleReconnect} className="w-full sm:w-auto">
+      </section>
+
+      {/* Primary CTA */}
+      {isConnected ? (
+        <Button
+          type="button"
+          size="lg"
+          onClick={handleSyncNow}
+          disabled={syncing}
+          className="w-full h-12 rounded-xl uppercase tracking-[0.14em] text-xs font-bold bg-foreground text-background hover:bg-foreground/90"
+        >
+          {syncing ? (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          ) : (
+            <RefreshCw className="h-4 w-4 mr-2" />
+          )}
+          {syncing ? 'Menyinkronkan...' : 'Sync Sekarang'}
+        </Button>
+      ) : (
+        <Button
+          type="button"
+          size="lg"
+          onClick={handleReconnect}
+          className="w-full h-12 rounded-xl uppercase tracking-[0.14em] text-xs font-bold"
+        >
           <Mail className="h-4 w-4 mr-2" />
           Aktifkan Sync
         </Button>
-      </div>
-    )
-  }
+      )}
 
-  return (
-    <div className="space-y-6">
-      {/* Connected status card */}
-      <div className="rounded-xl border border-border/50 bg-card p-6 space-y-4 shadow-[0_2px_12px_rgba(0,0,0,0.04)]">
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <div className="flex items-center gap-3">
-            <div className="rounded-full bg-emerald-100 dark:bg-emerald-950/50 p-2">
-              <Mail className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-foreground">Gmail terhubung</p>
-              {(liveLastSyncedAt ?? lastSyncedAt) && (
-                <p className="text-xs text-muted-foreground">
-                  Terakhir sync: {formatDate((liveLastSyncedAt ?? lastSyncedAt)!)}
-                </p>
-              )}
-            </div>
-          </div>
-          <SyncStatusBadge gmailSyncEnabled={true} lastSyncedAt={lastSyncedAt} isSyncing={isPolling} />
-        </div>
-
-        <div className="flex flex-wrap gap-2 pt-1">
-          <Button
-            size="sm"
-            onClick={handleSyncNow}
-            disabled={isSyncing || isPolling}
-          >
-            {(isSyncing || isPolling) ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <RefreshCw className="h-4 w-4 mr-2" />
-            )}
-            {(isSyncing || isPolling) ? 'Menyinkronkan...' : 'Sync Sekarang'}
-          </Button>
-
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => setDisconnectOpen(true)}
-            disabled={isDisconnecting}
-            className="text-destructive hover:text-destructive border-destructive/30 hover:border-destructive/60"
-          >
-            <Unlink className="h-4 w-4 mr-2" />
-            Putuskan Gmail
-          </Button>
-        </div>
-      </div>
-
-      {/* Sync logs */}
-      <div className="rounded-xl border border-border/50 bg-card p-6 space-y-3 shadow-[0_2px_12px_rgba(0,0,0,0.04)]">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-foreground">Riwayat Sync</h2>
-          {isPolling && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
-        </div>
-
-        {(liveLogs ?? syncLogs).length === 0 ? (
-          <p className="text-xs text-muted-foreground py-4 text-center">
-            Belum ada aktivitas sync
+      {/* Info cards */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="rounded-xl bg-muted/60 p-4">
+          <Receipt className="h-4 w-4 text-foreground mb-2" />
+          <p className="text-xs text-foreground leading-snug">
+            Auto-deteksi e-receipt &amp; tagihan.
           </p>
-        ) : (
-          <div className="space-y-2">
-            {(liveLogs ?? syncLogs).map((log) => (
-              <div
+        </div>
+        <div className="rounded-xl bg-muted/60 p-4">
+          <ShieldCheck className="h-4 w-4 text-foreground mb-2" />
+          <p className="text-xs text-foreground leading-snug">
+            Data terenkripsi. Hanya baca akses.
+          </p>
+        </div>
+      </div>
+
+      {/* Disconnect */}
+      {isConnected && (
+        <Button
+          type="button"
+          variant="outline"
+          size="lg"
+          onClick={() => setDisconnectOpen(true)}
+          disabled={isDisconnecting}
+          className="w-full h-12 rounded-xl uppercase tracking-[0.14em] text-xs font-bold text-destructive border-destructive/40 hover:bg-destructive/5 hover:text-destructive hover:border-destructive/60"
+        >
+          <Unlink className="h-4 w-4 mr-2" />
+          Putuskan Koneksi
+        </Button>
+      )}
+
+      {/* Sync history — collapsed visually below hero */}
+      {isConnected && syncLogs.length > 0 && (
+        <section className="rounded-xl border border-border/50 bg-card p-5 shadow-[0_2px_12px_rgba(0,0,0,0.04)] space-y-3">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Riwayat sync
+          </h2>
+          <ul className="space-y-2">
+            {syncLogs.slice(0, 5).map((log) => (
+              <li
                 key={log.id}
-                className="flex items-start gap-3 py-2 border-b border-border/50 last:border-0"
+                className="flex items-start gap-3 py-1.5 border-b border-border/40 last:border-0"
               >
                 <StatusIcon status={log.status} />
                 <div className="flex-1 min-w-0 space-y-0.5">
                   <div className="flex items-center justify-between gap-2 flex-wrap">
-                    <span className="text-xs font-medium text-foreground">
-                      {statusLabel(log.status)}
-                    </span>
-                    <span className="text-xs text-muted-foreground shrink-0">
+                    <span className="text-xs font-medium text-foreground">{statusLabel(log.status)}</span>
+                    <span className="text-[11px] text-muted-foreground shrink-0">
                       {formatDate(log.started_at)}
                     </span>
                   </div>
                   {log.status !== 'failed' && (
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-[11px] text-muted-foreground">
                       {log.emails_scanned} email diperiksa · {log.transactions_created} transaksi ditambahkan
                     </p>
                   )}
                   {log.error_message && (
-                    <p className="text-xs text-destructive truncate">
-                      {log.error_message}
-                    </p>
+                    <p className="text-[11px] text-destructive truncate">{log.error_message}</p>
                   )}
                 </div>
-              </div>
+              </li>
             ))}
-          </div>
-        )}
-      </div>
+          </ul>
+        </section>
+      )}
 
       <ConfirmDialog
         open={disconnectOpen}

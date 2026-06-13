@@ -10,18 +10,20 @@ import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 import { useBudgets, type BudgetWithUtilization } from '@/lib/hooks/use-budgets'
 import { BudgetCard } from './budget-card'
 import { BudgetForm } from './budget-form'
+import { formatIDR } from '@/lib/utils/currency'
+import { cn } from '@/lib/utils'
 
 function BudgetSkeleton() {
   return (
-    <div className="rounded-xl border bg-card p-4 space-y-3">
-      <div className="flex justify-between gap-2">
-        <div className="space-y-2 flex-1">
+    <div className="rounded-2xl border border-border/50 bg-card p-4 space-y-3">
+      <div className="flex items-start gap-3">
+        <div className="h-10 w-10 rounded-full bg-muted animate-pulse shrink-0" />
+        <div className="flex-1 space-y-2">
           <div className="h-4 w-1/2 bg-muted rounded animate-pulse" />
-          <div className="h-3 w-2/3 bg-muted rounded animate-pulse" />
+          <div className="h-3 w-1/3 bg-muted rounded animate-pulse" />
         </div>
       </div>
-      <div className="h-2 w-full bg-muted rounded animate-pulse" />
-      <div className="h-3 w-1/3 bg-muted rounded animate-pulse" />
+      <div className="h-1.5 w-full bg-muted rounded animate-pulse" />
     </div>
   )
 }
@@ -62,43 +64,48 @@ export function BudgetListClient() {
     setFormOpen(true)
   }
 
-  if (sessionLoading || isLoading) {
-    return (
-      <div className="space-y-3">
-        <BudgetSkeleton />
-        <BudgetSkeleton />
-      </div>
-    )
-  }
-
-  if (isError) {
-    return (
-      <EmptyState
-        icon={<AlertCircle className="h-10 w-10" />}
-        title="Gagal memuat budget"
-        description="Coba muat ulang halaman."
-        action={{ label: 'Muat ulang', onClick: () => window.location.reload() }}
-      />
-    )
-  }
-
   const budgets = data ?? []
+  const totalRemaining = budgets.reduce((sum, b) => sum + b.utilization.remaining, 0)
+  const remainingColor = totalRemaining < 0
+    ? 'text-red-600 dark:text-red-400'
+    : 'text-emerald-600 dark:text-emerald-400'
 
   return (
     <>
-      <div className="flex items-center justify-between gap-3 mb-4">
-        <p className="text-xs text-muted-foreground">
-          {budgets.length === 0
-            ? 'Belum ada budget'
-            : `${budgets.length} budget aktif`}
-        </p>
-        <Button size="sm" onClick={openCreate}>
-          <Plus className="h-4 w-4 mr-1" />
-          Tambah
-        </Button>
-      </div>
+      <header className="flex items-end justify-between gap-3 mb-5">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Anggaran</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {budgets.length === 0 ? 'Belum ada budget' : `${budgets.length} budget aktif`}
+          </p>
+        </div>
+        {budgets.length > 0 && (
+          <div className="text-right">
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              {totalRemaining < 0 ? 'Lebih anggaran' : 'Total tersisa'}
+            </p>
+            <p className={cn('text-lg font-bold tabular-nums', remainingColor)}>
+              {totalRemaining < 0
+                ? `-${formatIDR(Math.abs(totalRemaining))}`
+                : formatIDR(totalRemaining)}
+            </p>
+          </div>
+        )}
+      </header>
 
-      {budgets.length === 0 ? (
+      {sessionLoading || isLoading ? (
+        <div className="space-y-3">
+          <BudgetSkeleton />
+          <BudgetSkeleton />
+        </div>
+      ) : isError ? (
+        <EmptyState
+          icon={<AlertCircle className="h-10 w-10" />}
+          title="Gagal memuat budget"
+          description="Coba muat ulang halaman."
+          action={{ label: 'Muat ulang', onClick: () => window.location.reload() }}
+        />
+      ) : budgets.length === 0 ? (
         <EmptyState
           icon={<Target className="h-10 w-10" />}
           title="Belum ada budget"
@@ -106,11 +113,24 @@ export function BudgetListClient() {
           action={{ label: 'Tambah budget pertama', onClick: openCreate }}
         />
       ) : (
-        <div className="space-y-3">
-          {budgets.map((b) => (
-            <BudgetCard key={b.id} budget={b} onEdit={() => openEdit(b)} onDelete={() => setDeleting(b)} />
-          ))}
-        </div>
+        <>
+          <div className="space-y-3">
+            {budgets.map((b) => (
+              <BudgetCard
+                key={b.id}
+                budget={b}
+                onEdit={() => openEdit(b)}
+                onDelete={() => setDeleting(b)}
+              />
+            ))}
+          </div>
+          <div className="flex justify-end pt-4">
+            <Button size="sm" onClick={openCreate}>
+              <Plus className="h-4 w-4 mr-1" />
+              Tambah budget
+            </Button>
+          </div>
+        </>
       )}
 
       <BudgetForm open={formOpen} onOpenChange={setFormOpen} budget={editing} />
