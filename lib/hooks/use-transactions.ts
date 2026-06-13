@@ -30,6 +30,7 @@ export function useTransactions({ page = 1, type, q }: UseTransactionsParams = {
       const from = (page - 1) * PAGE_SIZE
       const to = from + PAGE_SIZE - 1
 
+      // Defense in depth: explicit user_id filter (security.md §4).
       let q_ = supabase
         .from('transactions')
         .select(`
@@ -37,6 +38,7 @@ export function useTransactions({ page = 1, type, q }: UseTransactionsParams = {
           wallet:wallets!wallet_id(id, name, color),
           category:categories(id, name, icon, color)
         `, { count: 'exact' })
+        .eq('user_id', user!.id)
         .is('deleted_at', null)
         .order('transacted_at', { ascending: false })
         .range(from, to)

@@ -22,6 +22,7 @@ export function useTransactionDetail(id: string) {
           category:categories(id, name, icon, color)
         `)
         .eq('id', id)
+        .eq('user_id', user!.id)
         .is('deleted_at', null)
         .single()
 

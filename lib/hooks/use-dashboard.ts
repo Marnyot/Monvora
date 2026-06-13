@@ -16,6 +16,9 @@ export function useDashboard() {
       const now = new Date()
       const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
 
+      // Defense in depth: explicit user_id on every row-scoped query
+      // (security.md §4). RLS is still the authoritative gate.
+      const uid = user!.id
       const [
         { data: wallets },
         { data: txThisMonth },
@@ -25,11 +28,13 @@ export function useDashboard() {
         supabase
           .from('wallets')
           .select('id, name, balance, color')
+          .eq('user_id', uid)
           .is('deleted_at', null)
           .eq('is_active', true),
         supabase
           .from('transactions')
           .select('amount, type')
+          .eq('user_id', uid)
           .is('deleted_at', null)
           .gte('transacted_at', firstOfMonth),
         supabase
@@ -39,12 +44,14 @@ export function useDashboard() {
             wallet:wallets!wallet_id(id, name, color),
             category:categories(id, name, icon, color)
           `)
+          .eq('user_id', uid)
           .is('deleted_at', null)
           .order('transacted_at', { ascending: false })
           .limit(10),
         supabase
           .from('profiles')
           .select('full_name')
+          .eq('id', uid)
           .single(),
       ])
 

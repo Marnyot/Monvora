@@ -37,12 +37,16 @@ export function useBudgets() {
       const supabase = createClient()
       const now = new Date()
 
+      // Defense in depth: RLS guards row visibility, but we keep an
+      // explicit user_id filter so the query intent stays obvious and
+      // survives a future RLS policy edit (security.md §4).
       const { data: budgets, error: budgetErr } = await supabase
         .from('budgets')
         .select(`
           id, name, amount, period, category_id, is_active, created_at, updated_at,
           category:categories(id, name, icon, color)
         `)
+        .eq('user_id', user!.id)
         .is('deleted_at', null)
         .order('created_at', { ascending: true })
 
@@ -60,6 +64,7 @@ export function useBudgets() {
       const { data: txs, error: txErr } = await supabase
         .from('transactions')
         .select('amount, type, transacted_at, category_id')
+        .eq('user_id', user!.id)
         .is('deleted_at', null)
         .eq('type', 'expense')
         .gte('transacted_at', earliest.toISOString())

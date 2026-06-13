@@ -25,6 +25,9 @@ export function useAnalytics() {
       const supabase = createClient()
       const now = new Date()
 
+      // Defense in depth: RLS already restricts rows to the session user,
+      // but the explicit user_id filter survives any RLS policy refactor
+      // and makes the intent obvious to reviewers (per security.md §4).
       const { data, error } = await supabase
         .from('transactions')
         .select(`
@@ -32,6 +35,7 @@ export function useAnalytics() {
           is_recurring, recurring_group_id,
           category:categories(id, name, icon, color)
         `)
+        .eq('user_id', user!.id)
         .is('deleted_at', null)
         .gte('transacted_at', trendWindowStart(now))
         .order('transacted_at', { ascending: false })

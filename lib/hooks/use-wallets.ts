@@ -25,9 +25,12 @@ export function useWallets() {
     gcTime: 5 * 60 * 1000,
     queryFn: async () => {
       const supabase = createClient()
+      // Defense in depth: explicit user_id keeps query intent obvious
+      // even if RLS policies change (security.md §4).
       const { data } = await supabase
         .from('wallets')
         .select('id, name, type, provider, balance, color, icon, is_active, created_at, updated_at')
+        .eq('user_id', user!.id)
         .is('deleted_at', null)
         .order('created_at', { ascending: true })
       return (data ?? []) as WalletItem[]
