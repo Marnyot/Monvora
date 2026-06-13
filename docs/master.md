@@ -105,8 +105,8 @@ All UI strings in Bahasa Indonesia for Phase 1–3. i18n infrastructure (next-in
 | Service | Purpose | Tier |
 |---|---|---|
 | Google OAuth + Gmail API | Auth + email parsing | Free |
-| Gemini API (gemini-1.5-flash) | Transaction categorization | Free tier |
-| Tesseract.js | OCR for e-wallet screenshots | Free (client-side) |
+| Gemini API (gemini-2.5-flash) | Categorize transaksi, daily insights, OCR vision, Gmail parser fallback (budget 30/user/hari) | Free tier |
+| Tesseract.js | ⚠️ DEPRECATED (Jun 2026) — diganti Gemini Vision via `lib/ai/ocr-vision.ts`; lihat ADR-022 amendment | — |
 
 ### Hosting
 | Service | Purpose |

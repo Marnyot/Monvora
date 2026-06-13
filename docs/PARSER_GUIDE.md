@@ -554,3 +554,92 @@ Setiap parser baru wajib punya test untuk skenario berikut:
 [ ] Email dengan body kosong → return null tanpa throw
 [ ] Duplicate email (raw_email_id sama) → ditangani di level service, bukan parser
 ```
+
+---
+
+## AI FALLBACK PIPELINE (Jun 2026 — ADR-026)
+
+> **Hidden from UI.** AI fallback adalah backend optimization. End user tidak boleh tahu bahwa email mereka diparse oleh AI — positioning aplikasi: "smart automatic parser", bukan "AI-powered parser".
+
+### Alur
+
+```
+detectAndParseWithAi(email, { supabase, userId })
+  │
+  ▼
+1. Run detectAndParse(email) — rule chain (BCA, Mandiri, BNI, BRI, CIMB, generic)
+  │
+  ├── Rule confidence >= 0.7 (RULE_CONFIDENCE_FLOOR)
+  │   → PAKAI hasil rule ✓
+  │
+  └── Rule null OR confidence < 0.7
+      │
+      ▼
+2. aiFallbackParse() — gate by daily budget
+   │
+   ├── reserveDailyBudget() via RPC gmail_ai_reserve_call
+   │   → atomic INSERT ... ON CONFLICT DO UPDATE WHERE call_count < 30
+   │   → return NULL kalau cap exhausted
+   │
+   ├── Budget exhausted → return ruleResult apa adanya (mungkin null)
+   │
+   └── Budget OK → parseEmailWithAi() panggil gemini-2.5-flash
+       │
+       ├── Gemini upstream gagal → return ruleResult
+       │
+       └── Gemini OK → bandingkan confidence
+           ├── AI confidence > rule confidence → PAKAI AI ✓
+           └── AI confidence ≤ rule → PAKAI rule ✓
+```
+
+### Konfigurasi
+
+| Konstanta | Nilai | Lokasi |
+|---|---|---|
+| `RULE_CONFIDENCE_FLOOR` | 0.7 | `lib/gmail/parsers/index.ts` |
+| `DAILY_BUDGET` | 30 calls / user / hari | `lib/gmail/parsers/ai-fallback.ts` |
+| `TIMEOUT_MS` | 12000 (12s) | `lib/ai/email-parser.ts` |
+| `MAX_BODY_CHARS` | 4000 | `lib/ai/email-parser.ts` |
+| Model | `gemini-2.5-flash` | `lib/ai/email-parser.ts` |
+
+### Aturan WAJIB (Invisibility Constraint)
+
+```
+❌ JANGAN expose AI involvement ke UI atau user-facing log
+❌ JANGAN set ParsedTransaction.bank = 'ai' — gunakan nama bank yang dideteksi atau 'unknown'
+❌ JANGAN set transaction.source = 'gmail_ai' — tetap 'gmail'
+❌ JANGAN add policy SELECT/INSERT/UPDATE/DELETE di tabel gmail_ai_usage_daily — service-role only
+❌ JANGAN log nominal/merchant di console — pakai error ID pattern (lihat email-parser.ts:179)
+❌ JANGAN bypass budget gate — atomic RPC adalah satu-satunya jalan masuk
+```
+
+### Tabel Tracking
+
+`gmail_ai_usage_daily` (migration 012 + 013):
+
+| Kolom | Tipe | Catatan |
+|---|---|---|
+| `user_id` | UUID | FK → profiles(id) |
+| `usage_date` | DATE | WIB calendar key (YYYY-MM-DD) |
+| `call_count` | INT | atomic increment via RPC |
+| `updated_at` | TIMESTAMPTZ | timestamp call terakhir |
+
+PK: `(user_id, usage_date)`. RLS enabled, **tanpa policy** = locked to service-role.
+
+### Privacy Carve-Out (lihat security.md §AI Fallback Carve-Out)
+
+Konten yang dikirim ke Gemini:
+- `subject` (full)
+- `from` (full email pengirim)
+- `body` slice ≤ 4000 char (truncated)
+
+Ini **secara explisit melanggar ADR-022 awal** ("data transaksi tidak boleh dikirim ke Gemini verbatim — hanya metadata") tapi di-carve-out di **ADR-026** dengan justifikasi: tanpa konteks utuh, AI tidak bisa infer transaction type / payment method / merchant.
+
+### Cara Tambah Bank Baru (Update untuk Hybrid Era)
+
+Sekarang ada **3 jalur** untuk menangani bank baru:
+
+1. **Tulis specific parser** (preferred, fast + free) — ikuti template di section "Template Parser Baru" di atas. Set `confidence` ≥ 0.7 supaya tidak trigger AI fallback.
+2. **Andalkan generic + AI fallback** — kalau bank jarang dipakai user atau format-nya complex, biarkan saja. Generic parser caps di 0.5 → AI akan ambil alih. Cost ~0.001 per email.
+3. **Tulis specific parser + biarkan AI sebagai safety net** — best balance. Specific parser handle 95% kasus, AI handle edge case yang format-nya berubah.
+

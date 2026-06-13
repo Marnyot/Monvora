@@ -494,7 +494,7 @@ STEP 1: Rule-based classifier (selalu dicoba dulu)
 STEP 2: Gemini API (hanya kalau rule-based confidence < 0.9)
 │
 │  Buat prompt dengan konteks transaksi
-│  Kirim ke gemini-1.5-flash
+│  Kirim ke gemini-2.5-flash
 │  │
 │  ├── Response valid JSON? → parse category + confidence
 │  ├── Response tidak valid → fallback ke "Other", confidence: 0.3

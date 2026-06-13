@@ -78,10 +78,10 @@ Keputusan ini disengaja:
 ```
 
 ### Prinsip Arsitektur
-1. **Data hanya mengalir satu arah** — Presentation → API → Persistence. Tidak ada komponen UI yang langsung akses database
+1. **Read-only data boleh client-direct Supabase** — hook read-only (dashboard, transactions, wallets, categories, analytics, budgets, transaction-detail) query Supabase langsung dari browser dengan filter `user_id` eksplisit + RLS aktif. Mutasi & operasi sensitif tetap lewat API route. Lihat **ADR-025**.
 2. **Setiap layer punya satu tanggung jawab** — API layer tidak parse email, parsing layer tidak kategorikan transaksi
-3. **External calls selalu di server** — Gmail API dan Gemini API tidak pernah dipanggil dari browser/client
-4. **RLS sebagai last line of defense** — meski API layer sudah filter by user_id, database tetap enforce RLS
+3. **External calls (Gmail OAuth, Gemini) selalu di server** — token Gmail tidak pernah di-expose ke client
+4. **RLS bukan satu-satunya guard, tapi authoritative guard** — semua client-direct query WAJIB punya `.eq('user_id', user.id)` eksplisit sebagai defense in depth (security.md §4), RLS yang enforce
 5. **Fail safe over fail open** — kalau parsing gagal, transaksi tidak disimpan. Lebih baik tidak ada data daripada data salah
 
 ---
@@ -98,10 +98,15 @@ Keputusan ini disengaja:
 - Server state caching (TanStack Query)
 - Theme management (light/dark/system)
 
+**Yang BOLEH dilakukan (per ADR-025):**
+- Query Supabase langsung dari hook read-only untuk path display data, dengan filter `user_id` eksplisit + RLS aktif
+- Hook yang sudah pakai pattern ini: `useDashboard`, `useTransactions`, `useWallets`, `useCategories`, `useTransactionDetail`, `useAnalytics`, `useBudgets`, `useGmailSettings`
+
 **Yang TIDAK boleh dilakukan:**
-- Langsung akses Supabase dari client untuk operasi sensitif
+- Mutasi (insert/update/delete) langsung dari client — selalu lewat API route untuk validasi + rate limit
+- Akses tabel yang punya logic complex (mis. `gmail_ai_usage_daily` — service-role only)
 - Menyimpan token atau secret apapun
-- Memanggil Gmail API atau Gemini API langsung
+- Memanggil Gmail API atau Gemini API langsung dari browser (perantara API route / Inngest job)
 
 ---
 
@@ -166,12 +171,14 @@ return Response.json(result)
 ---
 
 ### AI Layer
-**Teknologi:** Gemini API (gemini-1.5-flash), Rule-based engine
+**Teknologi:** Gemini API (gemini-2.5-flash), Rule-based engine
 
 **Tanggung jawab:**
-- Kategorisasi transaksi otomatis
-- Generate AI insights harian dalam Bahasa Indonesia
-- Rule-based fallback ketika Gemini tidak tersedia
+- Kategorisasi transaksi otomatis (`lib/ai/gemini.ts`)
+- Generate AI insights harian dalam Bahasa Indonesia (`lib/ai/insights.ts`)
+- OCR struk via Gemini Vision (`lib/ai/ocr-vision.ts`) — menggantikan Tesseract.js sejak Jun 2026
+- Gmail email parser fallback (`lib/ai/email-parser.ts`) — invisible dari UI, lihat ADR-026
+- Rule-based fallback ketika Gemini tidak tersedia / over budget
 
 **Yang TIDAK boleh dilakukan:**
 - Panggil Gemini untuk setiap transaksi tanpa coba rule-based dulu
@@ -754,7 +761,7 @@ Step 1: Rule-based engine
         │
         ▼ (hanya jika rule-based < 0.9)
 Step 2: Gemini API
-  - Model: gemini-1.5-flash (gratis, cukup untuk kategorisasi)
+  - Model: gemini-2.5-flash (gratis untuk free tier RPM/RPD limit)
   - Prompt dalam Bahasa Indonesia
   - Response: JSON { category, confidence, reasoning }
   - Timeout: 5 detik

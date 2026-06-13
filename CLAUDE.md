@@ -235,7 +235,7 @@ State          : Zustand (client) + TanStack Query (server)
 Database       : Supabase (PostgreSQL + RLS)
 Auth           : Supabase Auth + Google OAuth
 Background     : Inngest
-AI             : Gemini API (gemini-1.5-flash) + rule-based
+AI             : Gemini API (gemini-2.5-flash) — categorize, insights, OCR vision, Gmail parser fallback
 OCR            : Tesseract.js (client-side)
 Testing        : Vitest + Testing Library + Playwright
 Package Manager: pnpm

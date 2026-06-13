@@ -1179,3 +1179,45 @@ LANGKAH SEGERA:
 *Referenced from: master.md v2, architecture.md v1*
 *⚠️ Review dokumen ini setiap kali ada fitur baru yang menyentuh auth atau data user*
 *Next review: Before Phase 2 (Gmail integration) — pastikan checklist Phase 1→2 sudah selesai*
+
+---
+
+## 16. AI FALLBACK CARVE-OUT (Jun 2026 — ADR-022 Amendment)
+
+> Bagian ini men-document carve-out atas kebijakan "data transaksi tidak boleh dikirim ke Gemini verbatim — hanya metadata" yang awalnya di-set di ADR-022. Carve-out di-formalisasi di **ADR-026**.
+
+### Scope yang Dikecualikan
+
+| Fitur | Konten dikirim ke Gemini | Justifikasi |
+|---|---|---|
+| **OCR vision** (`lib/ai/ocr-vision.ts`) | Gambar struk full (base64) + nama-nama kategori user | Tanpa gambar utuh, tidak ada yang bisa diparse. Gambar tidak persist di pihak kita |
+| **Gmail email parser fallback** (`lib/ai/email-parser.ts`) | Subject + from + body slice ≤ 4000 char (mengandung nominal + merchant + ref number) | Tanpa konteks utuh, AI tidak bisa infer transaction type / payment method / merchant. Lihat ADR-026 untuk alternatif yang dipertimbangkan |
+
+### Yang TETAP Berlaku
+
+```
+✓ Logging tetap tidak boleh mention nominal, merchant, atau snippet email
+  → Gunakan error ID + generic message (pattern di email-parser.ts:179, ocr-vision.ts)
+✓ Gemini response TIDAK boleh di-cache di server (di-process per-call, tidak persist)
+✓ Per-user daily budget 30 calls (Gmail) untuk batasi exposure aggregate
+✓ Body email di-truncate ke 4000 char (Gmail) sebelum kirim — batasi exposure
+✓ Tidak ada raw email atau image yang persist di Supabase storage
+✓ Tidak ada fitur "history of AI calls" di UI — user tidak boleh tahu AI dilibatkan untuk Gmail
+```
+
+### Threat Model
+
+| Threat | Mitigasi |
+|---|---|
+| Google logs request body di Gemini API server | Accepted risk — di-document di privacy policy. Tidak ada cara hindari kalau pakai Gemini. Konsekuensi: tidak commit-able ke high-stakes financial data (mis. salary dari corporate) |
+| API key bocor → adversary panggil Gemini atas nama kita | Standard: rotate key (lihat security.md §2). Bukan exposure data user — adversary tidak punya akses ke email user |
+| Adversary intercept request Vercel ↔ Gemini | TLS in transit + Gemini di-host Google (network sudah secured). Bukan threat unik AI fallback |
+| Gemini API returns hallucinated data → di-insert sebagai transaksi | Mitigated dengan `is_verified: false` flag — semua AI-derived transaksi butuh user review. Validation: amount integer positif, payment_method enum check (lihat parseEmailResponse) |
+| Budget bypass → unlimited AI calls per user | Atomic RPC `gmail_ai_reserve_call` (migration 013) — pakai `WHERE call_count < cap` di UPDATE, impossible to overshoot |
+
+### Yang Perlu Ada di Privacy Policy
+
+Saat publish app, privacy policy WAJIB mention:
+- "Email notifikasi bank Anda akan diproses untuk ekstraksi data transaksi. Proses ini menggunakan Gemini API (Google) sebagai sistem otomatis ketika pengenalan otomatis kami tidak yakin. Konten email yang dikirim: subject, sender, dan body singkat (≤ 4000 karakter)."
+- "Foto struk yang Anda scan akan dianalisis oleh Gemini API (Google) untuk ekstraksi data. Gambar tidak disimpan di server kami."
+- Linked to ADR-026 di docs internal untuk audit trail

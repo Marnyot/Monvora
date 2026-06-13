@@ -686,7 +686,11 @@ Dependabot untuk PR otomatis saat ada update/vulnerability, dikombinasikan denga
 Perlu AI untuk kategorisasi transaksi otomatis dan generasi insights. Perlu memilih provider.
 
 **Keputusan:**
-Gemini API (gemini-1.5-flash) sebagai AI provider. Rule-based fallback sebagai safety net.
+Gemini API sebagai AI provider tunggal untuk semua fitur (categorize, insights, OCR vision, Gmail parser fallback). Rule-based tetap ada sebagai jalur cepat / safety net di Gmail parser dan categorize.
+
+**Amendment Jun 2026:**
+- Model di-upgrade dari `gemini-1.5-flash` → `gemini-2.5-flash` (model name lama yang sempat keliru di-set ke `gemini-3.1-flash-lite` di-fix). Semua call site (`lib/ai/gemini.ts`, `lib/ai/insights.ts`, `lib/ai/ocr-vision.ts`, `lib/ai/email-parser.ts`) konsisten pakai model yang sama.
+- Konsekuensi "data transaksi tidak boleh dikirim ke Gemini secara verbatim — hanya metadata" **secara eksplisit di-carve-out untuk OCR vision (gambar struk) dan Gmail parser fallback (subject + from + body slice ≤ 4000 char)**. Lihat ADR-026 untuk justifikasi & threat model.
 
 **Alternatif yang dipertimbangkan:**
 
@@ -698,11 +702,11 @@ Gemini API (gemini-1.5-flash) sebagai AI provider. Rule-based fallback sebagai s
 | Pure rule-based | Tidak scalable untuk kategori yang terus bertambah |
 
 **Konsekuensi yang diterima:**
-- Free tier rate limit bisa menjadi bottleneck saat volume tinggi
-- Rule-based fallback harus selalu di-maintain sebagai safety net
-- Data transaksi tidak boleh dikirim ke Gemini secara verbatim — hanya metadata
+- Free tier rate limit bisa menjadi bottleneck saat volume tinggi → di-mitigate dengan per-user daily budget di Gmail parser (lihat ADR-026)
+- Rule-based fallback harus selalu di-maintain sebagai safety net (Gmail) atau jalur cepat (categorize)
+- Data transaksi metadata-only kebijakan **tidak berlaku absolut**: OCR + Gmail parser kirim konten verbatim ke Gemini — di-document di security.md dan ADR-026
 
-**Review Trigger:** Jika Gemini free tier rate limit menghambat user experience, atau ada privacy concern dengan data yang dikirim ke Gemini.
+**Review Trigger:** Jika Gemini free tier rate limit menghambat user experience, atau ada privacy incident terkait body email yang dikirim ke Gemini.
 
 ---
 
@@ -768,6 +772,102 @@ Seluruh UI Monvora (label, placeholder, toast, error message, navigasi) dalam Ba
 - Saat Phase 3 (i18n), perlu extraction semua string dari kode ke translation files
 
 **Review Trigger:** Jika ada target market non-Indonesia yang konkret di Phase 4.
+
+---
+
+### ADR-025 — Client-Direct Supabase untuk Read-Only Hooks
+
+| Field | Detail |
+|---|---|
+| **Tanggal** | Jun 13, 2026 |
+| **Status** | ✅ Active |
+| **Kategori** | Architecture |
+| **Supersedes** | architecture.md §1 principle #1 dan §2 "Presentation Layer" untuk path read-only |
+
+**Konteks:**
+Awal arsitektur (architecture.md) mewajibkan semua data flow melalui `Presentation → API → Persistence` — UI tidak boleh langsung query Supabase. Realitas selama Phase 1-3: banyak hook (`useDashboard`, `useTransactions`, `useWallets`, `useCategories`, `useTransactionDetail`) **sudah** query Supabase langsung dari browser sejak awal karena pattern ini lebih ringkas + cepat untuk read-only data. Saat audit kode (Jun 13, 2026), 2 hook tambahan (`useAnalytics`, `useBudgets`) yang sebelumnya lewat `/api/analytics` + `/api/budgets` di-konversi juga ke client-direct setelah perf complaint user (1s navigation lag).
+
+**Keputusan:**
+**Pattern client-direct Supabase di-formalisasi sebagai pola yang valid untuk hook read-only**, dengan syarat:
+
+1. **RLS aktif & restrictive** di semua tabel yang diakses (sudah)
+2. **Filter `user_id` eksplisit** di setiap query (defense in depth, security.md §4) — bukan hanya RLS
+3. **TIDAK boleh** untuk operasi mutasi/sensitif: write (insert/update/delete), validasi cross-table, rate limiting, atau apapun yang butuh server-side enforcement → tetap lewat API route
+4. **TIDAK boleh** untuk data yang melibatkan transformasi bisnis logic yang complex / belum aman di-expose ke client (mis. computed financial totals yang dipakai untuk billing) — kalau ada keraguan, default ke API route
+
+**Alternatif yang dipertimbangkan:**
+
+| Alternatif | Alasan Ditolak |
+|---|---|
+| Strict API-only (rollback) | Perf cost konkret (1 hop ekstra + cold start risk) untuk no security gain karena RLS sudah cover |
+| Hybrid: API for sensitive, client-direct for "obviously safe" | Sudah ini yang dipilih — pasal ini formalize-nya |
+| Edge functions sebagai proxy | Tidak menyelesaikan masalah hop, hanya pindah lokasi |
+
+**Konsekuensi yang diterima:**
+- Bundle client tumbuh sedikit (Supabase JS sudah ter-include via auth, marginal cost)
+- Setiap perubahan RLS policy butuh test client-direct path (sudah dilakukan via integration tests)
+- File `app/api/analytics/route.ts` dihapus; `GET /api/budgets` dihapus, `POST/PATCH/DELETE` tetap
+- Tetap ada beberapa endpoint read-only yang sengaja dipertahankan di API (`/api/insights`) karena ada rate-limit per-user yang diinginkan
+
+**Review Trigger:**
+- RLS policy refactor yang memperketat atau memperlonggar visibility — review semua client-direct hook
+- Insiden data leak antar user → segera review apakah ada hook yang melewatkan filter `user_id`
+- Migrasi ke server components atau RSC pattern yang bisa men-stream data tanpa hop client
+
+---
+
+### ADR-026 — Hybrid Gmail Parser (Rule + AI Fallback)
+
+| Field | Detail |
+|---|---|
+| **Tanggal** | Jun 13, 2026 |
+| **Status** | ✅ Active |
+| **Kategori** | Architecture / Security |
+| **Amends** | ADR-022 ("data transaksi tidak boleh dikirim ke Gemini verbatim") |
+
+**Konteks:**
+Phase 2 punya 5 parser bank rule-based (BCA, Mandiri, BNI, BRI, CIMB) + generic fallback. Cakupan bank Indonesia luas (50+), dan format email tiap bank berbeda + sering berubah. Tulis parser baru tiap kali user pindah bank tidak scalable. User ingin app bisa dijual ke teman-teman dekat (1-30 user) dengan asumsi user pakai bank yang belum di-cover.
+
+**Keputusan:**
+**Hybrid pipeline `detectAndParseWithAi` di `lib/gmail/parsers/index.ts`:**
+
+1. Rule chain jalan dulu (specific parsers → generic)
+2. Kalau hasil null atau `confidence < 0.7` (`RULE_CONFIDENCE_FLOOR`) → fallback ke AI (`lib/ai/email-parser.ts`)
+3. AI di-gate per-user daily budget 30 calls/hari, atomic reservation via Postgres RPC `gmail_ai_reserve_call` (lihat migration `013_gmail_ai_reserve_rpc.sql`)
+4. Tabel `gmail_ai_usage_daily` track call count per user per hari (WIB calendar), RLS enabled tanpa policy (service-role only writes — invisible dari client)
+
+**Privacy carve-out (amends ADR-022):**
+- Konten yang dikirim ke Gemini: `subject`, `from`, `body slice ≤ 4000 char` (mengandung nominal + merchant)
+- Body slice di-truncate untuk batasi exposure
+- Tidak ada caching response di pihak kita (di-process per-call, tidak persist)
+- Error logs pakai prefix generic `[email-parser]` — tidak leak ke user-facing logs
+
+**Invisibility dari UI (decision):**
+- Field `bank` di `ParsedTransaction` dari AI: nama bank yang dideteksi (`'mandiri'`, `'bca'`, dst) atau `'unknown'` — **TIDAK PERNAH `'ai'`**. Indistinguishable dari hasil rule parser.
+- `transaction.source` tetap `'gmail'` (bukan `'gmail_ai'`)
+- Tabel usage daily tidak punya RLS policy untuk client read
+- User tidak boleh tahu AI dilibatkan di Gmail parsing (positioning: "smart automatic parser", bukan "AI parser")
+
+**Alternatif yang dipertimbangkan:**
+
+| Alternatif | Alasan Ditolak |
+|---|---|
+| Full AI (semua email lewat Gemini) | Burn quota tinggi (30 email/bulan × N user × token = $$); semua email lambat 1-3s |
+| Full rule-based (tulis parser per bank) | Maintenance burden tinggi; tidak realistis untuk solo dev menjangkau 50+ bank |
+| Masking konten sebelum kirim ke Gemini (strip nominal/merchant) | Akurasi parsing hancur — Gemini butuh konteks utuh untuk infer transaction type/payment method |
+| Tampilkan label "AI Parsed" di UI | Positioning aplikasi: "smart" lebih dipercaya daripada "AI-powered" untuk financial domain Indonesia |
+
+**Konsekuensi yang diterima:**
+- Privacy: email bank user (nominal, merchant, ref number) di-process oleh Gemini → di-document di security.md (carve-out)
+- Cost: ~20% email jatuh ke AI, untuk 30 user × 30 email/bulan ≈ $0.03/bulan di free tier
+- Vendor lock: kalau Gemini API down/expensive, butuh implement alt provider atau accept missed transactions
+- Race-free budget: butuh Postgres RPC (extra migration) — sudah dilakukan via `gmail_ai_reserve_call`
+
+**Review Trigger:**
+- User base tumbuh > 100 → review budget per-user vs aggregate cost
+- Privacy incident terkait body email yang dikirim ke Gemini
+- Gemini API breaking change yang affect email-parser format
+- Decision untuk reveal AI ke UI (positioning shift)
 
 ---
 

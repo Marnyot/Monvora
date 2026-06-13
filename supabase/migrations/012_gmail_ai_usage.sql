@@ -17,6 +17,12 @@ CREATE INDEX IF NOT EXISTS idx_gmail_ai_usage_user_date
 
 ALTER TABLE public.gmail_ai_usage_daily ENABLE ROW LEVEL SECURITY;
 
--- No client-side SELECT/INSERT/UPDATE policies: only service-role (sync job)
--- writes to this table. Exposing it to the user would reveal that AI is in
--- the loop, which is intentionally hidden.
+-- IMPORTANT: NO RLS policies are defined for this table — by design.
+-- With RLS enabled + zero policies, the table is fully locked to anon and
+-- authenticated roles. Only the service-role (used by the Inngest sync job)
+-- can read/write here.
+--
+-- DO NOT add a permissive policy here. Exposing AI usage counters to the
+-- client would reveal that AI is in the Gmail parsing loop, which is
+-- intentionally hidden per ADR-026 "Hybrid Gmail Parser (Rule + AI Fallback)".
+-- See PARSER_GUIDE.md "AI Fallback Pipeline" + security.md §16 carve-out.

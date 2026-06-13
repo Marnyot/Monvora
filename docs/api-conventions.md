@@ -111,16 +111,20 @@ POST   /api/sync/gmail              → trigger manual Gmail sync
 GET    /api/sync/status             → status sync terakhir + logs
 
 BUDGETS (Phase 3)
-GET    /api/budgets                 → list semua budget aktif
-POST   /api/budgets                 → buat budget baru
+POST   /api/budgets                 → buat budget baru (write-only)
 PATCH  /api/budgets/:id             → update budget
 DELETE /api/budgets/:id             → nonaktifkan budget
+# GET list dipindah ke client-direct Supabase (useBudgets) sejak ADR-025
 
 ANALYTICS (Phase 3)
-GET    /api/analytics               → data analytics dengan query params
+# Tidak ada route — data analytics di-fetch via useAnalytics client-direct
+# (ADR-025). Aggregation pakai pure function lib/analytics/aggregate.ts
+
+INSIGHTS (Phase 3)
+GET    /api/insights                → fetch AI insights harian (read-only, daily cache)
 
 OCR (Phase 3)
-POST   /api/ocr                     → parse hasil OCR (text input)
+POST   /api/ocr                     → Gemini Vision parse struk (base64 image input)
 
 PROFILE (Phase 3)
 GET    /api/profile                 → data profil user
@@ -598,43 +602,32 @@ Soft delete — set `deleted_at = NOW()`
 
 ---
 
-### GET /api/analytics
+### ~~GET /api/analytics~~ — REMOVED (Jun 13, 2026)
 
-**Query params:**
-```
-period    : "weekly" | "monthly" | "yearly" (default: "monthly")
-month     : "2026-05" (jika period = monthly)
-year      : "2026" (jika period = yearly)
-wallet_id : UUID (opsional, filter by wallet)
-```
+Pindah ke client-direct Supabase via `useAnalytics()` di `lib/hooks/use-analytics.ts`. Aggregation pakai pure function `lib/analytics/aggregate.ts` yang dipanggil di browser. Lihat **ADR-025** untuk rationale.
+
+Untuk fetch AI insights harian saja, lihat **GET /api/insights**.
+
+---
+
+### GET /api/insights
 
 **Response:**
 ```json
 {
   "data": {
-    "summary": {
-      "total_expense": 2500000,
-      "total_income": 8000000,
-      "net": 5500000,
-      "period": "2026-05"
-    },
-    "by_category": [
-      { "category_id": "uuid", "name": "Food & Beverage", "total": 800000, "percentage": 32 }
-    ],
-    "by_month": [
-      { "month": "2026-01", "total_expense": 2000000, "total_income": 8000000 }
-    ],
-    "top_merchants": [
-      { "merchant_name": "Mixue", "count": 12, "total": 300000 }
-    ],
     "insights": [
       "Pengeluaran makananmu naik 35% dibanding bulan lalu.",
       "Kamu punya 3 langganan rutin totalnya Rp 150.000 per bulan."
     ],
-    "insights_generated_at": "2026-05-24T07:00:00+07:00"
-  }
+    "generatedAt": "2026-06-13T07:00:00+07:00",
+    "periodKey": "2026-06-13"
+  },
+  "error": null
 }
 ```
+
+Insights di-generate sekali per hari di 00:00 UTC (07:00 WIB) oleh Inngest cron, cached di `ai_insights` table per `(user_id, period_key)`. Endpoint ini read-only — fetch row terbaru ≤ hari ini.
 
 ---
 
