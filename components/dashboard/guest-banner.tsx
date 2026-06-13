@@ -47,7 +47,7 @@ export function GuestBanner({ isGuest }: GuestBannerProps) {
 
   return (
     <section
-      className="mx-4 mb-4 rounded-2xl border border-primary/30 bg-primary/5 p-4"
+      className="mx-4 mb-4 rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 to-primary/[0.02] p-4 shadow-[0_2px_12px_rgba(0,0,0,0.04)]"
       aria-label="Upgrade dari mode tamu"
     >
       <div className="flex items-start gap-3">

@@ -49,9 +49,9 @@ export function QuickEntryFab() {
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Tambah transaksi"
-        className="fixed bottom-20 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/25 transition-transform active:scale-95 hover:bg-primary/90 md:bottom-6 md:right-6"
+        className="fixed bottom-24 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-amber-500 to-amber-600 text-white shadow-lg shadow-amber-500/30 transition-transform active:scale-90 hover:scale-105 hover:shadow-xl hover:shadow-amber-500/40 md:bottom-6 md:right-6"
       >
-        <Plus className="h-6 w-6" strokeWidth={2.5} />
+        <Plus className="h-7 w-7" strokeWidth={3} />
       </button>
 
       <QuickEntry

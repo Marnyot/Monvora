@@ -60,26 +60,32 @@ export function WelcomeCard({
 
   return (
     <section
-      className="mx-4 mb-4 rounded-2xl border border-border bg-card p-5"
+      className="mx-4 mb-4 rounded-2xl bg-card p-5 shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-border/50 relative overflow-hidden"
       aria-label="Panduan memulai"
     >
-      <div className="mb-4 flex items-center gap-2">
-        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
-          <Sparkles className="h-4 w-4" aria-hidden="true" />
+      <div className="absolute top-0 right-0 w-32 h-32 bg-secondary/10 rounded-bl-full blur-xl pointer-events-none" aria-hidden />
+      <div className="relative z-10 flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-sm">
+            <Sparkles className="h-4 w-4" aria-hidden="true" />
+          </div>
+          <div>
+            <h2 className="text-sm font-semibold text-foreground">
+              Selamat datang di Monvora
+            </h2>
+            <p className="text-xs text-muted-foreground">
+              {isGuest
+                ? 'Mulai catat dulu — daftar nanti untuk simpan.'
+                : `Selesaikan ${steps.length} langkah ini untuk mulai tracking`}
+            </p>
+          </div>
         </div>
-        <div>
-          <h2 className="text-sm font-semibold text-foreground">
-            Selamat datang di Monvora
-          </h2>
-          <p className="text-xs text-muted-foreground">
-            {isGuest
-              ? 'Mulai catat dulu — daftar nanti untuk simpan.'
-              : `Selesaikan ${steps.length} langkah ini untuk mulai tracking`}
-          </p>
-        </div>
+        <span className="text-xs font-medium px-2 py-1 rounded-md bg-muted text-muted-foreground">
+          {steps.filter(s => s.done).length}/{steps.length}
+        </span>
       </div>
 
-      <ol className="space-y-2">
+      <ol className="space-y-2 relative z-10">
         {steps.map((step) => {
           const content = (
             <>
@@ -116,12 +122,12 @@ export function WelcomeCard({
               {step.href ? (
                 <Link
                   href={step.href}
-                  className="flex gap-3 rounded-lg p-2 -m-2 transition hover:bg-muted/50"
+                  className="flex gap-3 rounded-lg p-2 -m-2 transition hover:bg-accent/50"
                 >
                   {content}
                 </Link>
               ) : (
-                <div className="flex gap-3 p-2 -m-2">{content}</div>
+                <div className="flex gap-3 rounded-lg p-2 -m-2 bg-accent/30 border border-border/30">{content}</div>
               )}
             </li>
           )
