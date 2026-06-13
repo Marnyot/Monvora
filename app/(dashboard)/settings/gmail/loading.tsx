@@ -2,7 +2,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 
 export default function GmailSettingsLoading() {
   return (
-    <div className="max-w-lg mx-auto px-4 py-6 space-y-6">
+    <div className="max-w-lg lg:max-w-2xl mx-auto px-4 py-6 space-y-6">
       <div className="space-y-3">
         <Skeleton className="h-3 w-24" />
         <Skeleton className="h-6 w-48" />

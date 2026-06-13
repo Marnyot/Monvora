@@ -24,7 +24,7 @@ export default function TransactionsPage() {
 
   if (sessionLoading) {
     return (
-      <div className="max-w-lg mx-auto">
+      <div className="max-w-lg lg:max-w-2xl mx-auto">
         <Header title="Transaksi" />
         <TransactionFilters />
         <div className="px-4 py-4"><SkeletonList count={5} /></div>
@@ -33,7 +33,7 @@ export default function TransactionsPage() {
   }
 
   return (
-    <div className="max-w-lg mx-auto">
+    <div className="max-w-lg lg:max-w-2xl mx-auto">
       <Header title="Transaksi" isRefreshing={isFetching && !isLoading} />
 
       <TransactionFilters />

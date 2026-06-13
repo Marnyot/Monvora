@@ -2,7 +2,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 
 export default function AnalyticsLoading() {
   return (
-    <div className="max-w-lg mx-auto px-4 py-6 space-y-4">
+    <div className="max-w-lg lg:max-w-2xl mx-auto px-4 py-6 space-y-4">
       <header className="space-y-1.5">
         <Skeleton className="h-6 w-28" />
         <Skeleton className="h-4 w-60" />

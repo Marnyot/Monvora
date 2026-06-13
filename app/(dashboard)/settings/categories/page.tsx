@@ -10,7 +10,7 @@ export default function CategoriesPage() {
 
   if (isLoading || sessionLoading) {
     return (
-      <div className="max-w-lg mx-auto px-4 py-6 space-y-6">
+      <div className="max-w-lg lg:max-w-2xl mx-auto px-4 py-6 space-y-6">
         <Skeleton className="h-7 w-28" />
         <SkeletonList count={6} />
       </div>
@@ -18,7 +18,7 @@ export default function CategoriesPage() {
   }
 
   return (
-    <div className="max-w-lg mx-auto px-4 py-6">
+    <div className="max-w-lg lg:max-w-2xl mx-auto px-4 py-6">
       <h1 className="text-xl font-semibold text-foreground mb-6">Kategori</h1>
       <CategoryListClient categories={categories ?? []} />
     </div>

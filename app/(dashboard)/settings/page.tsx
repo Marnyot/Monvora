@@ -34,7 +34,7 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="max-w-lg mx-auto px-4 py-6 space-y-6">
+      <div className="max-w-lg lg:max-w-2xl mx-auto px-4 py-6 space-y-6">
         <Skeleton className="h-7 w-32" />
         <div className="rounded-xl border border-border bg-card p-6 space-y-4">
           <Skeleton className="h-4 w-16" />
@@ -52,7 +52,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="max-w-lg mx-auto px-4 py-6 space-y-6">
+    <div className="max-w-lg lg:max-w-2xl mx-auto px-4 py-6 space-y-6">
       <h1 className="text-xl font-semibold text-foreground">Pengaturan</h1>
 
       {/* Akun */}

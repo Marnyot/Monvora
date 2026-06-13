@@ -3,7 +3,7 @@ import { SkeletonList } from '@/components/shared/skeleton-card'
 
 export default function DashboardLoading() {
   return (
-    <div className="max-w-lg mx-auto">
+    <div className="max-w-lg lg:max-w-2xl mx-auto">
       <div className="flex items-center justify-between px-4 py-4">
         <div className="space-y-1.5">
           <Skeleton className="h-3 w-24" />

@@ -42,7 +42,7 @@ export default function GmailSettingsPage() {
   const { data, isLoading, sessionLoading } = useGmailSettings()
 
   return (
-    <div className="max-w-lg mx-auto px-4 py-6 space-y-6">
+    <div className="max-w-lg lg:max-w-2xl mx-auto px-4 py-6 space-y-6">
       <div>
         <Link
           href="/settings"
