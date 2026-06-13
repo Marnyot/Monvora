@@ -37,7 +37,7 @@ export function TransactionCard({ transaction }: TransactionCardProps) {
   const label = merchant_name || description || category?.name || 'Transaksi'
 
   return (
-    <Link href={`/transactions/${transaction.id}`} className="flex items-center gap-3 py-3 px-4 hover:bg-accent/40 transition-colors rounded-lg block">
+    <Link href={`/transactions/${transaction.id}`} prefetch className="flex items-center gap-3 py-3 px-4 hover:bg-accent/40 transition-colors rounded-lg block">
       {/* Info */}
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-foreground truncate flex items-center gap-1.5">

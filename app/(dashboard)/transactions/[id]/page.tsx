@@ -37,11 +37,5 @@ export default function TransactionDetailPage({ params }: Props) {
   if (isLoading || sessionLoading) return <TransactionDetailSkeleton />
   if (!data?.transaction) return notFound()
 
-  return (
-    <TransactionDetailClient
-      transaction={data.transaction as any}
-      wallets={data.wallets}
-      categories={data.categories as any}
-    />
-  )
+  return <TransactionDetailClient transaction={data.transaction as any} />
 }

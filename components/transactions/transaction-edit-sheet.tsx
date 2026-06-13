@@ -22,6 +22,8 @@ import {
 } from '@/components/ui/select'
 import { PAYMENT_METHODS } from '@/lib/validations/transaction'
 import { toDatetimeLocalInput } from '@/lib/utils/date'
+import { useWallets } from '@/lib/hooks/use-wallets'
+import { useCategories } from '@/lib/hooks/use-categories'
 
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
   qris: 'QRIS',
@@ -65,19 +67,17 @@ interface TransactionEditSheetProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   transaction: Transaction
-  wallets: Wallet[]
-  categories: Category[]
 }
 
 export function TransactionEditSheet({
   open,
   onOpenChange,
   transaction,
-  wallets,
-  categories,
 }: TransactionEditSheetProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
+  const { data: wallets = [] } = useWallets()
+  const { data: categories = [] } = useCategories()
 
   const [merchantName, setMerchantName] = useState(transaction.merchant_name ?? '')
   const [description, setDescription] = useState(transaction.description ?? '')

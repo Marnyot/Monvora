@@ -12,6 +12,19 @@ vi.mock('sonner', () => ({
   toast: { success: vi.fn(), error: vi.fn() },
 }))
 
+const mockWallets = [{ id: 'w-1', name: 'BCA', color: '#3b82f6' }]
+const mockCategories = [
+  { id: 'cat-1', name: 'Food & Beverage', icon: 'utensils', color: '#f59e0b', type: 'expense', is_system: true },
+]
+
+// Mock data-fetching hooks the sheet pulls in
+vi.mock('@/lib/hooks/use-wallets', () => ({
+  useWallets: () => ({ data: mockWallets, isLoading: false, sessionLoading: false }),
+}))
+vi.mock('@/lib/hooks/use-categories', () => ({
+  useCategories: () => ({ data: mockCategories, isLoading: false, sessionLoading: false }),
+}))
+
 // Mock fetch
 const mockFetch = vi.fn()
 global.fetch = mockFetch
@@ -28,11 +41,6 @@ const mockTransaction = {
   category: { id: 'cat-1', name: 'Food & Beverage', icon: 'utensils', color: '#f59e0b', type: 'expense', is_system: true },
 }
 
-const mockWallets = [{ id: 'w-1', name: 'BCA', color: '#3b82f6' }]
-const mockCategories = [
-  { id: 'cat-1', name: 'Food & Beverage', icon: 'utensils', color: '#f59e0b', type: 'expense', is_system: true },
-]
-
 describe('TransactionEditSheet', () => {
   beforeEach(() => {
     mockFetch.mockReset()
@@ -44,8 +52,8 @@ describe('TransactionEditSheet', () => {
         open={true}
         onOpenChange={vi.fn()}
         transaction={mockTransaction}
-        wallets={mockWallets}
-        categories={mockCategories}
+
+
       />
     )
 
@@ -59,8 +67,8 @@ describe('TransactionEditSheet', () => {
         open={false}
         onOpenChange={vi.fn()}
         transaction={mockTransaction}
-        wallets={mockWallets}
-        categories={mockCategories}
+
+
       />
     )
 
@@ -79,8 +87,8 @@ describe('TransactionEditSheet', () => {
         open={true}
         onOpenChange={onOpenChange}
         transaction={mockTransaction}
-        wallets={mockWallets}
-        categories={mockCategories}
+
+
       />
     )
 
@@ -109,8 +117,8 @@ describe('TransactionEditSheet', () => {
         open={true}
         onOpenChange={vi.fn()}
         transaction={mockTransaction}
-        wallets={mockWallets}
-        categories={mockCategories}
+
+
       />
     )
 

@@ -65,11 +65,9 @@ interface Transaction {
 
 interface Props {
   transaction: Transaction
-  wallets: Wallet[]
-  categories: Category[]
 }
 
-export function TransactionDetailClient({ transaction, wallets, categories }: Props) {
+export function TransactionDetailClient({ transaction }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [editOpen, setEditOpen] = useState(false)
@@ -159,13 +157,11 @@ export function TransactionDetailClient({ transaction, wallets, categories }: Pr
         <DetailRow label="Dicatat pada" value={formatDate(transaction.created_at)} />
       </div>
 
-      {/* Edit sheet */}
+      {/* Edit sheet — wallets+categories load lazily on first open */}
       <TransactionEditSheet
         open={editOpen}
         onOpenChange={setEditOpen}
         transaction={transaction}
-        wallets={wallets}
-        categories={categories}
       />
 
       {/* Delete confirm */}
