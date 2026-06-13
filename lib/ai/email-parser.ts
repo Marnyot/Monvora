@@ -8,7 +8,7 @@
 // Privacy: we never log raw email bodies, merchant names, or amounts.
 import { GoogleGenerativeAI } from '@google/generative-ai'
 
-const MODEL_NAME = 'gemini-2.5-flash-lite'
+const MODEL_NAME = 'gemini-2.5-flash'
 const TIMEOUT_MS = 12_000
 const MAX_BODY_CHARS = 4_000
 
