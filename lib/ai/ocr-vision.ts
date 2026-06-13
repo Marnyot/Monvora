@@ -109,9 +109,17 @@ export function parseVisionResponse(raw: string): Omit<VisionOcrResult, 'categor
   }
 }
 
+export type VisionOcrError =
+  | { kind: 'upstream'; errorId: string }
+  | { kind: 'no_amount' }
+
+export type VisionOcrOutcome =
+  | { ok: true; data: VisionOcrResult }
+  | { ok: false; error: VisionOcrError }
+
 export async function extractReceiptFromImage(
   input: VisionOcrInput
-): Promise<VisionOcrResult | null> {
+): Promise<VisionOcrOutcome> {
   if (!process.env.GEMINI_API_KEY) {
     throw new Error('GEMINI_API_KEY is not set')
   }
@@ -120,28 +128,32 @@ export async function extractReceiptFromImage(
   const model = client.getGenerativeModel({ model: MODEL_NAME })
   const prompt = buildPrompt(input.categories)
 
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS)
+  let timeoutId: ReturnType<typeof setTimeout> | null = null
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error('GEMINI_TIMEOUT')), TIMEOUT_MS)
+  })
 
   try {
-    const response = await model.generateContent([
-      { inlineData: { mimeType: input.mimeType, data: input.imageBase64 } },
-      { text: prompt },
+    const response = await Promise.race([
+      model.generateContent([
+        { inlineData: { mimeType: input.mimeType, data: input.imageBase64 } },
+        { text: prompt },
+      ]),
+      timeoutPromise,
     ])
-    clearTimeout(timeoutId)
 
     const text = response.response.text()
     const parsed = parseVisionResponse(text)
-    if (!parsed) return null
-    if (!parsed.amount) return null
-
-    return parsed
+    if (!parsed || !parsed.amount) {
+      return { ok: false, error: { kind: 'no_amount' } }
+    }
+    return { ok: true, data: parsed }
   } catch (error) {
     const errorId = `ERR_${Date.now()}_${Math.random().toString(36).substring(7)}`
     const message = error instanceof Error ? error.message : 'unknown'
     console.error(`[ocr-vision] ID: ${errorId}, Message: ${message}`)
-    return null
+    return { ok: false, error: { kind: 'upstream', errorId } }
   } finally {
-    clearTimeout(timeoutId)
+    if (timeoutId) clearTimeout(timeoutId)
   }
 }

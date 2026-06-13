@@ -78,13 +78,25 @@ export async function POST(request: Request) {
 
   const categoryList = (categories ?? []).map((c) => ({ id: c.id, name: c.name }))
 
-  const result = await extractReceiptFromImage({
+  const outcome = await extractReceiptFromImage({
     imageBase64,
     mimeType,
     categories: categoryList,
   })
 
-  if (!result || !result.amount) {
+  if (!outcome.ok) {
+    if (outcome.error.kind === 'upstream') {
+      return NextResponse.json(
+        {
+          data: null,
+          error: {
+            code: 'AI_UNAVAILABLE',
+            message: 'Layanan AI sedang bermasalah. Coba lagi sebentar lagi atau input manual.',
+          },
+        },
+        { status: 503 }
+      )
+    }
     return NextResponse.json(
       {
         data: null,
@@ -96,6 +108,8 @@ export async function POST(request: Request) {
       { status: 422 }
     )
   }
+
+  const result = outcome.data
 
   // Map category_name back to category_id (case-insensitive).
   let categoryId: string | null = null

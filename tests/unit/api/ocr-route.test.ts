@@ -91,7 +91,7 @@ describe('POST /api/ocr — input validation', () => {
 
 describe('POST /api/ocr — extraction outcomes', () => {
   it('returns 422 PARSE_FAILED when Gemini cannot extract amount', async () => {
-    mockExtract.mockResolvedValue(null)
+    mockExtract.mockResolvedValue({ ok: false, error: { kind: 'no_amount' } })
     const { POST } = await import('@/app/api/ocr/route')
     const res = await POST(postRequest({ image: TINY_BASE64 }))
     expect(res.status).toBe(422)
@@ -99,15 +99,27 @@ describe('POST /api/ocr — extraction outcomes', () => {
     expect(json.error.code).toBe('PARSE_FAILED')
   })
 
+  it('returns 503 AI_UNAVAILABLE when Gemini upstream errors', async () => {
+    mockExtract.mockResolvedValue({ ok: false, error: { kind: 'upstream', errorId: 'ERR_test' } })
+    const { POST } = await import('@/app/api/ocr/route')
+    const res = await POST(postRequest({ image: TINY_BASE64 }))
+    expect(res.status).toBe(503)
+    const json = await res.json()
+    expect(json.error.code).toBe('AI_UNAVAILABLE')
+  })
+
   it('maps category_name back to category_id (case-insensitive)', async () => {
     mockExtract.mockResolvedValue({
-      amount: 35000,
-      merchantName: 'McDonalds',
-      description: 'Big Mac',
-      transactedAt: '2026-06-13T14:30:00+07:00',
-      paymentMethod: 'qris',
-      categoryName: 'MAKANAN & minuman', // different casing
-      confidence: 0.9,
+      ok: true,
+      data: {
+        amount: 35000,
+        merchantName: 'McDonalds',
+        description: 'Big Mac',
+        transactedAt: '2026-06-13T14:30:00+07:00',
+        paymentMethod: 'qris',
+        categoryName: 'MAKANAN & minuman', // different casing
+        confidence: 0.9,
+      },
     })
     const { POST } = await import('@/app/api/ocr/route')
     const res = await POST(postRequest({ image: TINY_BASE64 }))
@@ -122,13 +134,16 @@ describe('POST /api/ocr — extraction outcomes', () => {
 
   it('returns null category_id when category_name not in user list', async () => {
     mockExtract.mockResolvedValue({
-      amount: 35000,
-      merchantName: null,
-      description: null,
-      transactedAt: null,
-      paymentMethod: null,
-      categoryName: 'Unknown',
-      confidence: 0.6,
+      ok: true,
+      data: {
+        amount: 35000,
+        merchantName: null,
+        description: null,
+        transactedAt: null,
+        paymentMethod: null,
+        categoryName: 'Unknown',
+        confidence: 0.6,
+      },
     })
     const { POST } = await import('@/app/api/ocr/route')
     const res = await POST(postRequest({ image: TINY_BASE64 }))
