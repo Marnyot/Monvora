@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { useDashboard } from '@/lib/hooks/use-dashboard'
 import { CurrencyDisplay } from '@/components/shared/currency-display'
 import { AmountDisplay } from '@/components/shared/amount-display'
@@ -10,11 +11,13 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { SkeletonList } from '@/components/shared/skeleton-card'
 import { useSession } from '@/lib/hooks/use-session'
 import { WelcomeCard } from '@/components/dashboard/welcome-card'
+import { OnboardingDialog } from '@/components/dashboard/onboarding-dialog'
+import { GuestBanner } from '@/components/dashboard/guest-banner'
 import { List } from 'lucide-react'
 
 function DashboardSkeleton() {
   return (
-    <div className="max-w-lg mx-auto">
+    <div className="max-w-lg lg:max-w-2xl mx-auto">
       <div className="flex items-center justify-between px-4 py-4">
         <div className="space-y-1.5">
           <Skeleton className="h-3 w-24" />
@@ -51,6 +54,13 @@ function DashboardSkeleton() {
 export default function DashboardPage() {
   const { user } = useSession()
   const { data, isLoading, sessionLoading } = useDashboard()
+  const [onboardingOpen, setOnboardingOpen] = useState(false)
+
+  const needsOnboarding = data?.profile && data.profile.onboarding_completed === false
+
+  useEffect(() => {
+    if (needsOnboarding) setOnboardingOpen(true)
+  }, [needsOnboarding])
 
   if (isLoading || sessionLoading) return <DashboardSkeleton />
 
@@ -63,7 +73,8 @@ export default function DashboardPage() {
   const hasTransactions = (data?.txThisMonth?.length ?? 0) > 0 || recentTx.length > 0
 
   return (
-    <div className="max-w-lg mx-auto">
+    <div className="max-w-lg lg:max-w-2xl mx-auto">
+      <OnboardingDialog open={onboardingOpen} onOpenChange={setOnboardingOpen} />
       <div className="flex items-center justify-between px-4 py-4">
         <div className="space-y-1">
           <p className="text-xs text-muted-foreground">Selamat datang,</p>
@@ -72,10 +83,13 @@ export default function DashboardPage() {
         <ThemeToggle />
       </div>
 
+      <GuestBanner isGuest={data?.profile?.is_guest ?? false} />
+
       <WelcomeCard
         hasWallets={wallets.length > 0}
         gmailEnabled={data?.profile?.gmail_sync_enabled ?? false}
         hasTransactions={hasTransactions}
+        isGuest={data?.profile?.is_guest ?? false}
       />
 
       <div className="mx-4 rounded-2xl bg-primary p-5 text-primary-foreground mb-4">

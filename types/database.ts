@@ -258,7 +258,7 @@ export type Database = {
           avatar_url: string | null
           created_at: string | null
           currency: string | null
-          email: string
+          email: string | null
           full_name: string | null
           gmail_last_synced_at: string | null
           gmail_sync_enabled: boolean | null
@@ -269,6 +269,7 @@ export type Database = {
           google_refresh_token: string | null
           google_token_expires_at: string | null
           id: string
+          is_guest: boolean
           language: string | null
           onboarding_completed: boolean | null
           timezone: string | null
@@ -278,7 +279,7 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string | null
           currency?: string | null
-          email: string
+          email?: string | null
           full_name?: string | null
           gmail_last_synced_at?: string | null
           gmail_sync_enabled?: boolean | null
@@ -289,6 +290,7 @@ export type Database = {
           google_refresh_token?: string | null
           google_token_expires_at?: string | null
           id: string
+          is_guest?: boolean
           language?: string | null
           onboarding_completed?: boolean | null
           timezone?: string | null
@@ -298,7 +300,7 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string | null
           currency?: string | null
-          email?: string
+          email?: string | null
           full_name?: string | null
           gmail_last_synced_at?: string | null
           gmail_sync_enabled?: boolean | null
@@ -309,6 +311,7 @@ export type Database = {
           google_refresh_token?: string | null
           google_token_expires_at?: string | null
           id?: string
+          is_guest?: boolean
           language?: string | null
           onboarding_completed?: boolean | null
           timezone?: string | null

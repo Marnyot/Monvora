@@ -1,4 +1,5 @@
 import { GoogleLoginButton } from '@/components/shared/google-login-button'
+import { GuestLoginButton } from '@/components/shared/guest-login-button'
 
 export const metadata = {
   title: 'Masuk — Monvora',
@@ -38,6 +39,22 @@ export default async function LoginPage({
         )}
 
         <GoogleLoginButton />
+
+        <div className="relative py-1">
+          <div className="absolute inset-0 flex items-center" aria-hidden>
+            <span className="w-full border-t border-border" />
+          </div>
+          <div className="relative flex justify-center">
+            <span className="bg-card px-2 text-[10px] uppercase tracking-wide text-muted-foreground">
+              atau
+            </span>
+          </div>
+        </div>
+
+        <GuestLoginButton />
+        <p className="text-[11px] text-center text-muted-foreground leading-relaxed">
+          Mode tamu langsung jalan tanpa akun. Datamu tetap aman saat nanti kamu daftar.
+        </p>
       </div>
 
       {/* Footer note */}

@@ -5,6 +5,7 @@ interface WelcomeCardProps {
   hasWallets: boolean
   gmailEnabled: boolean
   hasTransactions: boolean
+  isGuest?: boolean
 }
 
 interface Step {
@@ -19,6 +20,7 @@ export function WelcomeCard({
   hasWallets,
   gmailEnabled,
   hasTransactions,
+  isGuest = false,
 }: WelcomeCardProps) {
   if (hasTransactions) return null
 
@@ -32,15 +34,21 @@ export function WelcomeCard({
         : 'Rekening bank, e-wallet, atau cash',
       href: hasWallets ? null : '/wallets',
     },
-    {
-      done: gmailEnabled,
-      icon: Mail,
-      title: gmailEnabled ? 'Gmail terhubung' : 'Hubungkan Gmail',
-      body: gmailEnabled
-        ? 'Transaksi bank ditangkap otomatis'
-        : 'Notifikasi bank ke transaksi otomatis',
-      href: gmailEnabled ? null : '/settings/gmail',
-    },
+    // Gmail sync requires a Google identity — hide it for guest sessions
+    // until they sign up. The GuestBanner already prompts them.
+    ...(isGuest
+      ? []
+      : [
+          {
+            done: gmailEnabled,
+            icon: Mail,
+            title: gmailEnabled ? 'Gmail terhubung' : 'Hubungkan Gmail',
+            body: gmailEnabled
+              ? 'Transaksi bank ditangkap otomatis'
+              : 'Notifikasi bank ke transaksi otomatis',
+            href: gmailEnabled ? null : '/settings/gmail',
+          },
+        ]),
     {
       done: false,
       icon: Plus,
@@ -64,7 +72,9 @@ export function WelcomeCard({
             Selamat datang di Monvora
           </h2>
           <p className="text-xs text-muted-foreground">
-            Selesaikan 3 langkah ini untuk mulai tracking
+            {isGuest
+              ? 'Mulai catat dulu — daftar nanti untuk simpan.'
+              : `Selesaikan ${steps.length} langkah ini untuk mulai tracking`}
           </p>
         </div>
       </div>

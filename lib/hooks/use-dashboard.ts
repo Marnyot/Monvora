@@ -50,7 +50,7 @@ export function useDashboard() {
           .limit(10),
         supabase
           .from('profiles')
-          .select('full_name, gmail_sync_enabled')
+          .select('full_name, gmail_sync_enabled, onboarding_completed, is_guest')
           .eq('id', uid)
           .single(),
       ])

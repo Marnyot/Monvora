@@ -43,6 +43,10 @@ export async function GET(request: NextRequest) {
       ? new Date(Date.now() + 3500 * 1000).toISOString() // 3500 detik (konservatif dari 3600)
       : null
 
+    // is_guest mirrors auth.users.is_anonymous. After a successful OAuth
+    // exchange or linkIdentity flow, the user is no longer anonymous, so
+    // clear the flag. Setting it to false here is idempotent — fresh
+    // signups already get false via the handle_new_user trigger.
     await supabase
       .from('profiles')
       .update({
@@ -50,6 +54,7 @@ export async function GET(request: NextRequest) {
         google_access_token: accessToken,
         google_refresh_token: refreshToken ?? undefined,
         google_token_expires_at: expiresAt,
+        is_guest: false,
       })
       .eq('id', user.id)
 
