@@ -14,7 +14,8 @@
     "test:e2e:ui": "playwright test --ui",
     "test:all": "pnpm test && pnpm test:e2e",
     "audit": "pnpm audit --audit-level=high",
-    "audit:fix": "pnpm audit --fix"
+    "audit:fix": "pnpm audit --fix",
+    "inngest": "inngest-cli dev"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
@@ -56,6 +57,7 @@
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "@vitejs/plugin-react": "^6.0.2",
+    "inngest-cli": "^1.27.0",
     "jsdom": "^29.1.1",
     "msw": "^2.14.6",
     "postcss": "^8",
@@ -63,5 +65,8 @@
     "tailwindcss": "^3.4.1",
     "typescript": "^5",
     "vitest": "^4.1.7"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["inngest-cli"]
   }
 }
