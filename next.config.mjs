@@ -19,7 +19,7 @@ const securityHeaders = [
       "script-src 'self' 'unsafe-eval' 'unsafe-inline' va.vercel-scripts.com",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' blob: data: lh3.googleusercontent.com",
-      "connect-src 'self' https://*.supabase.co wss://*.supabase.co accounts.google.com",
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co accounts.google.com https://*.sentry.io",
     ].join('; '),
   },
 ]
@@ -49,4 +49,6 @@ export default withSentryConfig(withSerwist(nextConfig), {
   disableServerWebpackPlugin: !process.env.SENTRY_DSN,
   disableClientWebpackPlugin: !process.env.SENTRY_DSN,
   hideSourceMaps: true,
+  telemetry: false,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
 })
