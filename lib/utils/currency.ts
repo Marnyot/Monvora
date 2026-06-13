@@ -1,5 +1,6 @@
 export function formatIDR(amount: number): string {
   if (!Number.isInteger(amount)) throw new Error('Amount must be an integer')
+  if (amount < 0) throw new Error('Amount cannot be negative')
 
   const abs = Math.abs(amount)
   const formatted = new Intl.NumberFormat('id-ID', {
@@ -9,7 +10,7 @@ export function formatIDR(amount: number): string {
     maximumFractionDigits: 0,
   })
     .format(abs)
-    .replace(/ /g, ' ') // normalize non-breaking space from Intl
+    .replace(/ /g, ' ') // Intl emits NBSP between Rp and digits; tests + UI expect regular space
 
   return amount < 0 ? `-${formatted}` : formatted
 }

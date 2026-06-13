@@ -16,8 +16,11 @@ describe('NavSidebar', () => {
 
   it('marks active item based on pathname', () => {
     render(<NavSidebar />)
+    // Active styling now lives on the inner SidebarItemContent span (Link is
+    // a transparent passthrough so useLinkStatus can read pending state).
     const berandaLink = screen.getByRole('link', { name: /beranda/i })
-    expect(berandaLink.className).toMatch(/text-primary|font-semibold|bg-accent/)
+    const inner = berandaLink.firstElementChild as HTMLElement | null
+    expect(inner?.className).toMatch(/text-primary|font-semibold|bg-accent/)
   })
 
   it('renders correct href for each item', () => {
