@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { BarChart3, ChartPie, Store, CalendarDays, AlertCircle, TrendingUp, TrendingDown, Wallet, RotateCw, Sparkles } from 'lucide-react'
+import { BarChart3, ChartPie, Store, CalendarDays, AlertCircle, TrendingUp, TrendingDown, Wallet, RotateCw } from 'lucide-react'
 import { useAnalytics } from '@/lib/hooks/use-analytics'
 import { SpendingTrendChart } from '@/components/analytics/spending-trend-chart'
 import { CategoryBreakdownChart } from '@/components/analytics/category-breakdown-chart'
@@ -11,7 +11,6 @@ import { DayOfWeekChart } from '@/components/analytics/day-of-week-chart'
 import { AiInsightsCard } from '@/components/analytics/ai-insights-card'
 import { RecurringSummary } from '@/components/analytics/recurring-summary'
 import { EmptyState } from '@/components/shared/empty-state'
-import { DecorativeBlobs } from '@/components/shared/decorative-blobs'
 import { formatIDR } from '@/lib/utils/currency'
 import type { CategoryAgg } from '@/lib/analytics/aggregate'
 
@@ -77,12 +76,11 @@ function TotalsTile({
 
 function AnalyticsSkeleton() {
   return (
-    <div className="max-w-lg lg:max-w-2xl mx-auto px-4 py-6 space-y-4 relative">
-      <DecorativeBlobs />
-      <div className="rounded-2xl bg-gradient-to-br from-primary via-primary/90 to-emerald-600/80 p-5">
-        <div className="h-5 w-32 bg-white/20 rounded animate-pulse mb-2" />
-        <div className="h-3 w-48 bg-white/20 rounded animate-pulse" />
-      </div>
+    <div className="max-w-lg lg:max-w-2xl mx-auto px-4 py-6 space-y-4">
+      <header>
+        <div className="h-6 w-32 bg-muted rounded animate-pulse mb-1.5" />
+        <div className="h-3 w-48 bg-muted rounded animate-pulse" />
+      </header>
       <div className="grid grid-cols-3 gap-3">
         {[0, 1, 2].map((i) => (
           <div key={i} className="rounded-xl border border-border/50 bg-card p-3 shadow-[0_2px_12px_rgba(0,0,0,0.04)]">
@@ -113,11 +111,10 @@ export default function AnalyticsPage() {
 
   if (isError || !data) {
     return (
-      <div className="max-w-lg lg:max-w-2xl mx-auto px-4 py-6 space-y-4 relative">
-        <DecorativeBlobs />
-        <div className="rounded-2xl bg-gradient-to-br from-primary via-primary/90 to-emerald-600/80 p-5 text-primary-foreground">
-          <h1 className="text-lg font-bold">Analytics</h1>
-        </div>
+      <div className="max-w-lg lg:max-w-2xl mx-auto px-4 py-6 space-y-4">
+        <header>
+          <h1 className="text-xl font-bold">Analytics</h1>
+        </header>
         <EmptyState
           icon={<AlertCircle className="h-10 w-10" />}
           title="Gagal memuat data"
@@ -135,15 +132,11 @@ export default function AnalyticsPage() {
 
   if (!hasAnyData) {
     return (
-      <div className="max-w-lg lg:max-w-2xl mx-auto px-4 py-6 space-y-4 relative">
-        <DecorativeBlobs />
-        <div className="rounded-2xl bg-gradient-to-br from-primary via-primary/90 to-emerald-600/80 p-5 text-primary-foreground">
-          <div className="flex items-center gap-2 mb-1">
-            <Sparkles className="h-4 w-4" />
-            <h1 className="text-lg font-bold">Analytics</h1>
-          </div>
-          <p className="text-sm opacity-80">Ringkasan keuanganmu bulan ini.</p>
-        </div>
+      <div className="max-w-lg lg:max-w-2xl mx-auto px-4 py-6 space-y-4">
+        <header>
+          <h1 className="text-xl font-bold">Analytics</h1>
+          <p className="text-sm text-muted-foreground">Ringkasan keuanganmu bulan ini.</p>
+        </header>
         <EmptyState
           icon={<BarChart3 className="h-10 w-10" />}
           title="Belum ada data"
@@ -158,21 +151,11 @@ export default function AnalyticsPage() {
   const totalExpenseCat = byCategory.reduce((sum, c) => sum + c.amount, 0)
 
   return (
-    <div className="max-w-lg lg:max-w-2xl mx-auto px-4 py-6 space-y-4 relative">
-      <DecorativeBlobs />
-
-      {/* Playful gradient header */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-primary/90 to-emerald-600/80 p-5 text-primary-foreground shadow-lg">
-        <div className="absolute -top-8 -right-8 w-32 h-32 bg-white/5 rounded-full blur-2xl animate-blob pointer-events-none" />
-        <div className="absolute -bottom-6 -left-6 w-24 h-24 bg-white/5 rounded-full blur-2xl animate-blob-delayed pointer-events-none" />
-        <div className="relative z-10">
-          <div className="flex items-center gap-2 mb-1">
-            <Sparkles className="h-4 w-4" />
-            <h1 className="text-lg font-bold">Analytics</h1>
-          </div>
-          <p className="text-sm opacity-80">Ringkasan keuanganmu bulan ini.</p>
-        </div>
-      </div>
+    <div className="max-w-lg lg:max-w-2xl mx-auto px-4 py-6 space-y-4">
+      <header>
+        <h1 className="text-xl font-bold">Analytics</h1>
+        <p className="text-sm text-muted-foreground">Ringkasan keuanganmu bulan ini.</p>
+      </header>
 
       <AiInsightsCard />
 

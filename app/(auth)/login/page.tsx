@@ -14,14 +14,7 @@ export default async function LoginPage({
   const { error } = await searchParams
 
   return (
-    <div className="w-full max-w-sm space-y-8 relative">
-      {/* Decorative blobs for login */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10" aria-hidden>
-        <div className="absolute -top-40 -right-40 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-blob" />
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-[hsl(var(--amber)/.1)] rounded-full blur-3xl animate-blob-delayed" />
-        <div className="absolute top-1/2 left-1/3 w-64 h-64 bg-[hsl(var(--lavender)/.08)] rounded-full blur-3xl animate-blob" />
-      </div>
-
+    <div className="w-full max-w-sm space-y-8">
       {/* Logo & heading */}
       <div className="text-center space-y-2">
         <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-emerald-600 text-white shadow-lg mb-3">

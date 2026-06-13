@@ -7,7 +7,6 @@ import { TransactionFilters } from '@/components/transactions/transaction-filter
 import { TransactionPagination } from '@/components/transactions/transaction-pagination'
 import { EmptyState } from '@/components/shared/empty-state'
 import { SkeletonList } from '@/components/shared/skeleton-card'
-import { DecorativeBlobs } from '@/components/shared/decorative-blobs'
 import { List, Receipt } from 'lucide-react'
 
 export default function TransactionsPage() {
@@ -26,7 +25,6 @@ export default function TransactionsPage() {
   if (sessionLoading) {
     return (
       <div className="max-w-lg lg:max-w-2xl mx-auto">
-        <DecorativeBlobs />
         <Header />
         <TransactionFilters />
         <div className="px-4 py-4"><SkeletonList count={5} /></div>
@@ -37,9 +35,7 @@ export default function TransactionsPage() {
   const hasActiveFilter = !!q || !!type
 
   return (
-    <div className="max-w-lg lg:max-w-2xl mx-auto relative">
-      <DecorativeBlobs />
-
+    <div className="max-w-lg lg:max-w-2xl mx-auto">
       <Header isRefreshing={isFetching && !isLoading} total={data?.transactions?.length ?? 0} />
 
       <div className="mx-4 mb-4 rounded-xl bg-card border border-border/50 shadow-[0_2px_12px_rgba(0,0,0,0.04)] overflow-hidden">

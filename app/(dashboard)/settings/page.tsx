@@ -15,15 +15,13 @@ import {
   Eye,
   EyeOff,
   Info,
-  Sparkles,
-  Settings2,
+  Check,
 } from 'lucide-react'
 import { LogoutButton } from './logout-button'
 import { EditNameSheet } from '@/components/dashboard/edit-name-sheet'
 import { useSession } from '@/lib/hooks/use-session'
 import { useProfile } from '@/lib/hooks/use-profile'
 import { useBalanceVisibility } from '@/lib/hooks/use-balance-visibility'
-import { DecorativeBlobs } from '@/components/shared/decorative-blobs'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 
@@ -42,12 +40,8 @@ export default function SettingsPage() {
 
   if (loading || profileLoading) {
     return (
-      <div className="max-w-lg lg:max-w-2xl mx-auto px-4 py-6 space-y-6 relative">
-        <DecorativeBlobs />
-        <div className="rounded-2xl bg-gradient-to-br from-primary via-primary/90 to-emerald-600/80 p-5 text-primary-foreground">
-          <div className="h-5 w-28 bg-white/20 rounded animate-pulse mb-2" />
-          <div className="h-3 w-44 bg-white/20 rounded animate-pulse" />
-        </div>
+      <div className="max-w-lg lg:max-w-2xl mx-auto px-4 py-6 space-y-6">
+        <Skeleton className="h-7 w-32" />
         <div className="rounded-xl border border-border/50 bg-card p-6 space-y-4 shadow-[0_2px_12px_rgba(0,0,0,0.04)]">
           <Skeleton className="h-4 w-16" />
           <div className="flex items-center gap-3">
@@ -70,20 +64,10 @@ export default function SettingsPage() {
     ''
 
   return (
-    <div className="max-w-lg lg:max-w-2xl mx-auto px-4 py-6 space-y-6 relative">
-      <DecorativeBlobs />
-
-      {/* Gradient header */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-primary/90 to-emerald-600/80 p-5 text-primary-foreground shadow-lg">
-        <div className="absolute -top-8 -right-8 w-32 h-32 bg-white/5 rounded-full blur-2xl animate-blob pointer-events-none" />
-        <div className="absolute -bottom-6 -left-6 w-24 h-24 bg-white/5 rounded-full blur-2xl animate-blob-delayed pointer-events-none" />
-        <div className="relative z-10">
-          <div className="flex items-center gap-2 mb-1">
-            <Settings2 className="h-4 w-4" />
-            <h1 className="text-lg font-bold">Pengaturan</h1>
-          </div>
-          <p className="text-sm opacity-80">Kelola akun dan preferensi kamu</p>
-        </div>
+    <div className="max-w-lg lg:max-w-2xl mx-auto px-4 py-6 space-y-6">
+      <div>
+        <h1 className="text-xl font-semibold text-foreground">Pengaturan</h1>
+        <p className="text-sm text-muted-foreground">Kelola akun dan preferensi kamu</p>
       </div>
 
       {/* Akun */}
@@ -130,12 +114,17 @@ export default function SettingsPage() {
                     onClick={() => setTheme(t.value)}
                     aria-pressed={active}
                     className={cn(
-                      'flex flex-col items-center justify-center gap-1.5 rounded-lg border px-3 py-3 text-xs font-medium transition-colors',
+                      'relative flex flex-col items-center justify-center gap-1.5 rounded-lg border px-3 py-3 text-xs font-medium transition-colors',
                       active
                         ? 'border-primary bg-primary/10 text-primary'
                         : 'border-border bg-background text-foreground hover:bg-accent',
                     )}
                   >
+                    {active && (
+                      <span className="absolute top-1.5 right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                        <Check className="h-2.5 w-2.5" strokeWidth={3} />
+                      </span>
+                    )}
                     <Icon className="h-4 w-4" />
                     {t.label}
                   </button>

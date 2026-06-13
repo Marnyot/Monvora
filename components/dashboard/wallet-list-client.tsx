@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Plus, Wallet, Target, ArrowRight, Sparkles } from 'lucide-react'
+import { Plus, Wallet, Target, ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -102,28 +102,18 @@ export function WalletListClient({ wallets }: WalletListClientProps) {
 
   return (
     <>
-      {/* Gradient header card */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-primary/90 to-emerald-600/80 p-5 mb-5 text-primary-foreground shadow-lg">
-        <div className="absolute -top-8 -right-8 w-32 h-32 bg-white/5 rounded-full blur-2xl animate-blob pointer-events-none" />
-        <div className="absolute -bottom-6 -left-6 w-24 h-24 bg-white/5 rounded-full blur-2xl animate-blob-delayed pointer-events-none" />
-        <div className="relative z-10 flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <Sparkles className="h-4 w-4" />
-              <h1 className="text-lg font-bold">Dompet Saya</h1>
-            </div>
-            <p className="text-sm opacity-80">{wallets.length} dompet terdaftar</p>
-          </div>
-          <Button
-            size="sm"
-            variant="secondary"
-            className="bg-white/20 text-white hover:bg-white/30 border-0"
-            onClick={() => { setEditTarget(undefined); setFormOpen(true) }}
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            Tambah
-          </Button>
+      <div className="flex items-start justify-between mb-5">
+        <div>
+          <h1 className="text-xl font-bold text-foreground">Dompet Saya</h1>
+          <p className="text-sm text-muted-foreground">{wallets.length} dompet terdaftar</p>
         </div>
+        <Button
+          size="sm"
+          onClick={() => { setEditTarget(undefined); setFormOpen(true) }}
+        >
+          <Plus className="h-4 w-4 mr-1" />
+          Tambah
+        </Button>
       </div>
 
       <Link

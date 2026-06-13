@@ -4,8 +4,7 @@ import Link from 'next/link'
 import { Skeleton } from '@/components/ui/skeleton'
 import { GmailSettingsClient } from './gmail-settings-client'
 import { useGmailSettings } from '@/lib/hooks/use-gmail-settings'
-import { DecorativeBlobs } from '@/components/shared/decorative-blobs'
-import { ChevronLeft, Mail } from 'lucide-react'
+import { ChevronLeft } from 'lucide-react'
 
 function GmailSettingsSkeleton() {
   return (
@@ -43,31 +42,24 @@ export default function GmailSettingsPage() {
   const { data, isLoading, sessionLoading } = useGmailSettings()
 
   return (
-    <div className="max-w-lg lg:max-w-2xl mx-auto px-4 py-6 space-y-6 relative">
-      <DecorativeBlobs />
-
-      {/* Gradient header */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-primary/90 to-emerald-600/80 p-5 text-primary-foreground shadow-lg">
-        <div className="absolute -top-8 -right-8 w-32 h-32 bg-white/5 rounded-full blur-2xl animate-blob pointer-events-none" />
-        <div className="absolute -bottom-6 -left-6 w-24 h-24 bg-white/5 rounded-full blur-2xl animate-blob-delayed pointer-events-none" />
-        <div className="relative z-10">
-          <Link
-            href="/settings"
-            className="inline-flex items-center gap-1 text-xs opacity-80 hover:opacity-100 transition-opacity mb-2"
-          >
-            <ChevronLeft className="h-3.5 w-3.5" />
-            Pengaturan
-          </Link>
-          <div className="flex items-center gap-2 mb-1">
-            <Mail className="h-5 w-5" />
-            <h1 className="text-lg font-bold">Sinkronisasi Gmail</h1>
-          </div>
-          <p className="text-sm opacity-80">
+    <div className="max-w-lg lg:max-w-2xl mx-auto px-4 py-6 space-y-6">
+      <div className="space-y-2">
+        <Link
+          href="/settings"
+          prefetch
+          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ChevronLeft className="h-3.5 w-3.5" />
+          Pengaturan
+        </Link>
+        <div className="space-y-1">
+          <h1 className="text-xl font-bold text-foreground">Sinkronisasi Gmail</h1>
+          <p className="text-sm text-muted-foreground">
             Hubungkan Gmail untuk mendeteksi transaksi bank secara otomatis dari email notifikasi.
           </p>
           <Link
             href="/gmail-permissions"
-            className="mt-2 inline-block text-xs opacity-80 hover:opacity-100 underline underline-offset-2 transition-opacity"
+            className="inline-block text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
           >
             Lihat detail akses yang kami minta →
           </Link>

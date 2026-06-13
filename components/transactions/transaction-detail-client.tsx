@@ -7,7 +7,6 @@ import { ArrowLeft, Pencil, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { AmountDisplay } from '@/components/shared/amount-display'
 import { ConfirmDialog } from '@/components/shared/confirm-dialog'
-import { DecorativeBlobs } from '@/components/shared/decorative-blobs'
 import { TransactionEditSheet } from '@/components/transactions/transaction-edit-sheet'
 import { formatDate } from '@/lib/utils/date'
 
@@ -90,9 +89,7 @@ export function TransactionDetailClient({ transaction }: Props) {
   }
 
   return (
-    <div className="max-w-lg mx-auto relative">
-      <DecorativeBlobs />
-
+    <div className="max-w-lg mx-auto">
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-4">
         <Button variant="ghost" size="icon" onClick={() => router.back()} aria-label="Kembali">
