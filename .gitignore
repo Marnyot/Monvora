@@ -48,3 +48,6 @@ app/api/tmp/
 /public/sw.js.map
 /public/swe-worker-*.js
 /public/swe-worker-*.js.map
+
+# opencode (berisi API key lokal)
+opencode.json
