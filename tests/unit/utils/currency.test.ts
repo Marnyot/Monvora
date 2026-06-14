@@ -14,8 +14,9 @@ describe('formatIDR', () => {
     expect(formatIDR(0)).toBe('Rp 0')
   })
 
-  it('throws for negative amount', () => {
-    expect(() => formatIDR(-1)).toThrow('Amount cannot be negative')
+  it('formats negative amount with leading minus', () => {
+    expect(formatIDR(-1)).toBe('-Rp 1')
+    expect(formatIDR(-50000)).toBe('-Rp 50.000')
   })
 
   it('throws for float amount', () => {

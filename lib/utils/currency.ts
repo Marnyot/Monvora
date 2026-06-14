@@ -1,6 +1,5 @@
 export function formatIDR(amount: number): string {
   if (!Number.isInteger(amount)) throw new Error('Amount must be an integer')
-  if (amount < 0) throw new Error('Amount cannot be negative')
 
   const abs = Math.abs(amount)
   const formatted = new Intl.NumberFormat('id-ID', {
