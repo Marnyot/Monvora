@@ -36,7 +36,7 @@ export default function TransactionsPage() {
 
   return (
     <div className="max-w-lg lg:max-w-2xl mx-auto">
-      <Header isRefreshing={isFetching && !isLoading} total={data?.transactions?.length ?? 0} />
+      <Header isRefreshing={isFetching && !isLoading} total={data?.count ?? 0} />
 
       <div className="mx-4 mb-4 rounded-xl bg-card border border-border/50 shadow-[0_2px_12px_rgba(0,0,0,0.04)] overflow-hidden">
         <TransactionFilters />
