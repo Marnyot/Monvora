@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 }
 
 const EFFECTIVE_DATE = '13 Juni 2026'
-const CONTACT_EMAIL = 'privasi@monvora.app'
+const CONTACT_EMAIL = 'mario.valenardhana@gmail.com'
 
 export default function PrivacyPage() {
   return (
@@ -111,6 +111,19 @@ export default function PrivacyPage() {
               </ul>
             </div>
           </div>
+          <p className="text-sm text-foreground/90">
+            Penggunaan dan transfer informasi yang Monvora terima dari Google API
+            mematuhi{' '}
+            <a
+              href="https://developers.google.com/terms/api-services-user-data-policy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary underline-offset-2 hover:underline"
+            >
+              Google API Services User Data Policy
+            </a>
+            , termasuk persyaratan <strong>Limited Use</strong>.
+          </p>
           <p className="text-sm text-foreground/90">
             Anda bisa mencabut akses Gmail kapan saja melalui{' '}
             <a

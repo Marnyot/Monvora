@@ -301,10 +301,10 @@ export default function GmailPermissionsPage() {
           <p>
             Pertanyaan?{' '}
             <a
-              href="mailto:privasi@monvora.app"
+              href="mailto:mario.valenardhana@gmail.com"
               className="text-primary underline-offset-2 hover:underline"
             >
-              privasi@monvora.app
+              mario.valenardhana@gmail.com
             </a>
           </p>
         </section>
