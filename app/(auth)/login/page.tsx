@@ -9,9 +9,10 @@ export const metadata = {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>
+  searchParams: Promise<{ error?: string; reason?: string }>
 }) {
-  const { error } = await searchParams
+  const { error, reason } = await searchParams
+  const gmailExpired = reason === 'gmail_expired'
 
   return (
     <div className="w-full max-w-sm space-y-8">
@@ -41,6 +42,12 @@ export default async function LoginPage({
         {error && (
           <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-3 py-2 text-sm text-destructive">
             Terjadi kesalahan saat masuk. Silakan coba lagi.
+          </div>
+        )}
+
+        {gmailExpired && (
+          <div className="rounded-lg bg-amber-500/10 border border-amber-500/30 px-3 py-2 text-sm text-amber-700 dark:text-amber-400">
+            Sesi Gmail kamu sudah habis. Silakan masuk kembali untuk menyambungkan otomatis sync.
           </div>
         )}
 

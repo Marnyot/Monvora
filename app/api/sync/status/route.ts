@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { checkRateLimit } from '@/lib/utils/rate-limit'
+import { getValidGoogleToken } from '@/lib/utils/google-token'
 
 /**
  * GET /api/sync/status
@@ -33,7 +34,7 @@ export async function GET(request: Request) {
   // ─── 3. FETCH PROFILE ─────────────────────────────────────
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('gmail_sync_enabled, gmail_last_synced_at')
+    .select('gmail_sync_enabled, gmail_last_synced_at, google_access_token, google_refresh_token, google_token_expires_at')
     .eq('id', user.id)
     .single()
 
@@ -42,6 +43,23 @@ export async function GET(request: Request) {
       { data: null, error: { code: 'NOT_FOUND', message: 'Profil tidak ditemukan' } },
       { status: 404 }
     )
+  }
+
+  // ─── 3a. CHECK GMAIL TOKEN VALIDITY ───────────────────────
+  // gmail_expired = true jika user pernah menyambungkan Gmail tapi refresh
+  // token sudah tidak bisa dipakai (dicabut, expired, atau hilang).
+  let gmailExpired = false
+  if (profile.gmail_sync_enabled) {
+    const token = await getValidGoogleToken(
+      {
+        google_access_token: profile.google_access_token,
+        google_refresh_token: profile.google_refresh_token,
+        google_token_expires_at: profile.google_token_expires_at,
+      },
+      supabase,
+      user.id
+    )
+    gmailExpired = !token
   }
 
   // ─── 4. FETCH RECENT SYNC LOGS ────────────────────────────
@@ -63,6 +81,7 @@ export async function GET(request: Request) {
   return NextResponse.json({
     data: {
       gmail_sync_enabled: profile.gmail_sync_enabled,
+      gmail_expired: gmailExpired,
       last_synced_at: profile.gmail_last_synced_at,
       recent_logs: (logs ?? []).map(log => ({
         id: log.id,
