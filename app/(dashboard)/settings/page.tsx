@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import { LogoutButton } from './logout-button'
 import { EditNameSheet } from '@/components/dashboard/edit-name-sheet'
+import { ResetDataSection } from '@/components/dashboard/reset-data-section'
 import { useSession } from '@/lib/hooks/use-session'
 import { useProfile } from '@/lib/hooks/use-profile'
 import { useBalanceVisibility } from '@/lib/hooks/use-balance-visibility'
@@ -272,6 +273,8 @@ export default function SettingsPage() {
           </Link>
         </div>
       </section>
+
+      <ResetDataSection />
 
       <EditNameSheet
         open={editNameOpen}
