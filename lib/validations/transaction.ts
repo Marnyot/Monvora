@@ -19,9 +19,15 @@ export const createTransactionSchema = z.object({
   source: z.enum(['manual', 'ocr']).default('manual'),
 })
 
-export const updateTransactionSchema = createTransactionSchema.partial().extend({
-  is_verified: z.boolean().optional(),
-})
+// `source` sengaja di-omit: kalau ikut .partial() + .default('manual'),
+// setiap PATCH tanpa source akan menulis 'manual' ke DB — diam-diam
+// mengubah baris hasil Gmail/OCR menjadi manual saat user edit.
+export const updateTransactionSchema = createTransactionSchema
+  .omit({ source: true })
+  .partial()
+  .extend({
+    is_verified: z.boolean().optional(),
+  })
 
 export const listTransactionSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
