@@ -44,7 +44,7 @@ export function useRealtimeTransactions(userId: string) {
       .on(
         'postgres_changes',
         {
-          event: 'UPDATE',
+          event: '*',
           schema: 'public',
           table: 'wallets',
           filter: `user_id=eq.${userId}`,
