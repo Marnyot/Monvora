@@ -1,6 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { TransactionEditSheet } from '@/components/transactions/transaction-edit-sheet'
+
+function renderWithClient(ui: React.ReactElement) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>)
+}
 
 // Mock next/navigation
 vi.mock('next/navigation', () => ({
@@ -47,13 +53,11 @@ describe('TransactionEditSheet', () => {
   })
 
   it('renders with pre-filled transaction data when open', () => {
-    render(
+    renderWithClient(
       <TransactionEditSheet
         open={true}
         onOpenChange={vi.fn()}
         transaction={mockTransaction}
-
-
       />
     )
 
@@ -62,13 +66,11 @@ describe('TransactionEditSheet', () => {
   })
 
   it('does not render content when closed', () => {
-    render(
+    renderWithClient(
       <TransactionEditSheet
         open={false}
         onOpenChange={vi.fn()}
         transaction={mockTransaction}
-
-
       />
     )
 
@@ -82,13 +84,11 @@ describe('TransactionEditSheet', () => {
     })
 
     const onOpenChange = vi.fn()
-    render(
+    renderWithClient(
       <TransactionEditSheet
         open={true}
         onOpenChange={onOpenChange}
         transaction={mockTransaction}
-
-
       />
     )
 
@@ -112,13 +112,11 @@ describe('TransactionEditSheet', () => {
       json: async () => ({ data: null, error: { message: 'Tidak ditemukan' } }),
     })
 
-    render(
+    renderWithClient(
       <TransactionEditSheet
         open={true}
         onOpenChange={vi.fn()}
         transaction={mockTransaction}
-
-
       />
     )
 
